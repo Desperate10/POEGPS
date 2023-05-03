@@ -5,7 +5,7 @@ import com.poe.poegps.feature.domain.model.Pillar
 import com.poe.poegps.feature.domain.model.Tp
 import kotlinx.coroutines.flow.Flow
 
-interface Repository {
+interface ObjectsRepository {
 
     fun getLines(): Flow<List<Line>>
 

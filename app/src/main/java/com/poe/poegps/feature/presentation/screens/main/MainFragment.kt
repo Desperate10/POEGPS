@@ -1,4 +1,4 @@
-package com.poe.poegps.feature.presentation.main
+package com.poe.poegps.feature.presentation.screens.main
 
 import android.os.Bundle
 import androidx.fragment.app.Fragment
