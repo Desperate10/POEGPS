@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/GPS_Layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal">
+
+    <TextView
+        android:id="@+id/GPS_Status"
+        style="@style/gps_status_loc"
+        android:text="@string/gps_status_off"
+        android:textStyle="bold" />
+
+    <!-- Статус RED не виводимо(див. код), замість нього ORA червоним кольором, статус YEL у оранжі -->
+    <TextView
+        android:id="@+id/GPS_SatRed"
+        style="@style/gps_status_sat"
+        android:text="@string/gps_sat_val"
+        android:textColor="@color/colorRed"
+        android:visibility="gone" />
+
+    <TextView
+        style="@style/gps_status_sat"
+        android:text="@string/gps_sat_div"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/GPS_SatOra"
+        style="@style/gps_status_sat"
+        android:text="@string/gps_sat_val"
+        android:textColor="@color/colorRed" />
+
+    <TextView
+        style="@style/gps_status_sat"
+        android:text="@string/gps_sat_div" />
+
+    <TextView
+        android:id="@+id/GPS_SatYel"
+        style="@style/gps_status_sat"
+        android:text="@string/gps_sat_val"
+        android:textColor="@color/colorOrange" />
+
+    <TextView
+        style="@style/gps_status_sat"
+        android:text="@string/gps_sat_div" />
+
+    <TextView
+        android:id="@+id/GPS_SatGre"
+        style="@style/gps_status_sat"
+        android:text="@string/gps_sat_val"
+        android:textColor="@color/colorGreen" />
+
+    <TextView
+        android:id="@+id/GPS_Latitude"
+        style="@style/gps_status_loc"
+        android:text="@string/gps_lat00" />
+
+    <TextView
+        android:id="@+id/GPS_Longitude"
+        style="@style/gps_status_loc"
+        android:text="@string/gps_lng00" />
+
+    <TextView
+        android:id="@+id/GPS_Accuracy"
+        style="@style/gps_status_loc"
+        android:text="@string/gps_accuracy" />
+</LinearLayout>

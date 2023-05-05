@@ -9,7 +9,17 @@ interface ObjectsRepository {
 
     fun getLines(): Flow<List<Line>>
 
+    fun getLowLines() : Flow<List<Line>>
+
+    suspend fun getLine(lineName: String): Line
+
     fun getTPs(): Flow<List<Tp>>
+
+    suspend fun getTp(): Tp
+
+    fun getPss(): Flow<List<Tp>>
+
+    suspend fun getPs(): Tp
 
     fun getPillars(tplnr: String): Flow<List<Pillar>>
 

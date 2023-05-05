@@ -6,6 +6,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "line10")
 data class Line10DbModel(
     @PrimaryKey(autoGenerate = true)
-    private val id: Int,
-    private val tplnr: String
+    val id: Int,
+    val tplnr: String,
+    val name: String
 )

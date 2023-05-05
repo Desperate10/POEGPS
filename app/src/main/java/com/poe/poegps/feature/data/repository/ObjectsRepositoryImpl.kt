@@ -12,7 +12,27 @@ class ObjectsRepositoryImpl : ObjectsRepository {
         TODO("Not yet implemented")
     }
 
+    override fun getLowLines(): Flow<List<Line>> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getLine(lineName: String): Line {
+        TODO("Not yet implemented")
+    }
+
     override fun getTPs(): Flow<List<Tp>> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getTp(): Tp {
+        TODO("Not yet implemented")
+    }
+
+    override fun getPss(): Flow<List<Tp>> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getPs(): Tp {
         TODO("Not yet implemented")
     }
 
