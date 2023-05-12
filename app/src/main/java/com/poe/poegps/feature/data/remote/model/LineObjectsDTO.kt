@@ -1,8 +1,7 @@
 package com.poe.poegps.feature.data.remote.model
 
-data class TpObjectsResponse(
+data class LineObjectsDTO(
     val tplnr: String,
     val pltxt: String,
-    val lng: String,
-    val lat: String,
+    val ucat: String
 )

@@ -34,7 +34,7 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient) : Retrofit {
         return Retrofit.Builder()
-            .baseUrl("https://randomuser.me/api/")
+            .baseUrl("http://task.poe.pl.ua:9090/gis/")
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

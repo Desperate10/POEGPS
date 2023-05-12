@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingBottom="8dp">
+
+    <TextView
+        android:id="@+id/opr"
+        android:layout_width="10dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="4dp"
+        android:layout_weight="1"
+        android:clickable="true"
+        android:foreground="#3233b5e5"
+        android:maxLines="1"
+        android:paddingTop="10dp"
+        android:text=""
+        android:textAlignment="center"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:id="@+id/textViews"
+        android:layout_width="114dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="4dp"
+        android:layout_weight="1"
+        android:longClickable="true"
+        android:onClick="equals"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/lat"
+            android:layout_width="match_parent"
+            android:layout_height="20dp"
+            android:layout_weight="1"
+            android:foreground="#37ff8800"
+            android:text=""
+            android:textAlignment="center" />
+
+        <TextView
+            android:id="@+id/lng"
+            android:layout_width="match_parent"
+            android:layout_height="20dp"
+            android:layout_weight="1"
+            android:foreground="#37ff8800"
+            android:text=""
+            android:textAlignment="center" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/wire"
+        android:layout_width="15dp"
+        android:layout_height="match_parent"
+        android:layout_marginTop="4dp"
+        android:layout_weight="1"
+        android:foreground="#3799cc00"
+        android:paddingTop="10dp"
+        android:text=""
+        android:textAlignment="center"
+        android:textSize="11sp" />
+
+    <Button
+        android:id="@+id/add_opr"
+        android:layout_width="20dp"
+        android:layout_height="match_parent"
+        android:layout_marginBottom="0dp"
+        android:layout_marginRight="0dp"
+        android:layout_marginTop="0dp"
+        android:layout_weight="1"
+        android:soundEffectsEnabled="true"
+        android:text="@string/take"
+        android:textSize="10sp" />
+
+</LinearLayout>

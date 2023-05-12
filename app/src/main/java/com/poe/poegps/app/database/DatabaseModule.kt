@@ -2,6 +2,7 @@ package com.poe.poegps.app.database
 
 import android.content.Context
 import androidx.room.Room
+import com.poe.poegps.feature.data.local.dao.ObjectsDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -23,5 +24,12 @@ object DatabaseModule {
             AppDatabase::class.java,
             "app_database"
         ).build()
+    }
+
+    @Provides
+    fun provideObjectsDao(
+        database: AppDatabase
+    ): ObjectsDao {
+        return database.objectsDao
     }
 }

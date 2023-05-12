@@ -1,60 +1,65 @@
 package com.poe.poegps.feature.presentation.screens.main
 
 import android.os.Bundle
+import android.view.*
+import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import androidx.fragment.app.viewModels
 import com.poe.poegps.R
+import com.poe.poegps.databinding.FragmentMainBinding
+import com.poe.poegps.feature.presentation.model.ObjectDisplayable
+import com.poe.poegps.feature.presentation.screens.main.adapter.ObjectsAdapter
+import com.poe.poegps.feature.presentation.screens.main.spinner.ObjectsSpinnerAdapter
+import dagger.hilt.android.AndroidEntryPoint
+import gromov.ramdomusertestcase.core.extension.autoCleaned
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
+@AndroidEntryPoint
+class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvider {
 
-/**
- * A simple [Fragment] subclass.
- * Use the [MainFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
-class MainFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
+    private var binding: FragmentMainBinding by autoCleaned()
+    private var adapter: ObjectsAdapter by autoCleaned()
+    private val viewModel by viewModels<MainViewModel>()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_main, container, false)
+    ): View {
+        binding = FragmentMainBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment MainFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            MainFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
-                }
-            }
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        setupObjectSpinner()
     }
+
+    private fun setupObjectSpinner() {
+        binding.objectSpinner.adapter = ObjectsSpinnerAdapter(requireContext())
+    }
+
+    override fun onClick(obj: ObjectDisplayable) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onLongClick(obj: ObjectDisplayable) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+        menuInflater.inflate(R.menu.menu_main, menu)
+    }
+
+    override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+        return when (menuItem.itemId) {
+            R.id.search -> {
+                true
+            }
+            R.id.download -> {
+                true
+            }
+            else -> false
+        }
+    }
+
+
 }

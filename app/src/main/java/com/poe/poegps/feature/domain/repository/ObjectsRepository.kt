@@ -6,20 +6,27 @@ import com.poe.poegps.feature.domain.model.Tp
 import kotlinx.coroutines.flow.Flow
 
 interface ObjectsRepository {
+    //загрузка линий из апи
+    suspend fun downloadLines(filial: Int)
 
-    fun getLines(): Flow<List<Line>>
+    //fun getLowLines() : Flow<List<Line>>
 
-    fun getLowLines() : Flow<List<Line>>
+    //Получение линий из БД
+    fun getLinesByTplnr(tplnr: String): Flow<List<Line>>
 
-    suspend fun getLine(lineName: String): Line
+    //Получение списка ТП из апи
+    suspend fun downloadTPs(filial: Int)
 
-    fun getTPs(): Flow<List<Tp>>
+    //Получение списка ТП из БД
+    suspend fun getTpList(): Flow<List<Tp>>
 
-    suspend fun getTp(): Tp
+    //Получение ТП из БД по клику
+    suspend fun getTpByTplnr(tplnr: String): Tp
 
-    fun getPss(): Flow<List<Tp>>
+    //Получение списка ПС из апи
+    suspend fun downloadPss()
 
-    suspend fun getPs(): Tp
+    suspend fun getPsByTplnr(): Tp
 
     fun getPillars(tplnr: String): Flow<List<Pillar>>
 

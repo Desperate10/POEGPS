@@ -8,4 +8,7 @@
     <string name="gps_accuracy">000.0</string>
     <string name="gps_lat00">00°00\'00.00\"N</string>
     <string name="gps_lng00">00°00\'00.00\"E</string>
+    <string name="take">Зняти</string>
+    <string name="search">Пошук</string>
+    <string name="download">Завантажити</string>
 </resources>
