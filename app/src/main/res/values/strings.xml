@@ -11,4 +11,6 @@
     <string name="take">Зняти</string>
     <string name="search">Пошук</string>
     <string name="download">Завантажити</string>
+    <string name="deleteOtp">Видалити відпайку</string>
+    <string name="sendObject">Відправити об\'єкт</string>
 </resources>

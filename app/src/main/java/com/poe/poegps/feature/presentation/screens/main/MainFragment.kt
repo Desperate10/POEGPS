@@ -2,6 +2,7 @@ package com.poe.poegps.feature.presentation.screens.main
 
 import android.os.Bundle
 import android.view.*
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -42,7 +43,20 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
     }
 
     override fun onLongClick(obj: ObjectDisplayable) {
-        TODO("Not yet implemented")
+        val popupMenu = PopupMenu(requireContext(), binding.objectsRv)
+        popupMenu.inflate(R.menu.menu_context_main)
+        popupMenu.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.deleteOtp -> {
+                    true
+                }
+                R.id.sendObject -> {
+                    true
+                }
+                else -> false
+            }
+        }
+        popupMenu.show()
     }
 
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
