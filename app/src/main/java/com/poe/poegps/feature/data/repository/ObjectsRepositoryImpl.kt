@@ -1,10 +1,12 @@
 package com.poe.poegps.feature.data.repository
 
-import com.poe.poegps.app.database.AppDatabase
 import com.poe.poegps.feature.data.local.dao.ObjectsDao
 import com.poe.poegps.feature.data.mapper.toDbModel
 import com.poe.poegps.feature.data.mapper.toDomainModel
+import com.poe.poegps.feature.data.mapper.toPsDbModel
+import com.poe.poegps.feature.data.remote.model.LoginRequest
 import com.poe.poegps.feature.data.remote.api.ObjectsApi
+import com.poe.poegps.feature.data.remote.utils.apiRequestFlow
 import com.poe.poegps.feature.domain.model.Line
 import com.poe.poegps.feature.domain.model.Pillar
 import com.poe.poegps.feature.domain.model.Tp
@@ -17,9 +19,12 @@ class ObjectsRepositoryImpl @Inject constructor(
     private val objectsDao: ObjectsDao,
     private val objectsApi: ObjectsApi
 ) : ObjectsRepository {
+    override fun auth(login: String, password: String) = apiRequestFlow {
+        objectsApi.auth(LoginRequest(login, password))
+    }
 
-    override suspend fun downloadLines(filial: Int) {
-        objectsApi.getLineObjects(filial)
+    override suspend fun downloadLines(filial: Int, token: String) {
+        objectsApi.getLineObjects(filial, "Bearer $token")
             .map { line ->
                 line.toDomainModel()
             }
@@ -34,7 +39,7 @@ class ObjectsRepositoryImpl @Inject constructor(
         TODO("Not yet implemented")
     }*/
 
-    override fun getLinesByTplnr(tplnr: String): Flow<List<Line>> {
+    override fun searchLine(tplnr: String): Flow<List<Line>> {
         return objectsDao.getLines(tplnr)
             .map {
                 it.map { line ->
@@ -43,24 +48,57 @@ class ObjectsRepositoryImpl @Inject constructor(
             }
     }
 
-    override suspend fun downloadTPs(filial: Int) {
-        TODO("Not yet implemented")
+    override suspend fun downloadTPs(filial: Int, token: String) {
+        objectsApi.getTpObjects(filial, "Bearer $token")
+            .map { tp ->
+                tp.toDomainModel()
+            }
+            .also { tps ->
+                tps.map {
+                    objectsDao.insertTp(it.toDbModel())
+                }
+            }
     }
 
     override suspend fun getTpList(): Flow<List<Tp>> {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getTpByTplnr(tplnr: String): Tp {
-        TODO("Not yet implemented")
+    override fun searchTP(tplnr: String): Flow<List<Tp>> {
+        return objectsDao.getTp(tplnr)
+            .map { tp ->
+                tp.map {
+                    it.toDomainModel()
+                }
+            }
     }
 
-    override suspend fun downloadPss() {
-        TODO("Not yet implemented")
+    override suspend fun downloadPss(token: String) {
+        objectsApi.getPsObjects("Bearer $token")
+            .map { ps ->
+                ps.toDomainModel()
+            }
+            .also { pss ->
+                pss.map {
+                    objectsDao.insertPs(it.toPsDbModel())
+                }
+            }
     }
 
     override suspend fun getPsByTplnr(): Tp {
         TODO("Not yet implemented")
+    }
+
+    override suspend fun downloadPillars(filial: Int, token: String) {
+        objectsApi.getPillarObjects(filial, "Bearer $token")
+            .map { pillar ->
+                pillar.toDomainModel()
+            }
+            .also { pillars ->
+                pillars.map {
+                    objectsDao.insertPillar(it.toDbModel())
+                }
+            }
     }
 
 

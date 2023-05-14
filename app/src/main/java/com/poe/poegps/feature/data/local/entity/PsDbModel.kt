@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "ps")
 data class PsDbModel(
     @PrimaryKey(autoGenerate = true)
-    val id: Int,
+    val id: Int = 0,
     val name: String,
     val tplnr: String,
     val lng: String,

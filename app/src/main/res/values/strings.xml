@@ -13,4 +13,6 @@
     <string name="download">Завантажити</string>
     <string name="deleteOtp">Видалити відпайку</string>
     <string name="sendObject">Відправити об\'єкт</string>
+    <string name="write_login_hint">Логин</string>
+    <string name="write_password_hint">Пароль</string>
 </resources>

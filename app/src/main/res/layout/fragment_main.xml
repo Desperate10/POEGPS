@@ -12,6 +12,7 @@
         android:layout_height="wrap_content"
         android:minHeight="40dp"/>
 
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/objects_rv"
         android:layout_width="match_parent"

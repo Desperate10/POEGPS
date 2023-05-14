@@ -3,12 +3,13 @@ package com.poe.poegps.feature.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "tp")
-data class TpDbModel(
+@Entity(tableName = "pillar")
+data class PillarDbModel(
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
-    val name: String,
+    val id: Int =0,
     val tplnr: String,
+    val name: String,
+    val wire: String,
     val lng: String,
     val lat: String
 )

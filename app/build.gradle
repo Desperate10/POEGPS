@@ -67,7 +67,7 @@ dependencies {
     implementation "com.squareup.retrofit2:retrofit:$retrofit_version"
     implementation "com.squareup.retrofit2:converter-gson:$retrofit_version"
     implementation "com.squareup.okhttp3:okhttp:4.9.0"
-    implementation "com.squareup.okhttp3:logging-interceptor:4.7.2"
+    implementation "com.squareup.okhttp3:logging-interceptor:4.9.0"
     // di hilt
     def hilt_version = "2.44"
     implementation "com.google.dagger:hilt-android:$hilt_version"
@@ -83,6 +83,8 @@ dependencies {
     kapt "androidx.room:room-compiler:2.5.1"
     //Paging support for Room
     implementation "androidx.room:room-paging:2.5.1"
+    //datastore preferences
+    implementation "androidx.datastore:datastore-preferences:1.0.0"
     //Kotlin Extensions and Coroutines support for Room
     implementation "androidx.room:room-ktx:2.5.1"
     // debugImplementation because LeakCanary should only run in debug builds.
