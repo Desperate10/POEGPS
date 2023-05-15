@@ -64,8 +64,8 @@ class ObjectsRepositoryImpl @Inject constructor(
         TODO("Not yet implemented")
     }
 
-    override fun searchTP(tplnr: String): Flow<List<Tp>> {
-        return objectsDao.getTp(tplnr)
+    override fun searchTP(filial: String, tplnr: String): Flow<List<Tp>> {
+        return objectsDao.getTp(filial, tplnr)
             .map { tp ->
                 tp.map {
                     it.toDomainModel()

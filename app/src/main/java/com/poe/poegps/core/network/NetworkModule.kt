@@ -25,14 +25,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "data_store")
-
-    @Singleton
-    @Provides
-    fun provideTokenManager(@ApplicationContext context: Context) : TokenManager {
-        return TokenManager(context)
-    }
-
     @Provides
     @Singleton
     fun provideHttpClient(authInterceptor: AuthInterceptor) : OkHttpClient {

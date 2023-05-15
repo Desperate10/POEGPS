@@ -28,9 +28,9 @@ interface ObjectsDao {
     @Query("SELECT * FROM tp")
     fun getTps(): Flow<List<TpDbModel>>
 
-    @Query("SELECT * FROM line04 WHERE tplnr LIKE 'PO-F-' || :tplnr || '%'")
+    @Query("SELECT * FROM line04 WHERE tplnr LIKE 'PO-F-20-L' || :tplnr || '%' GROUP BY name")
     fun getLines(tplnr: String): Flow<List<Line04DbModel>>
 
-    @Query("SELECT * FROM tp WHERE tplnr LIKE 'PO-F-' || :tplnr || '%'")
-    fun getTp(tplnr: String): Flow<List<TpDbModel>>
+    @Query("SELECT * FROM tp WHERE tplnr LIKE 'PO-F-' || :filial ||'-P'|| :tplnr || '%'")
+    fun getTp(filial: String, tplnr: String): Flow<List<TpDbModel>>
 }

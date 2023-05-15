@@ -2,15 +2,10 @@ package com.poe.poegps.feature.presentation.screens.main
 
 import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.Menu
-import android.view.MenuInflater
-import android.view.MenuItem
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.view.inputmethod.EditorInfo
-import android.widget.AdapterView
-import android.widget.Toast
+import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.MenuProvider
@@ -23,6 +18,7 @@ import com.poe.poegps.R
 import com.poe.poegps.databinding.FragmentMainBinding
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.presentation.CoroutinesErrorHandler
+import com.poe.poegps.feature.presentation.dialog.LoginDialogFragment
 import com.poe.poegps.feature.presentation.dialog.SearchObjectDialog
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.screens.main.adapter.ObjectsAdapter
@@ -54,15 +50,6 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
         setupObjectsAdapter()
         collectViewModel()
         requireActivity().addMenuProvider(this)
-        viewModel.authorization("poegis",
-            "123Qwerty",
-            object : CoroutinesErrorHandler {
-                override fun onError(message: String) {
-                    Toast.makeText(context, "Error! $message", Toast.LENGTH_SHORT).show()
-                }
-            })
-        //val loginDialog = LoginDialogFragment()
-        //loginDialog.show(childFragmentManager, "loginDialog")
     }
 
     private fun setupObjectsAdapter() {
@@ -78,6 +65,15 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
         collectLifecycleFlow(viewModel.token) { token ->
             if (token.isNotEmpty()) {
                 Log.d("testim", "token: $token")
+            } else {
+                //LoginDialogFragment().show(childFragmentManager, "login")
+                viewModel.authorization("poegis",
+                    "123Qwerty",
+                    object : CoroutinesErrorHandler {
+                        override fun onError(message: String) {
+                            Toast.makeText(context, "Error! $message", Toast.LENGTH_SHORT).show()
+                        }
+                    })
             }
         }
         collectLifecycleFlow(viewModel.loginResponse) { loginResponse ->
@@ -100,7 +96,15 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
             }
         }
         collectLifecycleFlow(viewModel.objectsList) { objectsList ->
+            Log.d("testim", "objectsList: $objectsList")
             adapter.submitList(objectsList)
+        }
+        collectLifecycleFlow(viewModel.filial) { filial ->
+            if (filial == "00") {
+                chooseYourFilialDialog()
+            } else {
+                Log.d("testim", "filial: $filial")
+            }
         }
     }
 
@@ -139,7 +143,6 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
         searchView.imeOptions = EditorInfo.IME_ACTION_DONE
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(tplnr: String?): Boolean {
-                //Log.d("testim", "onQueryTextSubmit: $tplnr")
                 tplnr?.let {
                     viewModel.searchObject(tplnr, object : CoroutinesErrorHandler {
                         override fun onError(message: String) {
@@ -199,7 +202,37 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
         )
     }
 
+    private fun chooseYourFilialDialog() {
+        val builder = AlertDialog.Builder(requireContext())
+        val inflater = this.layoutInflater
+        val dialogView = inflater.inflate(R.layout.dialog_filial, null)
+        builder.setCancelable(false)
+        builder.setView(dialogView)
+        val filials = resources.getStringArray(R.array.filials)
+        val spinner = dialogView.findViewById<View>(R.id.spinner) as Spinner
+        // Создаем адаптер ArrayAdapter с помощью массива строк и стандартной разметки элемета spinner
+        val adapter: ArrayAdapter<String> =
+            ArrayAdapter<String>(requireContext(), android.R.layout.simple_spinner_item, filials)
+        // Определяем разметку для использования при выборе элемента
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        // Применяем адаптер к элементу spinner
+        spinner.adapter = adapter
+        adapter.notifyDataSetChanged()
+        val alertDialog = builder.create()
+        alertDialog.show()
+        val create = dialogView.findViewById<Button>(R.id.choose)
+        create.setOnClickListener { view: View? ->
+            val filial = spinner.selectedItem.toString().take(2)
+            viewModel.selectedFilial(filial)
+            alertDialog.cancel()
+        }
+    }
+
     override fun onNothingSelected(parent: AdapterView<*>?) {}
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        requireActivity().removeMenuProvider(this)
+    }
 
 }

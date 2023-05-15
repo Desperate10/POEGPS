@@ -7,27 +7,27 @@ import com.poe.poegps.app.database.DatabaseModule.dataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-class TokenManager(private val context: Context){
+class FilialManager (private val context: Context) {
 
     companion object {
-        private val TOKEN_KEY = stringPreferencesKey("jwt_token")
+        private val FILIAL_KEY = stringPreferencesKey("filial")
     }
 
-    fun getToken() : Flow<String?> {
+    fun getFilial() : Flow<String?> {
         return context.dataStore.data.map { preferences ->
-            preferences[TOKEN_KEY]
+            preferences[FILIAL_KEY]
         }
     }
 
-    suspend fun saveToken(token: String) {
+    suspend fun saveFilial(filial: String) {
         context.dataStore.edit { preferences ->
-            preferences[TOKEN_KEY] = token
+            preferences[FILIAL_KEY] = filial
         }
     }
 
-    suspend fun deleteToken() {
+    suspend fun deleteFilial() {
         context.dataStore.edit { preferences ->
-            preferences.remove(TOKEN_KEY)
+            preferences.remove(FILIAL_KEY)
         }
     }
 }

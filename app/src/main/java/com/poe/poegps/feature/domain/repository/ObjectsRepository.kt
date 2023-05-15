@@ -27,7 +27,7 @@ interface ObjectsRepository {
     suspend fun getTpList(): Flow<List<Tp>>
 
     //Получение ТП из БД по клику
-    fun searchTP(tplnr: String): Flow<List<Tp>>
+    fun searchTP(filial: String, tplnr: String): Flow<List<Tp>>
 
     //Получение списка ПС из апи
     suspend fun downloadPss(token: String)

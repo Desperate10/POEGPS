@@ -53,6 +53,7 @@ class LoginDialogFragment : DialogFragment() {
                     }
                 })
         }
+        dismiss()
     }
 
 

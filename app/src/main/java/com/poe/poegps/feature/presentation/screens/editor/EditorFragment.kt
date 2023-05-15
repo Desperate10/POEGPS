@@ -1,10 +1,10 @@
 package com.poe.poegps.feature.presentation.screens.editor
 
 import android.os.Bundle
+import android.util.Log
+import android.view.*
 import androidx.fragment.app.Fragment
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import androidx.core.view.MenuProvider
 import androidx.fragment.app.viewModels
 import com.poe.poegps.R
 import com.poe.poegps.databinding.FragmentEditorBinding
@@ -13,7 +13,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import gromov.ramdomusertestcase.core.extension.autoCleaned
 
 @AndroidEntryPoint
-class EditorFragment : Fragment() {
+class EditorFragment : Fragment(), MenuProvider {
 
     private var binding: FragmentEditorBinding by autoCleaned()
     private var adapter: OprAdapter by autoCleaned()
@@ -25,6 +25,29 @@ class EditorFragment : Fragment() {
     ): View {
         binding = FragmentEditorBinding.inflate(inflater, container, false)
         return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        requireActivity().addMenuProvider(this)
+    }
+
+    override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+        menuInflater.inflate(R.menu.menu_editor, menu)
+    }
+
+    override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+        return when(menuItem.itemId) {
+            R.id.add_savedopr -> {
+                Log.d("testim", "add_savedopr")
+                true
+            }
+            else -> false
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        requireActivity().removeMenuProvider(this)
     }
 
 }

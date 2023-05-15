@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/add_savedopr"
+        android:title="@string/menu_add_saved"/>
+    <item
+        android:id="@+id/add_savedopr_from_small"
+        android:title="@string/menu_add_saved_0_4"/>
+    <item
+        android:id="@+id/add_savedtp_from_small"
+        android:title="@string/menu_add_saved_tp_0_4"/>
+    <item
+        android:id="@+id/add_opr"
+        android:title="@string/menu_add_opr"
+        android:icon="@drawable/add_opr_button"
+        app:showAsAction="always|withText"/>
+</menu>

@@ -1,4 +1,37 @@
 <resources>
+
+    <string-array name="filials">
+        <item>0200  Велико-Кохнівська філія</item>
+        <item>0300  Гадяцька філія</item>
+        <item>0400  Глобинська філія</item>
+        <item>0500  Гребінківська філія</item>
+        <item>0600  Диканьська філія</item>
+        <item>0800  Зіньківська філія</item>
+        <item>0900  Карлівська філія</item>
+        <item>1000  Кобеляцька філія</item>
+        <item>1100  Козельщинська філія</item>
+        <item>1200  Комсомольська філія</item>
+        <item>1300  Котелевська філія</item>
+        <item>1400  Красногорівська філія</item>
+        <item>1500  Кременчуцька філія</item>
+        <item>1600  Лохвицька філія</item>
+        <item>1700  Лубенська філія</item>
+        <item>1800  Машівська філія</item>
+        <item>1900  Миргородська філія</item>
+        <item>2000  Ново-Санжарська філія</item>
+        <item>2100  Оржицька філія</item>
+        <item>2200  Пирятинська філія</item>
+        <item>2300  Полтавська філія МЕМ</item>
+        <item>2400  Решетилівська філія</item>
+        <item>2500  Семенівська філія</item>
+        <item>2600  Хорольська філія</item>
+        <item>2700  Чорнухинська філія</item>
+        <item>2800  Чутівська філія</item>
+        <item>2900  Шишацька філія</item>
+        <item>3100  Полтавський район РЕМ</item>
+
+    </string-array>
+
     <string name="app_name">POEGPS</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
@@ -15,4 +48,17 @@
     <string name="sendObject">Відправити об\'єкт</string>
     <string name="write_login_hint">Логин</string>
     <string name="write_password_hint">Пароль</string>
+    <string name="to_choose">Вибрати</string>
+    <string name="menu_add_saved">Створити існуючу опору</string>
+    <string name="menu_add_saved_0_4">Створити існуючу опору 0.4</string>
+    <string name="menu_add_saved_tp_0_4">Додати ТП 0.4</string>
+    <string name="menu_add_opr">Створити опору</string>
+    <string name="save">Зберегти</string>
+    <string name="cancel">Назад</string>
+    <string name="choose">Вибрати</string>
+    <string name="firstOpr">Перша опора у відпайці</string>
+    <string name="addNext">Створити наступну опору</string>
+    <string name="clear_coord">Видалити координати опори</string>
+    <string name="deleteOpr">Видалити опору</string>
+    <string name="createOtp">Створити відпайку</string>
 </resources>
