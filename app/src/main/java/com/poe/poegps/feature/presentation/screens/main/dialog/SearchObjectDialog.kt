@@ -1,4 +1,4 @@
-package com.poe.poegps.feature.presentation.dialog
+package com.poe.poegps.feature.presentation.screens.main.dialog
 
 import android.content.Context
 import android.os.Bundle

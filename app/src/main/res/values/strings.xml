@@ -32,6 +32,74 @@
 
     </string-array>
 
+    <string-array name="wires">
+        <item>АС-120</item>
+        <item>АС-95</item>
+        <item>АС-50</item>
+        <item>АС-35</item>
+        <item>АС-25</item>
+        <item>АС-16</item>
+        <item>А-120</item>
+        <item>А-95</item>
+        <item>А-70</item>
+        <item>А-50</item>
+        <item>А-35</item>
+        <item>А-25</item>
+        <item>АПВ-4</item>
+        <item>АПВ-6</item>
+        <item>АПВ-10</item>
+        <item>АПВ-16</item>
+        <item>АПВ-25</item>
+        <item>АПВ-35</item>
+        <item>АЖ-50</item>
+        <item>АЖ-35</item>
+        <item>ПС-25</item>
+        <item>ПС-35</item>
+        <item>ПСО-3</item>
+        <item>ПСО-4</item>
+        <item>ПСО-5</item>
+        <item>АН-70</item>
+        <item>АН-50</item>
+        <item>АПС-50</item>
+        <item>А-16</item>
+        <item>3АА sXSn-20 1x50</item>
+        <item>3АА sXSn-20 1x90</item>
+        <item>3АА sXSn-20 1x120</item>
+        <item>ASxSN35</item>
+        <item>ASxSN16</item>
+        <item>ASxSN 2x16</item>
+        <item>ASxSN 2x25</item>
+        <item>ASxSN 2x35</item>
+        <item>ASxSN 4x16</item>
+        <item>ASxSN 4x25</item>
+        <item>ASxSN 4x35</item>
+        <item>ASxSN 4x50</item>
+        <item>ASxSN 4x70_1X25</item>
+        <item>ASxSN 4x70</item>
+        <item>ASxSN 4x95</item>
+        <item>AsXSN 4x35+1x25</item>
+        <item>AsXSN 4x35+1x35</item>
+        <item>ASxSN_4X50_1X25</item>
+        <item>ASxSN_4X50_1X35</item>
+        <item>ASxSN 4x120</item>
+        <item>СІП5 4X35-1X25</item>
+        <item>СІП5 4X70-1X35</item>
+        <item>СІП5 4X50-1X25</item>
+        <item>СІП5 4X50-1X35</item>
+        <item>СІП5 4X35</item>
+        <item>СІП5 4X25</item>
+        <item>САПт 2X16</item>
+        <item>САПт 4X25</item>
+        <item>АВВГ 3X240+1X120</item>
+        <item>АВВГ 4x25</item>
+        <item>АВВГ 4x150</item>
+        <item>АВВГ 3X4+1X2,5</item>
+        <item>АВББШВ 4x95</item>
+        <item>АВББШВ 4x120</item>
+        <item>АВББШВ 4x150</item>
+        <item>АВББШВ 4x180</item>
+    </string-array>
+
     <string name="app_name">POEGPS</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>

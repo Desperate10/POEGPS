@@ -1,4 +1,4 @@
-package com.poe.poegps.feature.presentation.dialog
+package com.poe.poegps.feature.presentation.screens.main.dialog
 
 import android.os.Bundle
 import android.view.LayoutInflater

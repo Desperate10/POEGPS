@@ -18,8 +18,8 @@ import com.poe.poegps.R
 import com.poe.poegps.databinding.FragmentMainBinding
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.presentation.CoroutinesErrorHandler
-import com.poe.poegps.feature.presentation.dialog.LoginDialogFragment
-import com.poe.poegps.feature.presentation.dialog.SearchObjectDialog
+import com.poe.poegps.feature.presentation.screens.main.dialog.LoginDialogFragment
+import com.poe.poegps.feature.presentation.screens.main.dialog.SearchObjectDialog
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.screens.main.adapter.ObjectsAdapter
 import com.poe.poegps.feature.presentation.screens.main.spinner.ObjectsSpinnerAdapter

@@ -1,6 +1,10 @@
 package com.poe.poegps.feature.presentation.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
+@Parcelize
 data class ObjectDisplayable(
     val tplnr: String,
     val name: String
-)
+) : Parcelable
