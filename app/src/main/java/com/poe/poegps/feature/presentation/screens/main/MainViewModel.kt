@@ -2,8 +2,8 @@ package com.poe.poegps.feature.presentation.screens.main
 
 import androidx.lifecycle.viewModelScope
 import com.poe.poegps.feature.data.remote.model.LoginResponse
-import com.poe.poegps.feature.data.remote.model.ObjectState
-import com.poe.poegps.feature.data.remote.model.ObjectType
+import com.poe.poegps.feature.presentation.model.ObjectState
+import com.poe.poegps.feature.presentation.model.ObjectType
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.data.remote.utils.FilialManager
 import com.poe.poegps.feature.data.remote.utils.TokenManager

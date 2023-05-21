@@ -23,5 +23,20 @@
         <argument
             android:name="pltxt"
             app:argType="string" />
+        <action
+            android:id="@+id/action_editorFragment_to_addPillarDialogFragment"
+            app:destination="@id/addPillarDialogFragment"
+            app:popUpTo="@id/editorFragment" />
     </fragment>
+    <dialog
+        android:id="@+id/addPillarDialogFragment"
+        android:name="com.poe.poegps.feature.presentation.screens.editor.dialog.AddPillarDialogFragment"
+        android:label="AddPillarDialogFragment" >
+        <argument
+            android:name="tplnr"
+            app:argType="string" />
+        <argument
+            android:name="order"
+            app:argType="integer" />
+    </dialog>
 </navigation>

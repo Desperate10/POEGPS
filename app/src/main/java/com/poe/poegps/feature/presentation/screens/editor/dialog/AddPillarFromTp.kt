@@ -9,14 +9,21 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.Spinner
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.viewModels
 import com.poe.poegps.R
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
+import com.poe.poegps.feature.presentation.model.OprDisplayable
+import com.poe.poegps.feature.presentation.screens.editor.EditorViewModel
+import dagger.hilt.android.AndroidEntryPoint
+import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 
+@AndroidEntryPoint
 class AddPillarFromTp: DialogFragment() {
     private var tps: ArrayList<ObjectDisplayable>? = null
+    private val viewModel by viewModels<EditorViewModel>(ownerProducer = { requireParentFragment() })
 
     interface Listener {
-        fun onSavedTpAdded(obj : ObjectDisplayable)
+        fun onSavedTpAdded(obj : OprDisplayable)
     }
 
     private var listener: Listener? = null
@@ -42,21 +49,23 @@ class AddPillarFromTp: DialogFragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.create_saved_opr, container, false)
-        val spinner = view.findViewById<Spinner>(R.id.lineSpinner)
-        tps?.let {
-            spinner.adapter = ArrayAdapter(requireActivity(), android.R.layout.simple_list_item_1, it)
-        }
         return view
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val lineSpinner = view.findViewById<Spinner>(R.id.lineSpinner)
+        val tpSpinner = view.findViewById<Spinner>(R.id.lineSpinner)
+        collectLifecycleFlow(viewModel.getTpList()) {
+            tpSpinner.adapter = ArrayAdapter(requireActivity(), android.R.layout.simple_list_item_1, it)
+        }
 
-        view.findViewById<Button>(R.id.save).setOnClickListener {
-            val spinnerValue = lineSpinner.selectedItem as ObjectDisplayable
+        view.findViewById<Button>(R.id.choose).setOnClickListener {
+            val spinnerValue = tpSpinner.selectedItem as OprDisplayable
             listener?.onSavedTpAdded(spinnerValue)
+            dismiss()
+        }
+        view.findViewById<Button>(R.id.cancel).setOnClickListener {
             dismiss()
         }
     }
@@ -64,11 +73,11 @@ class AddPillarFromTp: DialogFragment() {
     companion object {
         private const val TPS = "tps"
 
-        fun newInstance(tps: ArrayList<ObjectDisplayable>): AddPillarFromTp {
-            val args = Bundle()
-            args.putParcelableArrayList(TPS, tps)
+        fun newInstance(): AddPillarFromTp {
+            //val args = Bundle()
+            //args.putParcelableArrayList(TPS, tps)
             val fragment = AddPillarFromTp()
-            fragment.arguments = args
+            //fragment.arguments = args
             return fragment
         }
     }

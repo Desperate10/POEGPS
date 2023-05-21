@@ -1,11 +1,13 @@
 package com.poe.poegps.feature.data.repository
 
+import android.util.Log
 import com.poe.poegps.feature.data.local.dao.ObjectsDao
 import com.poe.poegps.feature.data.mapper.toDbModel
 import com.poe.poegps.feature.data.mapper.toDomainModel
+import com.poe.poegps.feature.data.mapper.toLinePillarDbModel
 import com.poe.poegps.feature.data.mapper.toPsDbModel
-import com.poe.poegps.feature.data.remote.model.LoginRequest
 import com.poe.poegps.feature.data.remote.api.ObjectsApi
+import com.poe.poegps.feature.data.remote.model.LoginRequest
 import com.poe.poegps.feature.data.remote.utils.apiRequestFlow
 import com.poe.poegps.feature.domain.model.Line
 import com.poe.poegps.feature.domain.model.Pillar
@@ -48,6 +50,24 @@ class ObjectsRepositoryImpl @Inject constructor(
             }
     }
 
+    override fun getLineList10(): Flow<List<Line>> {
+        return objectsDao.getLineList10()
+            .map {
+                it.map { line ->
+                    line.toDomainModel()
+                }
+            }
+    }
+
+    override fun getLineList04(): Flow<List<Line>> {
+        return objectsDao.getLineList04()
+            .map {
+                it.map { line ->
+                    line.toDomainModel()
+                }
+            }
+    }
+
     override suspend fun downloadTPs(filial: Int, token: String) {
         objectsApi.getTpObjects(filial, "Bearer $token")
             .map { tp ->
@@ -60,8 +80,13 @@ class ObjectsRepositoryImpl @Inject constructor(
             }
     }
 
-    override suspend fun getTpList(): Flow<List<Tp>> {
-        TODO("Not yet implemented")
+    override fun getTpList(): Flow<List<Tp>> {
+        return objectsDao.getTps()
+            .map { tp ->
+                tp.map {
+                    it.toDomainModel()
+                }
+            }
     }
 
     override fun searchTP(filial: String, tplnr: String): Flow<List<Tp>> {
@@ -102,19 +127,36 @@ class ObjectsRepositoryImpl @Inject constructor(
     }
 
 
-    override fun getPillars(tplnr: String): Flow<List<Pillar>> {
-        TODO("Not yet implemented")
+    override fun getPillarList(tplnr: String): Flow<List<Pillar>> {
+        return objectsDao.getPillarsByTplnr(tplnr)
+            .map { pillar ->
+                pillar.map {
+                    it.toDomainModel()
+                }
+            }
     }
 
-    override suspend fun saveCoordinatesOfLine(line: Line) {
-        TODO("Not yet implemented")
+    override fun getSavedPillars(pltxt: String): Flow<List<Pillar>> {
+        return objectsDao.getPillarsOfLine(pltxt)
+            .map { pillar ->
+                pillar.map {
+                    it.toDomainModel()
+                }
+            }
     }
 
-    override suspend fun savePillars(pillars: List<Pillar>) {
-        TODO("Not yet implemented")
+    override suspend fun savePillar(pillar: Pillar): Long {
+        return objectsDao.insertSavedPillar(pillar.toLinePillarDbModel())
+        //Log.d("testim", "savePillar: $i")
     }
 
-    override suspend fun saveCoordinatesOfTp(tp: Tp) {
-        TODO("Not yet implemented")
+    override suspend fun deletePillar(pillar: Pillar) {
+        Log.d("testim", "deletePillar: ${pillar.toLinePillarDbModel()}")
+        objectsDao.deletePillar(pillar.toLinePillarDbModel())
     }
+
+    override suspend fun getParentName(tplnr: String): String {
+        return objectsDao.getParentName(tplnr)
+    }
+
 }

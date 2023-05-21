@@ -7,7 +7,7 @@ import com.poe.poegps.app.database.DatabaseModule.dataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-class FilialManager (private val context: Context) {
+class FilialManager(private val context: Context) {
 
     companion object {
         private val FILIAL_KEY = stringPreferencesKey("filial")

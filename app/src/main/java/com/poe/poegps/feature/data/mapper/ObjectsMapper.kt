@@ -1,6 +1,7 @@
 package com.poe.poegps.feature.data.mapper
 
 import com.poe.poegps.feature.data.local.entity.Line04DbModel
+import com.poe.poegps.feature.data.local.entity.LinePillarDbModel
 import com.poe.poegps.feature.data.local.entity.PillarDbModel
 import com.poe.poegps.feature.data.local.entity.PsDbModel
 import com.poe.poegps.feature.data.local.entity.TpDbModel
@@ -12,18 +13,21 @@ import com.poe.poegps.feature.domain.model.Pillar
 import com.poe.poegps.feature.domain.model.Tp
 
 fun LineObjectsDTO.toDomainModel() = Line(
+    id = 0,
     tplnr = tplnr,
     name = pltxt,
     category = ucat
 )
 
 fun Line04DbModel.toDomainModel() = Line(
+    id = 0,
     tplnr = tplnr,
     name = name,
     category = "0,4"
 )
 
 fun TpObjectsDTO.toDomainModel() = Tp(
+    id = 0,
     tplnr = tplnr,
     name = pltxt,
     lat = lat,
@@ -50,6 +54,7 @@ fun Line.toDbModel() = Line04DbModel(
 )
 
 fun TpDbModel.toDomainModel() = Tp(
+    id= id,
     tplnr = tplnr,
     name = name,
     lat = lat,
@@ -57,16 +62,53 @@ fun TpDbModel.toDomainModel() = Tp(
 )
 
 fun PillarObjectsDTO.toDomainModel() = Pillar(
+    id = 0,
     tplnr = tplnr,
     name = pltxt,
+    parentName = "",
+    order = 0,
     wire = wire,
     lat = lat,
     lng = lng
 )
 
 fun Pillar.toDbModel() = PillarDbModel(
+    id = id,
     tplnr = tplnr,
     name = name,
+    wire = wire,
+    lat = lat,
+    lng = lng
+)
+
+fun PillarDbModel.toDomainModel() = Pillar(
+    id = id,
+    tplnr = tplnr,
+    name = name,
+    parentName = "",
+    order = 0,
+    wire = wire,
+    lat = lat,
+    lng = lng
+)
+
+fun LinePillarDbModel.toDomainModel() = Pillar(
+    id = id,
+    tplnr = tplnr,
+    name = name,
+    parentName = parentName,
+    order = order,
+    wire = wire,
+    lat = lat,
+    lng = lng
+)
+
+fun Pillar.toLinePillarDbModel() = LinePillarDbModel(
+    id = id,
+    tplnr = tplnr,
+    name = name,
+    parentName = parentName,
+    order = order,
     wire = wire,
     lat = lat,
     lng = lng

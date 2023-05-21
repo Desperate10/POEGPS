@@ -25,7 +25,7 @@ class OprAdapter : ListAdapter<OprDisplayable, OprViewHolder>(OprDiffUtil){
             addOpr.setOnClickListener {
                 onOprClickListener?.onTakeCoordinatesClick(oprItem)
             }
-            root.setOnLongClickListener {
+            textViews.setOnLongClickListener {
                 onOprClickListener?.onLongClick(oprItem)
                 true
             }

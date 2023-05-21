@@ -1,29 +1,105 @@
 package com.poe.poegps.feature.presentation.screens.editor
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.poe.poegps.feature.domain.repository.ObjectsRepository
+import com.poe.poegps.feature.presentation.mapper.toDomainModel
+import com.poe.poegps.feature.presentation.mapper.toObjectDisplayable
+import com.poe.poegps.feature.presentation.mapper.toOprDisplayable
+import com.poe.poegps.feature.presentation.model.ObjectDisplayable
+import com.poe.poegps.feature.presentation.model.OprDisplayable
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.forEach
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import java.util.ArrayList
 import javax.inject.Inject
 
 @HiltViewModel
 class EditorViewModel @Inject constructor(
-    private val repository: ObjectsRepository
-): ViewModel() {
+    private val repository: ObjectsRepository,
+    private val savedStateHandle: SavedStateHandle
+) : ViewModel() {
 
-    //функция сохранения опор
-    //fun saveOprList(list: List<Opr>) = repository.saveOprList(list)
+    private val args by lazy { EditorFragmentArgs.fromSavedStateHandle(savedStateHandle) }
 
-    //функция сохранения линии
-    //fun saveLine(lineName: String, tplnr: String, list: List<Opr>) = repository.saveLine(lineName, tplnr, list)
+    private val _oprDisplayable = MutableStateFlow<List<OprDisplayable>>(emptyList())
+    val oprDisplayable = _oprDisplayable
 
-    //функция сохранения ТП
-    //fun saveTp(tplnr: String, lat: String, lng: String) = repository.saveTp(tplnr, lat, lng)
+    private val _parentObjectName = MutableStateFlow<String>("")
+    val parentObjectName = _parentObjectName
 
-    //функция сохранения ПС
-    //fun savePs(tplnr: String, lat: String, lng: String) = repository.savePs(tplnr, lat, lng)
+    init {
+        viewModelScope.launch {
+            repository.getSavedPillars(args.pltxt).collectLatest { list ->
+                _oprDisplayable.value = list.map { opr -> opr.toOprDisplayable() }
+            }
+        }
+    }
 
-    //функция получения списка опор по tplnr
-    //fun getOprList(tplnr: String) = repository.getOprList(tplnr)
+    fun getPillarList(tplnr: String) =
+        repository.getPillarList(tplnr).map { list ->
+            list.map { opr -> opr.toOprDisplayable() }
+        }
+
+    fun getLineList10() =
+        repository.getLineList10().map { list ->
+            list.map { line -> line.toObjectDisplayable() }
+    }
+
+    fun getLineList04() =
+        repository.getLineList04().map { list ->
+            list.map { line -> line.toObjectDisplayable() }
+        }
+
+    fun getTpList() =
+        repository.getTpList().map { list ->
+            list.map { tp -> tp.toObjectDisplayable() }
+        }
+
+    fun addPillarToDisplay(obj: OprDisplayable) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.savePillar(obj.toDomainModel())
+        }
+    }
+
+    fun createOtp(pillar: OprDisplayable?) {
+
+    }
+
+    fun clearCoord(pillar: OprDisplayable?) {
+        val pillarNew = pillar?.copy(lat = "0.0", lng = "0.0")
+        viewModelScope.launch(Dispatchers.IO){
+            pillarNew?.toDomainModel()?.let { repository.savePillar(it) }
+        }
+    }
+
+    fun deleteOpr(pillar: OprDisplayable?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            pillar?.toDomainModel()?.let { repository.deletePillar(it) }
+        }
+    }
+
+    fun getParentName(tplnr: String) {
+        viewModelScope.launch {
+            _parentObjectName.value = repository.getParentName(tplnr)
+        }
+    }
+
+    /*fun getLineList10() {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getLineList10().collectLatest {
+                _lineList10.emit(it.map { opr -> opr.toObjectDisplayable() })
+            }
+        }
+    }*/
 
     //функция получения списка ТП или ПС по конкретной категории напряжения(10 или 0.4)
     //fun getTpList(category: String) = repository.getTpList(category)

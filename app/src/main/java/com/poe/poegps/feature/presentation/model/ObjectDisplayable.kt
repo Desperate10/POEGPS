@@ -5,6 +5,11 @@ import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class ObjectDisplayable(
+    val id: Int,
     val tplnr: String,
     val name: String
-) : Parcelable
+) : Parcelable {
+    override fun toString(): String {
+        return "$tplnr $name"
+    }
+}

@@ -20,11 +20,16 @@ interface ObjectsRepository {
     //Получение линий из БД
     fun searchLine(tplnr: String): Flow<List<Line>>
 
+    //Получение списка линий по категории
+    fun getLineList10(): Flow<List<Line>>
+
+    fun getLineList04(): Flow<List<Line>>
+
     //Получение списка ТП из апи
     suspend fun downloadTPs(filial: Int, token: String)
 
     //Получение списка ТП из БД
-    suspend fun getTpList(): Flow<List<Tp>>
+    fun getTpList(): Flow<List<Tp>>
 
     //Получение ТП из БД по клику
     fun searchTP(filial: String, tplnr: String): Flow<List<Tp>>
@@ -36,11 +41,14 @@ interface ObjectsRepository {
 
     suspend fun downloadPillars(filial: Int, token: String)
 
-    fun getPillars(tplnr: String): Flow<List<Pillar>>
+    fun getPillarList(tplnr: String): Flow<List<Pillar>>
 
-    suspend fun saveCoordinatesOfLine(line: Line)
+    fun getSavedPillars(pltxt: String): Flow<List<Pillar>>
 
-    suspend fun savePillars(pillars: List<Pillar>)
+    suspend fun savePillar(pillar: Pillar): Long
 
-    suspend fun saveCoordinatesOfTp(tp: Tp)
+    suspend fun deletePillar(pillar: Pillar)
+
+    suspend fun getParentName(tplnr: String): String
+
 }

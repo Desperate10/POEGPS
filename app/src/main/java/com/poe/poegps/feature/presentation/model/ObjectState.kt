@@ -1,6 +1,4 @@
-package com.poe.poegps.feature.data.remote.model
-
-import com.poe.poegps.feature.presentation.model.ObjectDisplayable
+package com.poe.poegps.feature.presentation.model
 
 data class ObjectState(
     val loadState: LoadState,
