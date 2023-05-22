@@ -43,7 +43,7 @@ class OnPillarLongClickDialogFragment: DialogFragment() {
                     REQUEST_KEY,
                     bundleOf(
                         PILLAR to pillar,
-                        KEY_BUTTON to options[item].toString())
+                        KEY_BUTTON to options[item])
                 )
             }
             .setCancelable(true)

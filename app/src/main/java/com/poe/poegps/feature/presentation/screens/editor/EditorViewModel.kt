@@ -77,20 +77,20 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    fun createOtp(pillar: OprDisplayable) {
+    fun createOtp(pillarStart: OprDisplayable, pillarNext: OprDisplayable) {
         viewModelScope.launch {
-            val lineName = "Відп. від оп. ${pillar.name} до оп."
-            setLineName(lineName)
-            val pillarToSave = pillar.copy(parentName = lineName)
-            repository.savePillar(pillarToSave.toDomainModel())
-            repository.saveLine(ObjectDisplayable(tplnr = pillar.tplnr, name = lineName).toLineDomainModel())
+            repository.copyPillarForOtp(pillarStart.copy(id = 0).toDomainModel())
+            repository.savePillar(pillarNext.toDomainModel())
+            repository.saveLine(ObjectDisplayable(tplnr = pillarStart.tplnr, name = pillarStart.parentName).toLineDomainModel())
         }
     }
 
     fun clearCoord(pillar: OprDisplayable?) {
-        val pillarNew = pillar?.copy(lat = "0.0", lng = "0.0")
-        viewModelScope.launch(Dispatchers.IO){
-            pillarNew?.toDomainModel()?.let { repository.savePillar(it) }
+        if(pillar?.order != 1) {
+            val pillarNew = pillar?.copy(lat = "0.0", lng = "0.0")
+            viewModelScope.launch(Dispatchers.IO) {
+                pillarNew?.toDomainModel()?.let { repository.savePillar(it) }
+            }
         }
     }
 

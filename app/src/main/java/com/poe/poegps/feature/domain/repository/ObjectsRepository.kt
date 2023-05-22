@@ -32,7 +32,7 @@ interface ObjectsRepository {
     fun getTpList(): Flow<List<Tp>>
 
     //Получение ТП из БД по клику
-    fun searchTP(filial: String, tplnr: String): Flow<List<Tp>>
+    fun searchTP(tplnr: String): Flow<List<Tp>>
 
     //Получение списка ПС из апи
     suspend fun downloadPss(token: String)
@@ -46,6 +46,8 @@ interface ObjectsRepository {
     fun getSavedPillars(pltxt: String): Flow<List<Pillar>>
 
     suspend fun savePillar(pillar: Pillar): Long
+
+    suspend fun copyPillarForOtp(pillar: Pillar)
 
     suspend fun deletePillar(pillar: Pillar)
 

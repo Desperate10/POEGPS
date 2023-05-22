@@ -22,8 +22,8 @@ class OprAdapter : ListAdapter<OprDisplayable, OprViewHolder>(OprDiffUtil){
             wire.text = oprItem.wire
             lat.text = oprItem.lat
             lng.text = oprItem.lng
-            addOpr.isEnabled = lat.text == "0.0"
-            addOpr.setOnClickListener {
+            takeCoord.isEnabled = lat.text == "0.0"
+            takeCoord.setOnClickListener {
                 onOprClickListener?.onTakeCoordinatesClick(oprItem, position)
             }
             textViews.setOnLongClickListener {

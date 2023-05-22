@@ -27,15 +27,19 @@ interface ObjectsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPillar(pillar: PillarDbModel)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun copyPillarForOtp(pillar: LinePillarDbModel)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSavedPillar(pillar: LinePillarDbModel): Long
+
     @Delete
     suspend fun deletePillar(pillar: LinePillarDbModel)
 
     @Query("SELECT * FROM tp")
     fun getTps(): Flow<List<TpDbModel>>
 
-    @Query("SELECT * FROM line04 WHERE tplnr LIKE 'PO-F-20-L' || :tplnr || '%' GROUP BY name")
+    @Query("SELECT * FROM line04 WHERE tplnr LIKE '%-L' || :tplnr || '%' GROUP BY name")
     fun getLines(tplnr: String): Flow<List<Line04DbModel>>
 
     @Query("SELECT * FROM line04 WHERE name LIKE 'ПЛ%'")
@@ -50,8 +54,8 @@ interface ObjectsDao {
     @Query("SELECT * FROM pillar WHERE tplnr LIKE :tplnr")
     fun getPillarsByTplnr(tplnr: String): Flow<List<PillarDbModel>>
 
-    @Query("SELECT * FROM tp WHERE tplnr LIKE 'PO-F-' || :filial ||'-P'|| :tplnr || '%'")
-    fun getTp(filial: String, tplnr: String): Flow<List<TpDbModel>>
+    @Query("SELECT * FROM tp WHERE tplnr LIKE '%-P'|| :tplnr || '%'")
+    fun getTp(tplnr: String): Flow<List<TpDbModel>>
 
     @Query("SELECT name FROM line04 WHERE tplnr LIKE :tplnr")
     suspend fun getParentName(tplnr: String): String

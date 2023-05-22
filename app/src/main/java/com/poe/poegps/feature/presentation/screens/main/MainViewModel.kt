@@ -140,11 +140,12 @@ class MainViewModel @Inject constructor(
         _objectsList,
         coroutineErrorHandler
     ) {
-        // return@baseRequest when(spinnerObjectType.value) {
-        //     ObjectType.LINE ->
-        repository.searchLine(tplnr).map { it.map { it.toObjectDisplayable() } }
-        //     ObjectType.TP -> repository.searchTP(tplnr).map { it.map { it.toObjectDisplayable() } }
-        // }
+         //return@baseRequest when(spinnerObjectType.value) {
+          //   ObjectType.LINE ->
+                   // repository.searchLine(tplnr).map { it.map { it.toObjectDisplayable() } }
+           //  ObjectType.TP ->
+    repository.searchTP(tplnr).map { it.map { it.toObjectDisplayable() } }
+         //}
     }
 
     fun selectedObjectType(type: String) {

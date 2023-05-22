@@ -3,7 +3,6 @@ package com.poe.poegps.feature.presentation.screens.editor
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.pm.PackageManager
 import android.location.*
 import android.os.Bundle
 import android.util.Log
@@ -76,7 +75,7 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        viewModel.setLineName(args.pltxt)
+       // viewModel.setLineName(args.pltxt)
         binding.backBtn.setOnClickListener(this)
         setupPillarAdapter()
         collectViewModel()
@@ -240,10 +239,10 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
             pillar, which ->
             when (which) {
                 getString(R.string.createOtp) -> {
+                    Log.d("EditorFragment", "createOtp")
                     val dialog =  OnCreateOtpDialogFragment.newInstance(pillar)
+                    dialog.setListener(this)
                     dialog.show(childFragmentManager, "CreateOtpaykaDialogFragment")
-                    viewModel.createOtp(pillar)
-
                 }
                 getString(R.string.clear_coord) -> {
                     viewModel.clearCoord(pillar)
@@ -256,8 +255,7 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
     }
 
     override fun onOtpCreated(pillarStart: OprDisplayable, pillarSecond: OprDisplayable) {
-        val lineName = "Відп. від оп. ${pillarStart.name} до оп. ${pillarSecond.name}"
-
+        viewModel.createOtp(pillarStart, pillarSecond)
     }
 
     @SuppressLint("MissingPermission")

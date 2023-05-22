@@ -1,6 +1,7 @@
 package com.poe.poegps.feature.presentation.screens.editor.dialog
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -70,9 +71,11 @@ class OnCreateOtpDialogFragment: DialogFragment() {
             val spinnerValue = wireSpinner.selectedItem.toString()
 
             val lineName = "Відп. від оп. ${opr!!.name} до оп. $oprNameTxt"
+            viewModel.setLineName(lineName)
 
             val oldPillar = opr!!.copy(parentName = lineName, order = 1)
             val pillar = OprDisplayable(tplnr = opr!!.tplnr, name = oprNameTxt, parentName = lineName, wire = spinnerValue, order = 2)
+            Log.d("testim", "$oldPillar $pillar")
             listener?.onOtpCreated(oldPillar, pillar)
 
             dismiss()
@@ -85,10 +88,10 @@ class OnCreateOtpDialogFragment: DialogFragment() {
     companion object {
         private const val PILLAR = "pillar"
 
-        fun newInstance(opr: OprDisplayable): AddPillarDialogFragment {
+        fun newInstance(opr: OprDisplayable): OnCreateOtpDialogFragment {
             val args = Bundle()
             args.putParcelable(PILLAR, opr)
-            val fragment = AddPillarDialogFragment()
+            val fragment = OnCreateOtpDialogFragment()
             fragment.arguments = args
             return fragment
         }

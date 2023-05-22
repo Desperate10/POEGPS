@@ -89,8 +89,8 @@ class ObjectsRepositoryImpl @Inject constructor(
             }
     }
 
-    override fun searchTP(filial: String, tplnr: String): Flow<List<Tp>> {
-        return objectsDao.getTp(filial, tplnr)
+    override fun searchTP(tplnr: String): Flow<List<Tp>> {
+        return objectsDao.getTp(tplnr)
             .map { tp ->
                 tp.map {
                     it.toDomainModel()
@@ -147,7 +147,11 @@ class ObjectsRepositoryImpl @Inject constructor(
 
     override suspend fun savePillar(pillar: Pillar): Long {
         return objectsDao.insertSavedPillar(pillar.toLinePillarDbModel())
-        //Log.d("testim", "savePillar: $i")
+    }
+
+    override suspend fun copyPillarForOtp(pillar: Pillar) {
+        Log.d("testim", "copyPillarForOtp: ${pillar.toLinePillarDbModel()}")
+        return objectsDao.copyPillarForOtp(pillar.toLinePillarDbModel())
     }
 
     override suspend fun deletePillar(pillar: Pillar) {

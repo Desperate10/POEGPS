@@ -37,7 +37,7 @@ class PillarLongClickDialogFragment: DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         view.findViewById<Button>(R.id.createOtp).setOnClickListener {
-            pillar?.let { it1 -> viewModel.createOtp(it1) }
+            //pillar?.let { it1 -> viewModel.createOtp(it1) }
             dismiss()
         }
         view.findViewById<Button>(R.id.clear_coord).setOnClickListener {
