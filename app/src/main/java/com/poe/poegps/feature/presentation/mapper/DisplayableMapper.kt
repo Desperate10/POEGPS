@@ -18,6 +18,15 @@ fun Tp.toObjectDisplayable() = ObjectDisplayable(
     name = name
 )
 
+fun Tp.toOprDisplayable() = OprDisplayable(
+    id = id,
+    name = name,
+    parentName = "",
+    lat = lat,
+    lng = lng,
+    tplnr = tplnr
+)
+
 fun Pillar.toOprDisplayable() = OprDisplayable(
     id = id,
     name = name,
@@ -38,4 +47,17 @@ fun OprDisplayable.toDomainModel() = Pillar(
     wire = wire,
     lat = lat,
     lng = lng
+)
+
+fun ObjectDisplayable.toOprDisplayable() = OprDisplayable(
+    name = name,
+    parentName = "",
+    order = 1,
+    tplnr = tplnr
+)
+
+fun ObjectDisplayable.toLineDomainModel() = Line(
+    id = id,
+    tplnr = tplnr,
+    name = name
 )

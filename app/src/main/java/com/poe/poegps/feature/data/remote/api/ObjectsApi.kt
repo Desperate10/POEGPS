@@ -19,6 +19,10 @@ interface ObjectsApi {
     @POST("authenticate")
     suspend fun auth(@Body loginRequest: LoginRequest): Response<LoginResponse>
 
+    @Headers("Content-Type: application/json;charset=UTF-8")
+    @POST("tokencheck")
+    suspend fun checkTokenValidity(@Body token: String): Response<Boolean>
+
     @GET("tp")
     suspend fun getTpObjects(@Query("filial") filial: Int, @Header("Authorization") token: String): List<TpObjectsDTO>
 

@@ -151,12 +151,19 @@ class ObjectsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deletePillar(pillar: Pillar) {
-        Log.d("testim", "deletePillar: ${pillar.toLinePillarDbModel()}")
         objectsDao.deletePillar(pillar.toLinePillarDbModel())
     }
 
     override suspend fun getParentName(tplnr: String): String {
         return objectsDao.getParentName(tplnr)
+    }
+
+    override fun checkTokenValidity(token: String) = apiRequestFlow {
+        objectsApi.checkTokenValidity("Bearer $token")
+    }
+
+    override suspend fun saveLine(line: Line) {
+        objectsDao.insertOtpaika(line.toDbModel())
     }
 
 }

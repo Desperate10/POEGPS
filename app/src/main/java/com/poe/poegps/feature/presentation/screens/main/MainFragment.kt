@@ -1,5 +1,7 @@
 package com.poe.poegps.feature.presentation.screens.main
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import android.view.*
@@ -14,18 +16,20 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.permissionx.guolindev.PermissionX
 import com.poe.poegps.R
 import com.poe.poegps.databinding.FragmentMainBinding
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.presentation.CoroutinesErrorHandler
-import com.poe.poegps.feature.presentation.screens.main.dialog.LoginDialogFragment
-import com.poe.poegps.feature.presentation.screens.main.dialog.SearchObjectDialog
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.screens.main.adapter.ObjectsAdapter
+import com.poe.poegps.feature.presentation.screens.main.dialog.SearchObjectDialog
 import com.poe.poegps.feature.presentation.screens.main.spinner.ObjectsSpinnerAdapter
 import dagger.hilt.android.AndroidEntryPoint
 import gromov.ramdomusertestcase.core.extension.autoCleaned
 import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
 class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvider,
@@ -63,17 +67,17 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
 
     private fun collectViewModel() {
         collectLifecycleFlow(viewModel.token) { token ->
-            if (token.isNotEmpty()) {
-                Log.d("testim", "token: $token")
-            } else {
-                //LoginDialogFragment().show(childFragmentManager, "login")
-                viewModel.authorization("poegis",
-                    "123Qwerty",
-                    object : CoroutinesErrorHandler {
-                        override fun onError(message: String) {
-                            Toast.makeText(context, "Error! $message", Toast.LENGTH_SHORT).show()
-                        }
-                    })
+            if (token.isEmpty()) {
+                withContext(Dispatchers.IO) {
+                    viewModel.authorization("poegis",
+                        "123Qwerty",
+                        object : CoroutinesErrorHandler {
+                            override fun onError(message: String) {
+                                Toast.makeText(context, "Error! $message", Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+                        })
+                }
             }
         }
         collectLifecycleFlow(viewModel.loginResponse) { loginResponse ->
@@ -96,14 +100,13 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
             }
         }
         collectLifecycleFlow(viewModel.objectsList) { objectsList ->
-            Log.d("testim", "objectsList: $objectsList")
             adapter.submitList(objectsList)
+            Log.d("testim", "objectsList: $objectsList")
+            Log.d("testim", "objectsList: ${adapter.itemCount}")
         }
         collectLifecycleFlow(viewModel.filial) { filial ->
             if (filial == "00") {
                 chooseYourFilialDialog()
-            } else {
-                Log.d("testim", "filial: $filial")
             }
         }
     }
@@ -234,5 +237,37 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
         super.onDestroyView()
         requireActivity().removeMenuProvider(this)
     }
+
+    @SuppressLint("InlinedApi")
+    private fun requestPermission() {
+        PermissionX.init(this)
+            .permissions(
+                Manifest.permission.POST_NOTIFICATIONS
+            )
+            .onExplainRequestReason { scope, deniedList ->
+                scope.showRequestReasonDialog(
+                    deniedList,
+                    getString(R.string.explain_permission_text),
+                    getString(R.string.yes), getString(R.string.cancel)
+                )
+            }
+            .onForwardToSettings { scope, deniedList ->
+                scope.showForwardToSettingsDialog(
+                    deniedList,
+                    getString(R.string.forward_to_settings_text),
+                    getString(R.string.yes), getString(R.string.cancel)
+                )
+            }
+            .request { allGranted, _, deniedList ->
+                if (!allGranted) {
+                    Toast.makeText(
+                        requireContext(),
+                        "${getString(R.string.denied_permissions_text)} $deniedList",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+    }
+
 
 }

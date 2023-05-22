@@ -38,10 +38,10 @@ interface ObjectsDao {
     @Query("SELECT * FROM line04 WHERE tplnr LIKE 'PO-F-20-L' || :tplnr || '%' GROUP BY name")
     fun getLines(tplnr: String): Flow<List<Line04DbModel>>
 
-    @Query("SELECT * FROM line04")
+    @Query("SELECT * FROM line04 WHERE name LIKE 'ПЛ%'")
     fun getLineList10(): Flow<List<Line04DbModel>>
 
-    @Query("SELECT * FROM line04")
+    @Query("SELECT * FROM line04 WHERE name LIKE 'ПЛ%'")
     fun getLineList04(): Flow<List<Line04DbModel>>
 
     @Query("SELECT * FROM line_pillar WHERE parentName LIKE :pltxt")
@@ -55,4 +55,7 @@ interface ObjectsDao {
 
     @Query("SELECT name FROM line04 WHERE tplnr LIKE :tplnr")
     suspend fun getParentName(tplnr: String): String
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOtpaika(otpaika: Line04DbModel)
 }

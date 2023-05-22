@@ -15,6 +15,7 @@ import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -44,6 +45,9 @@ class MainViewModel @Inject constructor(
     private val _state = MutableStateFlow<ObjectState>(ObjectState.initial)
     val state: StateFlow<ObjectState> = _state
 
+    private val _tokenValidity = MutableStateFlow<ApiResponse<Boolean>>(ApiResponse.Loading)
+    val tokenValidity = _tokenValidity
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             tokenManager.getToken().collect {
@@ -61,6 +65,14 @@ class MainViewModel @Inject constructor(
             }
         }
     }
+
+    /*fun checkTokenValidity(
+        coroutineErrorHandler: CoroutinesErrorHandler
+    ) = viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, error ->
+        repository.checkTokenValidity(token.value ?: "")
+    }) {
+        _tokenValidity.value = repository.checkTokenValidity(token.value ?: "")
+    }*/
 
     fun loadObjectsToDb() {
         viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, error ->

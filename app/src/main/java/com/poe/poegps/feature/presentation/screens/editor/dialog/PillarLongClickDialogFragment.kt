@@ -37,7 +37,7 @@ class PillarLongClickDialogFragment: DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         view.findViewById<Button>(R.id.createOtp).setOnClickListener {
-            viewModel.createOtp(pillar)
+            pillar?.let { it1 -> viewModel.createOtp(it1) }
             dismiss()
         }
         view.findViewById<Button>(R.id.clear_coord).setOnClickListener {
@@ -64,6 +64,7 @@ class PillarLongClickDialogFragment: DialogFragment() {
     }
 
     companion object {
+        private const val TAG = "PillarLongClickDialogFragment"
         private const val OBJ = "pillar"
 
         fun newInstance(

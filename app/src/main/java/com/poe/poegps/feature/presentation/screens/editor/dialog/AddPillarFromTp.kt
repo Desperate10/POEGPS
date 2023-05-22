@@ -11,6 +11,7 @@ import android.widget.Spinner
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import com.poe.poegps.R
+import com.poe.poegps.feature.presentation.mapper.toOprDisplayable
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.OprDisplayable
 import com.poe.poegps.feature.presentation.screens.editor.EditorViewModel
@@ -19,7 +20,9 @@ import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 
 @AndroidEntryPoint
 class AddPillarFromTp: DialogFragment() {
-    private var tps: ArrayList<ObjectDisplayable>? = null
+    private lateinit var pltxt: String
+    private lateinit var tplnr: String
+    private var order: Int = 0
     private val viewModel by viewModels<EditorViewModel>(ownerProducer = { requireParentFragment() })
 
     interface Listener {
@@ -35,7 +38,9 @@ class AddPillarFromTp: DialogFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
-            tps = it.getParcelableArrayList(TPS)
+            pltxt = it.getString(PLTXT).toString()
+            tplnr = it.getString(TPLNR).toString()
+            order = it.getInt(ORDER, 0)
         }
     }
 
@@ -62,7 +67,17 @@ class AddPillarFromTp: DialogFragment() {
 
         view.findViewById<Button>(R.id.choose).setOnClickListener {
             val spinnerValue = tpSpinner.selectedItem as OprDisplayable
-            listener?.onSavedTpAdded(spinnerValue)
+            val pillar = OprDisplayable(
+                id = 0,
+                tplnr = tplnr,
+                name = spinnerValue.name,
+                parentName = pltxt,
+                order = order,
+                wire = spinnerValue.wire,
+                lat = spinnerValue.lat,
+                lng = spinnerValue.lng
+            )
+            listener?.onSavedTpAdded(pillar)
             dismiss()
         }
         view.findViewById<Button>(R.id.cancel).setOnClickListener {
@@ -71,13 +86,17 @@ class AddPillarFromTp: DialogFragment() {
     }
 
     companion object {
-        private const val TPS = "tps"
+        private const val PLTXT = "pltxt"
+        private const val TPLNR = "tplnr"
+        private const val ORDER = "order"
 
-        fun newInstance(): AddPillarFromTp {
-            //val args = Bundle()
-            //args.putParcelableArrayList(TPS, tps)
+        fun newInstance(pltxt: String, tplnr: String, order:Int): AddPillarFromTp {
+            val args = Bundle()
+            args.putString(PLTXT, pltxt)
+            args.putString(TPLNR, tplnr)
+            args.putInt(ORDER, order)
             val fragment = AddPillarFromTp()
-            //fragment.arguments = args
+            fragment.arguments = args
             return fragment
         }
     }

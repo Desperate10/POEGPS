@@ -11,6 +11,7 @@
         android:layout_height="match_parent"
         android:layout_weight="0.3"
         android:paddingStart="8dp"
+        android:textSize="16dp"
         android:gravity="center|start"
         tools:text="Тех.місце" />
 
@@ -19,7 +20,8 @@
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="0.7"
-        android:paddingStart="8dp"
         android:gravity="center|start"
+        android:paddingStart="8dp"
+        android:textSize="16dp"
         tools:text="Назва об'єкта" />
 </LinearLayout>

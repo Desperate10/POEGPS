@@ -10,12 +10,19 @@
     <Spinner
         android:id="@+id/object_spinner"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="50dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:popupElevation="3dp"
+        android:background="@drawable/spinner_bg"
+        android:stateListAnimator="@drawable/spinner_sla"
         android:minHeight="40dp"/>
 
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/objects_rv"
+        android:layout_margin="8dp"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 </LinearLayout>

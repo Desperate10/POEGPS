@@ -1,27 +1,25 @@
 package com.poe.poegps.feature.presentation.screens.editor
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.poe.poegps.feature.domain.repository.ObjectsRepository
 import com.poe.poegps.feature.presentation.mapper.toDomainModel
+import com.poe.poegps.feature.presentation.mapper.toLineDomainModel
 import com.poe.poegps.feature.presentation.mapper.toObjectDisplayable
 import com.poe.poegps.feature.presentation.mapper.toOprDisplayable
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.OprDisplayable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.forEach
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.ArrayList
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class EditorViewModel @Inject constructor(
     private val repository: ObjectsRepository,
@@ -29,6 +27,9 @@ class EditorViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val args by lazy { EditorFragmentArgs.fromSavedStateHandle(savedStateHandle) }
+
+    private val _lineName = MutableStateFlow<String>(args.pltxt)
+    val lineName = _lineName
 
     private val _oprDisplayable = MutableStateFlow<List<OprDisplayable>>(emptyList())
     val oprDisplayable = _oprDisplayable
@@ -38,10 +39,16 @@ class EditorViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            repository.getSavedPillars(args.pltxt).collectLatest { list ->
+            _lineName.flatMapLatest {
+                repository.getSavedPillars(it)
+            }.collectLatest { list ->
                 _oprDisplayable.value = list.map { opr -> opr.toOprDisplayable() }
             }
         }
+    }
+
+    fun setLineName(lineName: String) {
+        _lineName.value = lineName
     }
 
     fun getPillarList(tplnr: String) =
@@ -61,7 +68,7 @@ class EditorViewModel @Inject constructor(
 
     fun getTpList() =
         repository.getTpList().map { list ->
-            list.map { tp -> tp.toObjectDisplayable() }
+            list.map { tp -> tp.toOprDisplayable() }
         }
 
     fun addPillarToDisplay(obj: OprDisplayable) {
@@ -70,8 +77,14 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    fun createOtp(pillar: OprDisplayable?) {
-
+    fun createOtp(pillar: OprDisplayable) {
+        viewModelScope.launch {
+            val lineName = "Відп. від оп. ${pillar.name} до оп."
+            setLineName(lineName)
+            val pillarToSave = pillar.copy(parentName = lineName)
+            repository.savePillar(pillarToSave.toDomainModel())
+            repository.saveLine(ObjectDisplayable(tplnr = pillar.tplnr, name = lineName).toLineDomainModel())
+        }
     }
 
     fun clearCoord(pillar: OprDisplayable?) {
@@ -90,6 +103,12 @@ class EditorViewModel @Inject constructor(
     fun getParentName(tplnr: String) {
         viewModelScope.launch {
             _parentObjectName.value = repository.getParentName(tplnr)
+        }
+    }
+
+    fun saveCoordinates(opr: OprDisplayable) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.savePillar(opr.toDomainModel())
         }
     }
 

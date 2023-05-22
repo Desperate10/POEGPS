@@ -21,7 +21,6 @@ import dagger.hilt.android.AndroidEntryPoint
 class AddPillarDialogFragment : DialogFragment() {
 
     private lateinit var tplnr: String
-    //private lateinit var wire: Array<String>
     private var order: Int = 0
     private val viewModel by viewModels<EditorViewModel>(ownerProducer = { requireParentFragment() })
 
@@ -40,7 +39,6 @@ class AddPillarDialogFragment : DialogFragment() {
         arguments?.let {
             tplnr = it.getString(TPLNR, "")
             order = it.getInt(ORDER, 0)
-           // wire = it.getStringArray(WIRE) ?: arrayOf()
         }
     }
 
@@ -75,11 +73,13 @@ class AddPillarDialogFragment : DialogFragment() {
 
             dismiss()
         }
+        view.findViewById<Button>(R.id.cancel).setOnClickListener {
+            dismiss()
+        }
     }
 
     companion object {
         private const val TPLNR = "tplnr"
-        private const val WIRE = "wire"
         private const val ORDER = "order"
 
         fun newInstance(tplnr: String, order: Int): AddPillarDialogFragment {

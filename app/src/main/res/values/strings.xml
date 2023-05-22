@@ -107,14 +107,14 @@
     <string name="gps_sat_val">00</string>
     <string name="gps_sat_div">-</string>
     <string name="gps_accuracy">000.0</string>
-    <string name="gps_lat00">00°00\'00.00\"N</string>
-    <string name="gps_lng00">00°00\'00.00\"E</string>
+    <string name="gps_lat00">0.0</string>
+    <string name="gps_lng00">0.0</string>
     <string name="take">Зняти</string>
     <string name="search">Пошук</string>
     <string name="download">Завантажити</string>
     <string name="deleteOtp">Видалити відпайку</string>
     <string name="sendObject">Відправити об\'єкт</string>
-    <string name="write_login_hint">Логин</string>
+    <string name="write_login_hint">Логін</string>
     <string name="write_password_hint">Пароль</string>
     <string name="to_choose">Вибрати</string>
     <string name="menu_add_saved">Створити існуючу опору</string>
@@ -129,4 +129,12 @@
     <string name="clear_coord">Видалити координати опори</string>
     <string name="deleteOpr">Видалити опору</string>
     <string name="createOtp">Створити відпайку</string>
+    <string name="explain_permission_text">Базовий функціонал оснований на цих дозволах</string>
+    <string name="yes">Так</string>
+    <string name="forward_to_settings_text">Вам потрібно дати необхідні дозволи в налаштуваннях вручну</string>
+    <string name="no">Ні</string>
+    <string name="denied_permissions_text">"Ці дозволи відхилені: "</string>
+    <string name="choose_action">Виберіть дію</string>
+    <string name="create_otp">Створити відпайку</string>
+    <string name="delete_opr">Видалити опору</string>
 </resources>

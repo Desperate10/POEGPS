@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.EditText
 import android.widget.Spinner
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
@@ -14,18 +15,15 @@ import com.poe.poegps.R
 import com.poe.poegps.feature.presentation.model.OprDisplayable
 import com.poe.poegps.feature.presentation.screens.editor.EditorViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 
 @AndroidEntryPoint
-class ChoosePillarDialogFragment : DialogFragment() {
+class OnCreateOtpDialogFragment: DialogFragment() {
 
-    private lateinit var tplnr: String
-    private lateinit var newTplnr: String
-    private var order: Int = 0
     private val viewModel by viewModels<EditorViewModel>(ownerProducer = { requireParentFragment() })
+    private var opr: OprDisplayable? = null
 
     interface Listener {
-        fun onPillarChoose(pillar: OprDisplayable)
+        fun onOtpCreated(pillarStart: OprDisplayable, pillarSecond: OprDisplayable)
     }
 
     private var listener: Listener? = null
@@ -37,9 +35,7 @@ class ChoosePillarDialogFragment : DialogFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
-            order = it.getInt(ORDER, 0)
-            tplnr = it.getString(TPLNR, "")
-            newTplnr = it.getString(NEW_TPLNR, "")
+            opr = it.getParcelable(PILLAR)
         }
     }
 
@@ -56,41 +52,29 @@ class ChoosePillarDialogFragment : DialogFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val view = inflater.inflate(R.layout.choose_opr, container, false)
-        val wireSpinner = view.findViewById<Spinner>(R.id.wireSpinner)
-
-        wireSpinner.adapter =
-            ArrayAdapter(requireActivity(),
-                android.R.layout.simple_list_item_1,
-                requireContext().resources.getStringArray(R.array.wires)
-            )
+        val view = inflater.inflate(R.layout.create_opr, container, false)
+        val spinner = view.findViewById<Spinner>(R.id.wireSpinner)
+        spinner.adapter = ArrayAdapter(requireActivity(), android.R.layout.simple_list_item_1, requireContext().resources.getStringArray(
+            R.array.wires))
         return view
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val coordSpinner = view.findViewById<Spinner>(R.id.coordSpinner)
-        collectLifecycleFlow(viewModel.getPillarList(tplnr)) {
-            coordSpinner.adapter = ArrayAdapter(requireActivity(), android.R.layout.simple_list_item_1, it)
-        }
+        val oprName = view.findViewById<EditText>(R.id.oprName)
         val wireSpinner = view.findViewById<Spinner>(R.id.wireSpinner)
 
         view.findViewById<Button>(R.id.save).setOnClickListener {
-            val pillarSpinner = coordSpinner.selectedItem as OprDisplayable
+            val oprNameTxt = oprName.text.toString()
             val spinnerValue = wireSpinner.selectedItem.toString()
 
-            val pillar = OprDisplayable(
-                id = 0,
-                tplnr = newTplnr,
-                name = pillarSpinner.name,
-                parentName = viewModel.parentObjectName.value,
-                order = order,
-                wire = spinnerValue,
-                lat = pillarSpinner.lat,
-                lng = pillarSpinner.lng
-            )
-            listener?.onPillarChoose(pillar)
+            val lineName = "Відп. від оп. ${opr!!.name} до оп. $oprNameTxt"
+
+            val oldPillar = opr!!.copy(parentName = lineName, order = 1)
+            val pillar = OprDisplayable(tplnr = opr!!.tplnr, name = oprNameTxt, parentName = lineName, wire = spinnerValue, order = 2)
+            listener?.onOtpCreated(oldPillar, pillar)
+
             dismiss()
         }
         view.findViewById<Button>(R.id.cancel).setOnClickListener {
@@ -99,22 +83,15 @@ class ChoosePillarDialogFragment : DialogFragment() {
     }
 
     companion object {
-        private const val TPLNR = "tplnr"
-        private const val NEW_TPLNR = "newtplnr"
-        private const val ORDER = "order"
+        private const val PILLAR = "pillar"
 
-        fun newInstance(
-            tplnr: String,
-            newTplnr: String,
-            order: Int
-        ): ChoosePillarDialogFragment {
+        fun newInstance(opr: OprDisplayable): AddPillarDialogFragment {
             val args = Bundle()
-            args.putString(TPLNR, tplnr)
-            args.putString(NEW_TPLNR, newTplnr)
-            args.putInt(ORDER, order)
-            val fragment = ChoosePillarDialogFragment()
+            args.putParcelable(PILLAR, opr)
+            val fragment = AddPillarDialogFragment()
             fragment.arguments = args
             return fragment
         }
     }
+
 }

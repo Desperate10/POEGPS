@@ -51,4 +51,8 @@ interface ObjectsRepository {
 
     suspend fun getParentName(tplnr: String): String
 
+    fun checkTokenValidity(token: String): Flow<ApiResponse<Boolean>>
+
+    suspend fun saveLine(line: Line)
+
 }

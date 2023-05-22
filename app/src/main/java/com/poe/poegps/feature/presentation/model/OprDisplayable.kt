@@ -8,9 +8,13 @@ data class OprDisplayable(
     val id: Int = 0,
     val tplnr: String,
     val name: String,
-    val parentName: String,
+    var parentName: String,
     val order: Int = 0,
-    val lat: String= "0.0",
-    val lng: String= "0.0",
+    var lat: String= "0.0",
+    var lng: String= "0.0",
     val wire: String=""
-) : Parcelable
+) : Parcelable {
+    override fun toString(): String {
+        return name
+    }
+}

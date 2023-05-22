@@ -7,7 +7,7 @@ import com.poe.poegps.feature.presentation.model.OprDisplayable
 object ObjectsDiffUtil: DiffUtil.ItemCallback<ObjectDisplayable>() {
 
     override fun areItemsTheSame(oldItem: ObjectDisplayable, newItem: ObjectDisplayable): Boolean {
-        return oldItem.name == newItem.name
+        return oldItem.id == newItem.id
     }
 
     override fun areContentsTheSame(

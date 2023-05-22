@@ -15,15 +15,13 @@ import com.poe.poegps.feature.domain.model.Tp
 fun LineObjectsDTO.toDomainModel() = Line(
     id = 0,
     tplnr = tplnr,
-    name = pltxt,
-    category = ucat
+    name = pltxt
 )
 
 fun Line04DbModel.toDomainModel() = Line(
     id = 0,
     tplnr = tplnr,
-    name = name,
-    category = "0,4"
+    name = name
 )
 
 fun TpObjectsDTO.toDomainModel() = Tp(

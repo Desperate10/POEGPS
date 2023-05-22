@@ -28,7 +28,7 @@
         android:layout_marginTop="4dp"
         android:layout_weight="1"
         android:longClickable="true"
-        android:onClick="equals"
+        android:onClick="@null"
         android:orientation="vertical">
 
         <TextView

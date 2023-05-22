@@ -1,40 +1,70 @@
 package com.poe.poegps.feature.presentation.screens.editor
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.*
 import android.os.Bundle
 import android.util.Log
 import android.view.*
 import android.view.View.OnClickListener
+import android.widget.Toast
+import androidx.core.app.ActivityCompat
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.permissionx.guolindev.PermissionX
 import com.poe.poegps.R
 import com.poe.poegps.databinding.FragmentEditorBinding
+import com.poe.poegps.feature.data.remote.utils.MyLocationListener
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.OprDisplayable
 import com.poe.poegps.feature.presentation.screens.editor.adapter.OprAdapter
 import com.poe.poegps.feature.presentation.screens.editor.dialog.*
-import com.poe.poegps.feature.presentation.screens.main.adapter.ObjectsAdapter
 import dagger.hilt.android.AndroidEntryPoint
 import gromov.ramdomusertestcase.core.extension.autoCleaned
 import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 
 @AndroidEntryPoint
-class EditorFragment : Fragment(), MenuProvider, OnClickListener,
+class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationListener,
     AddPillarDialogFragment.Listener,
     AddPillarFromSaved10.Listener,
     ChoosePillarDialogFragment.Listener,
     AddPillarFromSaved04.Listener,
     AddPillarFromTp.Listener,
-    OprAdapter.OnOprClickListener {
+    OprAdapter.OnOprClickListener,
+    OnCreateOtpDialogFragment.Listener,
+    ActivityCompat.OnRequestPermissionsResultCallback{
 
     private var binding: FragmentEditorBinding by autoCleaned()
     private var adapter: OprAdapter by autoCleaned()
     private val viewModel by viewModels<EditorViewModel>()
     private val args: EditorFragmentArgs by lazy {
         EditorFragmentArgs.fromBundle(requireArguments())
+    }
+
+    private var locationManager: LocationManager? = null
+
+    override fun onStop() {
+        super.onStop()
+        if (locationManager != null) {
+            locationManager?.removeUpdates(this)
+            locationManager = null
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        checkPermissions()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        checkEnabled()
     }
 
     override fun onCreateView(
@@ -46,16 +76,22 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener,
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        binding.lineName.text = args.pltxt
-        viewModel.getParentName(args.tplnr)
-        requireActivity().addMenuProvider(this)
+        viewModel.setLineName(args.pltxt)
+        binding.backBtn.setOnClickListener(this)
         setupPillarAdapter()
         collectViewModel()
+        viewModel.getParentName(args.tplnr)
+        requireActivity().addMenuProvider(this)
+        checkEnabled()
+        setupPillarLongClickMenuDialog()
     }
 
     private fun collectViewModel() {
         collectLifecycleFlow(viewModel.oprDisplayable) { list ->
             adapter.submitList(list)
+        }
+        collectLifecycleFlow(viewModel.lineName) { lineName ->
+            binding.lineName.text = lineName
         }
     }
 
@@ -96,7 +132,8 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener,
                 true
             }
             R.id.add_savedtp_from_small -> {
-                val dialog = AddPillarFromTp.newInstance()
+                val newOrderForOpr = adapter.itemCount + 1
+                val dialog = AddPillarFromTp.newInstance(args.pltxt, args.tplnr, newOrderForOpr)
                 dialog.setListener(this)
                 dialog.show(childFragmentManager, "CreateSavedTp04DialogFragment")
                 true
@@ -122,27 +159,32 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener,
         dialog.show(childFragmentManager, "CreatePillarDialogFragment")
     }
 
-    private fun openChoosePillarDialog(obj: ObjectDisplayable) {
-        //viewModel.getPillarList(obj.tplnr)
-
-        //
+    private fun openChoosePillarDialog(obj: ObjectDisplayable, tplnr: String) {
         val newOrderForOpr = adapter.itemCount + 1
         val dialog = ChoosePillarDialogFragment.newInstance(
             obj.tplnr,
-            newOrderForOpr,
-            requireContext().resources.getStringArray(R.array.wires)
+            tplnr,
+            newOrderForOpr
         )
         dialog.setListener(this)
         dialog.show(childFragmentManager, "ChoosePillarDialogFragment")
     }
 
+    private fun onCreateStartDialog() {
+        if (adapter.itemCount == 0) {
+            val dialog = AddPillarFromTp.newInstance(args.pltxt, args.tplnr, 1)
+            dialog.setListener(this)
+            dialog.show(childFragmentManager, "CreateSavedTp04DialogFragment")
+        }
+    }
+
 
     override fun onSavedPillar04Adding(obj: ObjectDisplayable) {
-        openChoosePillarDialog(obj)
+        openChoosePillarDialog(obj, args.tplnr)
     }
 
     override fun onSavedPillar10Adding(obj: ObjectDisplayable) {
-        openChoosePillarDialog(obj)
+        openChoosePillarDialog(obj, args.tplnr)
     }
 
     override fun onSavedTpAdded(obj: OprDisplayable) {
@@ -160,18 +202,151 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener,
     override fun onClick(v: View?) {
         when (v?.id) {
             R.id.back_btn -> {
-                //   requireActivity().onBackPressed()
+                findNavController().popBackStack()
             }
         }
     }
 
-    override fun onTakeCoordinatesClick(opr: OprDisplayable) {
-        TODO("Not yet implemented")
+    override fun onTakeCoordinatesClick(opr: OprDisplayable, position: Int) {
+        if (binding.include.GPSLatitude.text != "0.0" && locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true) {
+            //viewModel.saveCoordinates(opr)
+            opr.lat = binding.include.GPSLatitude.text.toString()
+            opr.lng = binding.include.GPSLongitude.text.toString()
+            viewModel.saveCoordinates(opr)
+            adapter.notifyItemChanged(position)
+        } else if (binding.include.GPSLatitude.text == "0.0" && locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true) {
+            Toast.makeText(
+                requireContext(),
+                "Заждіть доки не знайдуться нові спутники!",
+                Toast.LENGTH_SHORT
+            ).show()
+        } else {
+            Toast.makeText(
+                requireContext(),
+                "Будь-ласка, ввімкніть GPS!",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     override fun onLongClick(opr: OprDisplayable) {
-        val dialog = PillarLongClickDialogFragment.newInstance(opr)
-        dialog.show(childFragmentManager, "CreatePillarDialogFragment")
+        OnPillarLongClickDialogFragment.show(childFragmentManager, opr)
+        /*val dialog = PillarLongClickDialogFragment.newInstance(opr)
+        dialog.show(childFragmentManager, "CreatePillarDialogFragment")*/
+    }
+
+    private fun setupPillarLongClickMenuDialog() {
+        OnPillarLongClickDialogFragment.setupListeners(childFragmentManager, viewLifecycleOwner) {
+            pillar, which ->
+            when (which) {
+                getString(R.string.createOtp) -> {
+                    val dialog =  OnCreateOtpDialogFragment.newInstance(pillar)
+                    dialog.show(childFragmentManager, "CreateOtpaykaDialogFragment")
+                    viewModel.createOtp(pillar)
+
+                }
+                getString(R.string.clear_coord) -> {
+                    viewModel.clearCoord(pillar)
+                }
+                getString(R.string.deleteOpr) -> {
+                    viewModel.deleteOpr(pillar)
+                }
+            }
+        }
+    }
+
+    override fun onOtpCreated(pillarStart: OprDisplayable, pillarSecond: OprDisplayable) {
+        val lineName = "Відп. від оп. ${pillarStart.name} до оп. ${pillarSecond.name}"
+
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun checkPermissions() {
+        PermissionX.init(this)
+            .permissions(
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            )
+            .onExplainRequestReason { scope, deniedList ->
+                scope.showRequestReasonDialog(
+                    deniedList,
+                    getString(R.string.explain_permission_text),
+                    getString(R.string.yes), getString(R.string.cancel)
+                )
+            }
+            .onForwardToSettings { scope, deniedList ->
+                scope.showForwardToSettingsDialog(
+                    deniedList,
+                    getString(R.string.forward_to_settings_text),
+                    getString(R.string.yes), getString(R.string.cancel)
+                )
+            }
+            .request { allGranted, _, deniedList ->
+                if (allGranted) {
+                    locationManager =
+                        requireActivity().getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                    locationManager?.let {
+                        it.requestLocationUpdates(
+                            LocationManager.GPS_PROVIDER, EVERY_SECOND,
+                            EVERY_0M, this
+                        )
+                        if (!it.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                            LocationToggleDialogFragment.show(parentFragmentManager)
+                        }
+                    }
+                } else {
+                    Toast.makeText(
+                        requireContext(),
+                        "${getString(R.string.denied_permissions_text)} $deniedList",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+    }
+
+    override fun onLocationChanged(location: Location) {
+        binding.include.GPSLatitude.text = location.latitude.toString()
+        binding.include.GPSLongitude.text = location.longitude.toString()
+        if (location.provider.equals(LocationManager.GPS_PROVIDER)) {
+            binding.include.GPSLatitude.text = formatLocationLat(location)
+            binding.include.GPSLongitude.text = formatLocationLng(location)
+            if (location.hasAccuracy()) {
+                binding.include.GPSAccuracy.text = String.format("%4.1f", location.accuracy)
+            } else {
+                binding.include.GPSAccuracy.text = "000.0"
+            }
+        }
+    }
+
+    private fun formatLocationLat(location: Location?): String {
+        return if (location == null) "" else String.format(
+            "%1$.5f",
+            location.latitude
+        )
+    }
+
+
+    private fun formatLocationLng(location: Location?): String {
+        return if (location == null) "" else String.format(
+            "%1$.5f",
+            location.longitude
+        )
+    }
+
+    private fun checkEnabled() {
+        if (locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true) {
+            binding.include.GPSStatus.text = "ON"
+        } else {
+            binding.include.GPSStatus.text = "OFF"
+            binding.include.GPSLatitude.text = "0.0"
+            binding.include.GPSLongitude.text = "0.0"
+            binding.include.GPSAccuracy.text = "000.0"
+        }
+    }
+
+    companion object {
+        const val EVERY_SECOND = 2000L
+        const val EVERY_0M = 0f
     }
 
 }

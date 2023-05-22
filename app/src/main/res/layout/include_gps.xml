@@ -13,7 +13,7 @@
         android:textStyle="bold" />
 
     <!-- Статус RED не виводимо(див. код), замість нього ORA червоним кольором, статус YEL у оранжі -->
-    <TextView
+    <!--<TextView
         android:id="@+id/GPS_SatRed"
         style="@style/gps_status_sat"
         android:text="@string/gps_sat_val"
@@ -49,7 +49,7 @@
         android:id="@+id/GPS_SatGre"
         style="@style/gps_status_sat"
         android:text="@string/gps_sat_val"
-        android:textColor="@color/colorGreen" />
+        android:textColor="@color/colorGreen" />-->
 
     <TextView
         android:id="@+id/GPS_Latitude"

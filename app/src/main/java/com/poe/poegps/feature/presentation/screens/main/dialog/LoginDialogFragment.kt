@@ -17,7 +17,7 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class LoginDialogFragment : DialogFragment() {
 
-    private val viewModel by viewModels<MainViewModel>()
+    private val viewModel by viewModels<MainViewModel>(ownerProducer = { requireParentFragment() })
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -52,8 +52,9 @@ class LoginDialogFragment : DialogFragment() {
                         Toast.makeText(context, "Error! $message", Toast.LENGTH_SHORT).show()
                     }
                 })
+            dismiss()
         }
-        dismiss()
+
     }
 
 
