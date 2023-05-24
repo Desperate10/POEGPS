@@ -147,6 +147,15 @@ fun TpDbModel.toDomainModel() = Tp(
     lng = lng
 )
 
+fun PsDbModel.toDomainModel() = Tp(
+    id= id,
+    tplnr = tplnr,
+    name = name,
+    isAbon = false,
+    lat = lat,
+    lng = lng
+)
+
 fun PillarObjects04DTO.toDomainModel() = Pillar(
     id = 0,
     tplnr = tplnr,
