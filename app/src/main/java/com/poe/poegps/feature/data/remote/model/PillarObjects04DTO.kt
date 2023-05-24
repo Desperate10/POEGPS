@@ -4,8 +4,6 @@ data class PillarObjects04DTO(
     val tplnr: String,
     val pltxt: String,
     val wire: String,
-    val category: String,
-    val isAbon: Boolean,
     val lng: String,
     val lat: String
 

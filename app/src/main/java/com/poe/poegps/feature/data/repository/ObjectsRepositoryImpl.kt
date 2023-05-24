@@ -92,6 +92,7 @@ class ObjectsRepositoryImpl @Inject constructor(
             }
             .also { pss ->
                 pss.map {
+                    Log.d("testim", "downloadPss: $it")
                     objectsDao.insertPs(it.toPsDbModel())
                 }
             }
@@ -100,11 +101,9 @@ class ObjectsRepositoryImpl @Inject constructor(
     override suspend fun downloadPillars(filial: String, token: String) {
         objectsApi.getPillarObjects04(filial, "Bearer $token")
             .map { pillar ->
-                Log.d("testim", "downloadPillars: $pillar")
                 pillar.toDomainModel()
             }
             .also { pillars ->
-                Log.d("testim", "domain: $pillars")
                 pillars.map {
                     objectsDao.insertPillar04(it.to04DbModel())
                 }

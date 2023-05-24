@@ -160,7 +160,8 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
     private fun openChoosePillarFrom04Dialog(obj: ObjectDisplayable, tplnr: String) {
         val dialog = ChoosePillarFrom04DialogFragment.newInstance(
             obj.tplnr,
-            tplnr
+            tplnr,
+            args.pltxt
         )
         dialog.setListener(this)
         dialog.show(childFragmentManager, "ChoosePillarFrom04DialogFragment")
@@ -169,7 +170,8 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
     private fun openChoosePillarFrom10Dialog(obj: ObjectDisplayable, tplnr: String) {
         val dialog = ChoosePillarFrom10DialogFragment.newInstance(
             obj.tplnr,
-            tplnr
+            tplnr,
+            args.pltxt
         )
         dialog.setListener(this)
         dialog.show(childFragmentManager, "ChoosePillarFrom04DialogFragment")

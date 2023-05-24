@@ -4,6 +4,7 @@ import com.poe.poegps.feature.data.local.entity.*
 import com.poe.poegps.feature.data.remote.model.*
 import com.poe.poegps.feature.domain.model.Line
 import com.poe.poegps.feature.domain.model.Pillar
+import com.poe.poegps.feature.domain.model.Ps
 import com.poe.poegps.feature.domain.model.Tp
 
 fun LineObjects04DTO.toDomainModel() = Line(
@@ -79,13 +80,12 @@ fun TpObjectsDTO.toDomainModel() = Tp(
     isAbon = false
 )
 
-fun PsModelDTO.toDomainModel() = Tp(
+fun PsModelDTO.toDomainModel() = Ps(
     id = 0,
     tplnr = tplnr,
-    name = pltxt,
+    pltxt = pltxt,
     lat = lat,
-    lng = lng,
-    isAbon = false
+    lng = lng
 )
 
 fun TpObjectsAbonDTO.toDomainModel() = Tp(
@@ -111,9 +111,9 @@ fun Tp.toAbonDbModel() = AbonTpDbModel(
     lng = lng
 )
 
-fun Tp.toPsDbModel() = PsDbModel(
+fun Ps.toPsDbModel() = PsDbModel(
     tplnr = tplnr,
-    name = name,
+    name = pltxt,
     lat = lat,
     lng = lng
 )
@@ -147,11 +147,10 @@ fun TpDbModel.toDomainModel() = Tp(
     lng = lng
 )
 
-fun PsDbModel.toDomainModel() = Tp(
+fun PsDbModel.toDomainModel() = Ps(
     id= id,
     tplnr = tplnr,
-    name = name,
-    isAbon = false,
+    pltxt = name,
     lat = lat,
     lng = lng
 )
@@ -161,8 +160,8 @@ fun PillarObjects04DTO.toDomainModel() = Pillar(
     tplnr = tplnr,
     name = pltxt,
     parentName = "",
-    category = category,
-    isAbon = isAbon,
+    category = "0,4 кВ",
+    isAbon = false,
     wire = wire,
     lat = lat,
     lng = lng
@@ -173,8 +172,8 @@ fun PillarObjects10DTO.toDomainModel() = Pillar(
     tplnr = tplnr,
     name = pltxt,
     parentName = "",
-    category = category,
-    isAbon = isAbon,
+    category = "10 кВ",
+    isAbon = false,
     wire = wire,
     lat = lat,
     lng = lng

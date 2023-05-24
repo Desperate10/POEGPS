@@ -21,6 +21,7 @@ class ChoosePillarFrom10DialogFragment : DialogFragment() {
 
     private lateinit var tplnr: String
     private lateinit var newTplnr: String
+    private lateinit var lineName: String
     private val viewModel by viewModels<EditorViewModel>(ownerProducer = { requireParentFragment() })
 
     interface Listener {
@@ -38,6 +39,7 @@ class ChoosePillarFrom10DialogFragment : DialogFragment() {
         arguments?.let {
             tplnr = it.getString(TPLNR, "")
             newTplnr = it.getString(NEW_TPLNR, "")
+            lineName = it.getString(LINE_NAME, "")
         }
     }
 
@@ -82,7 +84,7 @@ class ChoosePillarFrom10DialogFragment : DialogFragment() {
                 id = 0,
                 tplnr = newTplnr,
                 name = pillarSpinner.name,
-                parentName = viewModel.parentObjectName.value,
+                parentName = lineName,
                 category = pillarSpinner.category,
                 isAbon = pillarSpinner.isAbon,
                 wire = spinnerValue,
@@ -100,15 +102,17 @@ class ChoosePillarFrom10DialogFragment : DialogFragment() {
     companion object {
         private const val TPLNR = "tplnr"
         private const val NEW_TPLNR = "newtplnr"
-        private const val ORDER = "order"
+        private const val LINE_NAME = "linename"
 
         fun newInstance(
             tplnr: String,
-            newTplnr: String
+            newTplnr: String,
+            lineName: String
         ): ChoosePillarFrom10DialogFragment {
             val args = Bundle()
             args.putString(TPLNR, tplnr)
             args.putString(NEW_TPLNR, newTplnr)
+            args.putString(LINE_NAME, lineName)
             val fragment = ChoosePillarFrom10DialogFragment()
             fragment.arguments = args
             return fragment
