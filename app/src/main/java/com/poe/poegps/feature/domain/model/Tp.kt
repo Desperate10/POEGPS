@@ -5,5 +5,6 @@ data class Tp(
     val name: String,
     val tplnr: String,
     val lng: String,
-    val lat: String
+    val lat: String,
+    val isAbon: Boolean
 )

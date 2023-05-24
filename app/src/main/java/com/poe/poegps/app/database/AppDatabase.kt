@@ -6,7 +6,18 @@ import com.poe.poegps.feature.data.local.dao.ObjectsDao
 import com.poe.poegps.feature.data.local.entity.*
 
 @Database(
-    entities = [PsDbModel::class, TpDbModel::class, Kl04DbModel::class, Line04DbModel::class, Kl10DbModel::class, Line10DbModel::class, PillarDbModel::class, LinePillarDbModel::class],
+    entities = [
+        AbonLine04DbModel::class,
+        AbonLine10DbModel::class,
+        AbonTpDbModel::class,
+        PsDbModel::class,
+        TpDbModel::class,
+        Line04DbModel::class,
+        Line10DbModel::class,
+        Pillar04DbModel::class,
+        Pillar10DbModel::class,
+        LinePillarDbModel::class
+    ],
     version = 1,
     exportSchema = false
 )

@@ -17,15 +17,14 @@ import dagger.hilt.android.AndroidEntryPoint
 import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 
 @AndroidEntryPoint
-class ChoosePillarDialogFragment : DialogFragment() {
+class ChoosePillarFrom04DialogFragment : DialogFragment() {
 
     private lateinit var tplnr: String
     private lateinit var newTplnr: String
-    private var order: Int = 0
     private val viewModel by viewModels<EditorViewModel>(ownerProducer = { requireParentFragment() })
 
     interface Listener {
-        fun onPillarChoose(pillar: OprDisplayable)
+        fun onPillarAdded(pillar: OprDisplayable)
     }
 
     private var listener: Listener? = null
@@ -37,7 +36,6 @@ class ChoosePillarDialogFragment : DialogFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
-            order = it.getInt(ORDER, 0)
             tplnr = it.getString(TPLNR, "")
             newTplnr = it.getString(NEW_TPLNR, "")
         }
@@ -85,12 +83,13 @@ class ChoosePillarDialogFragment : DialogFragment() {
                 tplnr = newTplnr,
                 name = pillarSpinner.name,
                 parentName = viewModel.parentObjectName.value,
-                order = order,
+                category = pillarSpinner.category,
+                isAbon = pillarSpinner.isAbon,
                 wire = spinnerValue,
                 lat = pillarSpinner.lat,
                 lng = pillarSpinner.lng
             )
-            listener?.onPillarChoose(pillar)
+            listener?.onPillarAdded(pillar)
             dismiss()
         }
         view.findViewById<Button>(R.id.cancel).setOnClickListener {
@@ -101,18 +100,15 @@ class ChoosePillarDialogFragment : DialogFragment() {
     companion object {
         private const val TPLNR = "tplnr"
         private const val NEW_TPLNR = "newtplnr"
-        private const val ORDER = "order"
 
         fun newInstance(
             tplnr: String,
-            newTplnr: String,
-            order: Int
-        ): ChoosePillarDialogFragment {
+            newTplnr: String
+        ): ChoosePillarFrom04DialogFragment {
             val args = Bundle()
             args.putString(TPLNR, tplnr)
             args.putString(NEW_TPLNR, newTplnr)
-            args.putInt(ORDER, order)
-            val fragment = ChoosePillarDialogFragment()
+            val fragment = ChoosePillarFrom04DialogFragment()
             fragment.arguments = args
             return fragment
         }

@@ -10,7 +10,7 @@ data class ObjectState(
         val initial = ObjectState(
             loadState = LoadState.IDLE,
             objects = emptyList(),
-            objectType = ObjectType.LINE,
+            objectType = ObjectType.LINE04,
             errorMessage = "",
         )
     }
@@ -24,7 +24,9 @@ enum class LoadState {
 }
 
 enum class ObjectType(val type: String) {
-    LINE("Лінія"),
-    TP("ТП")
+    LINE04("Лінія 04"),
+    LINE10("Лінія 10"),
+    LINEABON04("Лінія 04 абон"),
+    LINEABON10("Лінія 10 абон"),
 }
 

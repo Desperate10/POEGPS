@@ -5,8 +5,9 @@ data class Pillar(
     val tplnr: String,
     val name: String,
     val parentName: String,
-    val order: Int,
+    val category: String,
     val wire: String,
     val lng: String,
-    val lat: String
+    val lat: String,
+    val isAbon: Boolean
 )

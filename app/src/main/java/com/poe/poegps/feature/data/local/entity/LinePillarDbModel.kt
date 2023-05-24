@@ -10,8 +10,9 @@ data class LinePillarDbModel(
     val tplnr: String,
     val name: String,
     val parentName:String,
-    val order: Int,
+    val category: String,
     val wire: String,
     val lat: String,
-    val lng: String
+    val lng: String,
+    val isAbon: Boolean
 )

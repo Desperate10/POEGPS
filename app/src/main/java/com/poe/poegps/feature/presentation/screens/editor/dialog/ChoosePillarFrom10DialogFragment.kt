@@ -11,21 +11,20 @@ import android.widget.Spinner
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import com.poe.poegps.R
-import com.poe.poegps.feature.presentation.mapper.toOprDisplayable
-import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.OprDisplayable
 import com.poe.poegps.feature.presentation.screens.editor.EditorViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 
 @AndroidEntryPoint
-class AddPillarFromTp: DialogFragment() {
-    private lateinit var pltxt: String
+class ChoosePillarFrom10DialogFragment : DialogFragment() {
+
     private lateinit var tplnr: String
+    private lateinit var newTplnr: String
     private val viewModel by viewModels<EditorViewModel>(ownerProducer = { requireParentFragment() })
 
     interface Listener {
-        fun onPillarAdded(obj : OprDisplayable)
+        fun onPillarAdded(pillar: OprDisplayable)
     }
 
     private var listener: Listener? = null
@@ -37,8 +36,8 @@ class AddPillarFromTp: DialogFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
-            pltxt = it.getString(PLTXT).toString()
-            tplnr = it.getString(TPLNR).toString()
+            tplnr = it.getString(TPLNR, "")
+            newTplnr = it.getString(NEW_TPLNR, "")
         }
     }
 
@@ -50,31 +49,45 @@ class AddPillarFromTp: DialogFragment() {
         )
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val view = inflater.inflate(R.layout.create_saved_opr, container, false)
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        val view = inflater.inflate(R.layout.choose_opr, container, false)
+        val wireSpinner = view.findViewById<Spinner>(R.id.wireSpinner)
+
+        wireSpinner.adapter =
+            ArrayAdapter(requireActivity(),
+                android.R.layout.simple_list_item_1,
+                requireContext().resources.getStringArray(R.array.wires)
+            )
         return view
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val tpSpinner = view.findViewById<Spinner>(R.id.lineSpinner)
-        collectLifecycleFlow(viewModel.getTpList(false)) {
-            tpSpinner.adapter = ArrayAdapter(requireActivity(), android.R.layout.simple_list_item_1, it)
+        val coordSpinner = view.findViewById<Spinner>(R.id.coordSpinner)
+        collectLifecycleFlow(viewModel.getPillarList(tplnr)) {
+            coordSpinner.adapter = ArrayAdapter(requireActivity(), android.R.layout.simple_list_item_1, it)
         }
+        val wireSpinner = view.findViewById<Spinner>(R.id.wireSpinner)
 
-        view.findViewById<Button>(R.id.choose).setOnClickListener {
-            val spinnerValue = tpSpinner.selectedItem as OprDisplayable
+        view.findViewById<Button>(R.id.save).setOnClickListener {
+            val pillarSpinner = coordSpinner.selectedItem as OprDisplayable
+            val spinnerValue = wireSpinner.selectedItem.toString()
+
             val pillar = OprDisplayable(
                 id = 0,
-                tplnr = tplnr,
-                name = spinnerValue.name,
-                parentName = pltxt,
-                category = spinnerValue.category,
-                isAbon = spinnerValue.isAbon,
-                wire = spinnerValue.wire,
-                lat = spinnerValue.lat,
-                lng = spinnerValue.lng
+                tplnr = newTplnr,
+                name = pillarSpinner.name,
+                parentName = viewModel.parentObjectName.value,
+                category = pillarSpinner.category,
+                isAbon = pillarSpinner.isAbon,
+                wire = spinnerValue,
+                lat = pillarSpinner.lat,
+                lng = pillarSpinner.lng
             )
             listener?.onPillarAdded(pillar)
             dismiss()
@@ -85,18 +98,20 @@ class AddPillarFromTp: DialogFragment() {
     }
 
     companion object {
-        private const val PLTXT = "pltxt"
         private const val TPLNR = "tplnr"
+        private const val NEW_TPLNR = "newtplnr"
         private const val ORDER = "order"
 
-        fun newInstance(pltxt: String, tplnr: String): AddPillarFromTp {
+        fun newInstance(
+            tplnr: String,
+            newTplnr: String
+        ): ChoosePillarFrom10DialogFragment {
             val args = Bundle()
-            args.putString(PLTXT, pltxt)
             args.putString(TPLNR, tplnr)
-            val fragment = AddPillarFromTp()
+            args.putString(NEW_TPLNR, newTplnr)
+            val fragment = ChoosePillarFrom10DialogFragment()
             fragment.arguments = args
             return fragment
         }
     }
-
 }

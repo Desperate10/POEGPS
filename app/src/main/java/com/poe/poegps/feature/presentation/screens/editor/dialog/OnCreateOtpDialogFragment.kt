@@ -1,7 +1,6 @@
 package com.poe.poegps.feature.presentation.screens.editor.dialog
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,7 +17,7 @@ import com.poe.poegps.feature.presentation.screens.editor.EditorViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class OnCreateOtpDialogFragment: DialogFragment() {
+class OnCreateOtpDialogFragment : DialogFragment() {
 
     private val viewModel by viewModels<EditorViewModel>(ownerProducer = { requireParentFragment() })
     private var opr: OprDisplayable? = null
@@ -55,8 +54,13 @@ class OnCreateOtpDialogFragment: DialogFragment() {
     ): View? {
         val view = inflater.inflate(R.layout.create_opr, container, false)
         val spinner = view.findViewById<Spinner>(R.id.wireSpinner)
-        spinner.adapter = ArrayAdapter(requireActivity(), android.R.layout.simple_list_item_1, requireContext().resources.getStringArray(
-            R.array.wires))
+        spinner.adapter = ArrayAdapter(
+            requireActivity(),
+            android.R.layout.simple_list_item_1,
+            requireContext().resources.getStringArray(
+                R.array.wires
+            )
+        )
         return view
     }
 
@@ -73,9 +77,15 @@ class OnCreateOtpDialogFragment: DialogFragment() {
             val lineName = "Відп. від оп. ${opr!!.name} до оп. $oprNameTxt"
             viewModel.setLineName(lineName)
 
-            val oldPillar = opr!!.copy(parentName = lineName, order = 1)
-            val pillar = OprDisplayable(tplnr = opr!!.tplnr, name = oprNameTxt, parentName = lineName, wire = spinnerValue, order = 2)
-            Log.d("testim", "$oldPillar $pillar")
+            val oldPillar = opr!!.copy(parentName = lineName)
+            val pillar = OprDisplayable(
+                tplnr = opr!!.tplnr,
+                name = oprNameTxt,
+                parentName = lineName,
+                category = opr!!.category,
+                isAbon = opr!!.isAbon,
+                wire = spinnerValue
+            )
             listener?.onOtpCreated(oldPillar, pillar)
 
             dismiss()

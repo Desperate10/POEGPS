@@ -1,17 +1,12 @@
 package com.poe.poegps.feature.data.remote.api
 
-import com.poe.poegps.feature.data.remote.model.LineObjectsDTO
-import com.poe.poegps.feature.data.remote.model.LoginRequest
-import com.poe.poegps.feature.data.remote.model.LoginResponse
-import com.poe.poegps.feature.data.remote.model.PillarObjectsDTO
-import com.poe.poegps.feature.data.remote.model.TpObjectsDTO
+import com.poe.poegps.feature.data.remote.model.*
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Headers
 import retrofit2.http.POST
-import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface ObjectsApi {
@@ -24,14 +19,29 @@ interface ObjectsApi {
     suspend fun checkTokenValidity(@Body token: String): Response<Boolean>
 
     @GET("tp")
-    suspend fun getTpObjects(@Query("filial") filial: Int, @Header("Authorization") token: String): List<TpObjectsDTO>
+    suspend fun getTpObjects(@Query("filial") filial: String, @Header("Authorization") token: String): List<TpObjectsDTO>
+
+    @GET("abontp")
+    suspend fun getAbonTpObjects(@Query("filial") filial: String, @Header("Authorization") token: String): List<TpObjectsAbonDTO>
 
     @GET("ps")
     suspend fun getPsObjects(@Header("Authorization") token: String): List<TpObjectsDTO>
 
-    @GET("lines")
-    suspend fun getLineObjects(@Query("filial") filial: Int, @Header("Authorization") token: String): List<LineObjectsDTO>
+    @GET("lines10")
+    suspend fun getLine10Objects(@Query("filial") filial: String, @Header("Authorization") token: String): List<LineObjects10DTO>
 
-    @GET("pillars")
-    suspend fun getPillarObjects(@Query("filial") filial: Int, @Header("Authorization") token: String): List<PillarObjectsDTO>
+    @GET("lines04")
+    suspend fun getLine04Objects(@Query("filial") filial: String, @Header("Authorization") token: String): List<LineObjects04DTO>
+
+    @GET("pillars04")
+    suspend fun getPillarObjects04(@Query("filial") filial: String, @Header("Authorization") token: String): List<PillarObjects04DTO>
+
+    @GET("pillars10")
+    suspend fun getPillarObjects10(@Query("filial") filial: String, @Header("Authorization") token: String): List<PillarObjects10DTO>
+
+    @GET("abonlines10")
+    suspend fun getLine10AbonObjects(@Query("filial") filial: String, @Header("Authorization") token: String): List<LineObjects10AbonDTO>
+
+    @GET("abonlines04")
+    suspend fun getLine04AbonObjects(@Query("filial") filial: String, @Header("Authorization") token: String): List<LineObjects04AbonDTO>
 }

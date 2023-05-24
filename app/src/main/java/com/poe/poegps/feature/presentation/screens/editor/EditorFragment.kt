@@ -21,6 +21,7 @@ import com.poe.poegps.R
 import com.poe.poegps.databinding.FragmentEditorBinding
 import com.poe.poegps.feature.data.remote.utils.MyLocationListener
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
+import com.poe.poegps.feature.presentation.model.ObjectType
 import com.poe.poegps.feature.presentation.model.OprDisplayable
 import com.poe.poegps.feature.presentation.screens.editor.adapter.OprAdapter
 import com.poe.poegps.feature.presentation.screens.editor.dialog.*
@@ -32,7 +33,8 @@ import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationListener,
     AddPillarDialogFragment.Listener,
     AddPillarFromSaved10.Listener,
-    ChoosePillarDialogFragment.Listener,
+    ChoosePillarFrom04DialogFragment.Listener,
+    ChoosePillarFrom10DialogFragment.Listener,
     AddPillarFromSaved04.Listener,
     AddPillarFromTp.Listener,
     OprAdapter.OnOprClickListener,
@@ -75,7 +77,6 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-       // viewModel.setLineName(args.pltxt)
         binding.backBtn.setOnClickListener(this)
         setupPillarAdapter()
         collectViewModel()
@@ -131,8 +132,7 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
                 true
             }
             R.id.add_savedtp_from_small -> {
-                val newOrderForOpr = adapter.itemCount + 1
-                val dialog = AddPillarFromTp.newInstance(args.pltxt, args.tplnr, newOrderForOpr)
+                val dialog = AddPillarFromTp.newInstance(args.pltxt, args.tplnr)
                 dialog.setListener(this)
                 dialog.show(childFragmentManager, "CreateSavedTp04DialogFragment")
                 true
@@ -147,31 +147,37 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
     }
 
     private fun openCreatePillarDialog() {
-        //Заменить на запрос к БД и поиск максимального order+1
-        val newOrderForOpr = adapter.itemCount + 1
         val dialog = AddPillarDialogFragment.newInstance(
             args.tplnr,
-            newOrderForOpr
-            //requireContext().resources.getStringArray(R.array.wires)
+            binding.lineName.text.toString(),
+            args.category,
+            args.isAbon
         )
         dialog.setListener(this)
         dialog.show(childFragmentManager, "CreatePillarDialogFragment")
     }
 
-    private fun openChoosePillarDialog(obj: ObjectDisplayable, tplnr: String) {
-        val newOrderForOpr = adapter.itemCount + 1
-        val dialog = ChoosePillarDialogFragment.newInstance(
+    private fun openChoosePillarFrom04Dialog(obj: ObjectDisplayable, tplnr: String) {
+        val dialog = ChoosePillarFrom04DialogFragment.newInstance(
             obj.tplnr,
-            tplnr,
-            newOrderForOpr
+            tplnr
         )
         dialog.setListener(this)
-        dialog.show(childFragmentManager, "ChoosePillarDialogFragment")
+        dialog.show(childFragmentManager, "ChoosePillarFrom04DialogFragment")
+    }
+
+    private fun openChoosePillarFrom10Dialog(obj: ObjectDisplayable, tplnr: String) {
+        val dialog = ChoosePillarFrom10DialogFragment.newInstance(
+            obj.tplnr,
+            tplnr
+        )
+        dialog.setListener(this)
+        dialog.show(childFragmentManager, "ChoosePillarFrom04DialogFragment")
     }
 
     private fun onCreateStartDialog() {
         if (adapter.itemCount == 0) {
-            val dialog = AddPillarFromTp.newInstance(args.pltxt, args.tplnr, 1)
+            val dialog = AddPillarFromTp.newInstance(args.pltxt, args.tplnr)
             dialog.setListener(this)
             dialog.show(childFragmentManager, "CreateSavedTp04DialogFragment")
         }
@@ -179,24 +185,24 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
 
 
     override fun onSavedPillar04Adding(obj: ObjectDisplayable) {
-        openChoosePillarDialog(obj, args.tplnr)
+        openChoosePillarFrom04Dialog(obj, args.tplnr)
     }
 
     override fun onSavedPillar10Adding(obj: ObjectDisplayable) {
-        openChoosePillarDialog(obj, args.tplnr)
-    }
-
-    override fun onSavedTpAdded(obj: OprDisplayable) {
-        viewModel.addPillarToDisplay(obj)
+        openChoosePillarFrom10Dialog(obj, args.tplnr)
     }
 
     override fun onPillarAdded(pillar: OprDisplayable) {
         viewModel.addPillarToDisplay(pillar)
     }
 
-    override fun onPillarChoose(pillar: OprDisplayable) {
+    /*override fun onSavedTpAdded(obj: OprDisplayable) {
+        viewModel.addPillarToDisplay(obj)
+    }*/
+
+    /*override fun onPillarChoose(pillar: OprDisplayable) {
         viewModel.addPillarToDisplay(pillar)
-    }
+    }*/
 
     override fun onClick(v: View?) {
         when (v?.id) {

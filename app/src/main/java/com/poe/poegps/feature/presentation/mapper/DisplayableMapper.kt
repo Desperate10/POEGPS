@@ -9,19 +9,23 @@ import com.poe.poegps.feature.presentation.model.OprDisplayable
 fun Line.toObjectDisplayable() = ObjectDisplayable(
     id = id,
     tplnr = tplnr,
-    name = name
+    name = name,
+    category = category,
+    isAbon = isAbon
 )
 
-fun Tp.toObjectDisplayable() = ObjectDisplayable(
+/*fun Tp.toObjectDisplayable() = ObjectDisplayable(
     id = id,
     tplnr = tplnr,
     name = name
-)
+)*/
 
 fun Tp.toOprDisplayable() = OprDisplayable(
     id = id,
     name = name,
     parentName = "",
+    category = "",
+    isAbon = isAbon,
     lat = lat,
     lng = lng,
     tplnr = tplnr
@@ -31,7 +35,8 @@ fun Pillar.toOprDisplayable() = OprDisplayable(
     id = id,
     name = name,
     parentName = parentName,
-    order = order,
+    category = category,
+    isAbon = isAbon,
     lat = lat,
     lng = lng,
     tplnr = tplnr,
@@ -43,21 +48,24 @@ fun OprDisplayable.toDomainModel() = Pillar(
     tplnr = tplnr,
     name = name,
     parentName = parentName,
-    order = order,
+    category = category,
+    isAbon = isAbon,
     wire = wire,
     lat = lat,
     lng = lng
 )
 
-fun ObjectDisplayable.toOprDisplayable() = OprDisplayable(
+/*fun ObjectDisplayable.toOprDisplayable() = OprDisplayable(
     name = name,
     parentName = "",
     order = 1,
     tplnr = tplnr
-)
+)*/
 
 fun ObjectDisplayable.toLineDomainModel() = Line(
     id = id,
     tplnr = tplnr,
-    name = name
+    name = name,
+    category = category,
+    isAbon = isAbon
 )

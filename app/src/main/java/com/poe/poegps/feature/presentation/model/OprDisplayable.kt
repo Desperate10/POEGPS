@@ -9,7 +9,8 @@ data class OprDisplayable(
     val tplnr: String,
     val name: String,
     var parentName: String,
-    val order: Int = 0,
+    val category: String,
+    val isAbon: Boolean,
     var lat: String= "0.0",
     var lng: String= "0.0",
     val wire: String=""

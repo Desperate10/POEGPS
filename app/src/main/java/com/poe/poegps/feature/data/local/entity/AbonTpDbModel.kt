@@ -3,12 +3,12 @@ package com.poe.poegps.feature.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "tp")
-data class TpDbModel(
+@Entity(tableName = "abon_tp")
+data class AbonTpDbModel(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val pltxt: String,
     val tplnr: String,
+    val pltxt: String,
     val lng: String,
     val lat: String
 )

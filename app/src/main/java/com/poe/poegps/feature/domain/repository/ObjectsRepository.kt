@@ -12,34 +12,42 @@ interface ObjectsRepository {
     //логин
     fun auth(login: String, password: String): Flow<ApiResponse<LoginResponse>>
 
+    fun checkTokenValidity(token: String): Flow<ApiResponse<Boolean>>
+
     //загрузка линий из апи
-    suspend fun downloadLines(filial: Int, token: String)
+    suspend fun downloadLines(filial: String, token: String)
 
-    //fun getLowLines() : Flow<List<Line>>
+    //Получение списка ТП из апи
+    suspend fun downloadTPs(filial: String, token: String)
 
-    //Получение линий из БД
-    fun searchLine(tplnr: String): Flow<List<Line>>
+    //Получение списка ПС из апи
+    suspend fun downloadPss(token: String)
+
+    //Получение списка опор из апи
+    suspend fun downloadPillars(filial: String, token: String)
+
+    //Получение линий 10 из БД
+    fun searchLine10(tplnr: String): Flow<List<Line>>
+
+    //Получение линий 04 из БД
+    fun searchLine04(tplnr: String): Flow<List<Line>>
+
+    //Получение абонентских линий 10 из БД
+    fun searchAbonLine10(tplnr: String): Flow<List<Line>>
+
+    //Получение абонентских линий 04 из БД
+    fun searchAbonLine04(tplnr: String): Flow<List<Line>>
+
+    //Получение ТП из БД по клику
+    fun searchTP(tplnr: String, abonState: Boolean): Flow<List<Tp>>
 
     //Получение списка линий по категории
     fun getLineList10(): Flow<List<Line>>
 
     fun getLineList04(): Flow<List<Line>>
 
-    //Получение списка ТП из апи
-    suspend fun downloadTPs(filial: Int, token: String)
-
     //Получение списка ТП из БД
     fun getTpList(): Flow<List<Tp>>
-
-    //Получение ТП из БД по клику
-    fun searchTP(tplnr: String): Flow<List<Tp>>
-
-    //Получение списка ПС из апи
-    suspend fun downloadPss(token: String)
-
-    suspend fun getPsByTplnr(): Tp
-
-    suspend fun downloadPillars(filial: Int, token: String)
 
     fun getPillarList(tplnr: String): Flow<List<Pillar>>
 
@@ -53,8 +61,20 @@ interface ObjectsRepository {
 
     suspend fun getParentName(tplnr: String): String
 
-    fun checkTokenValidity(token: String): Flow<ApiResponse<Boolean>>
+    suspend fun saveLine04(line: Line)
 
-    suspend fun saveLine(line: Line)
+    suspend fun saveLine10(line: Line)
+
+    suspend fun saveAbonLine04(line: Line)
+
+    suspend fun saveAbonLine10(line: Line)
+
+    suspend fun deleteLine04(pltxt: String)
+
+    suspend fun deleteLine10(pltxt: String)
+
+    suspend fun deleteAbonLine04(pltxt: String)
+
+    suspend fun deleteAbonLine10(pltxt: String)
 
 }

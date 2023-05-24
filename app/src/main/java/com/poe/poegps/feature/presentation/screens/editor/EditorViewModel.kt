@@ -1,6 +1,5 @@
 package com.poe.poegps.feature.presentation.screens.editor
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,13 +9,16 @@ import com.poe.poegps.feature.presentation.mapper.toLineDomainModel
 import com.poe.poegps.feature.presentation.mapper.toObjectDisplayable
 import com.poe.poegps.feature.presentation.mapper.toOprDisplayable
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
+import com.poe.poegps.feature.presentation.model.ObjectType
 import com.poe.poegps.feature.presentation.model.OprDisplayable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import java.util.ArrayList
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -59,14 +61,14 @@ class EditorViewModel @Inject constructor(
     fun getLineList10() =
         repository.getLineList10().map { list ->
             list.map { line -> line.toObjectDisplayable() }
-    }
+        }
 
     fun getLineList04() =
         repository.getLineList04().map { list ->
             list.map { line -> line.toObjectDisplayable() }
         }
 
-    fun getTpList() =
+    fun getTpList(isAbon: Boolean) =
         repository.getTpList().map { list ->
             list.map { tp -> tp.toOprDisplayable() }
         }
@@ -81,17 +83,56 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch {
             repository.copyPillarForOtp(pillarStart.copy(id = 0).toDomainModel())
             repository.savePillar(pillarNext.toDomainModel())
-            repository.saveLine(ObjectDisplayable(tplnr = pillarStart.tplnr, name = pillarStart.parentName).toLineDomainModel())
+            when(args.objectType) {
+                ObjectType.LINE04 -> repository.saveLine04(
+                    ObjectDisplayable(
+                        tplnr = pillarStart.tplnr,
+                        name = pillarStart.parentName,
+                        category = pillarStart.category,
+                        isAbon = pillarStart.isAbon
+                    ).toLineDomainModel()
+                )
+                ObjectType.LINE10 -> repository.saveLine10(
+                    ObjectDisplayable(
+                        tplnr = pillarStart.tplnr,
+                        name = pillarStart.parentName,
+                        category = pillarStart.category,
+                        isAbon = pillarStart.isAbon
+                    ).toLineDomainModel()
+                )
+                ObjectType.LINEABON04 -> repository.saveAbonLine04(
+                    ObjectDisplayable(
+                        tplnr = pillarStart.tplnr,
+                        name = pillarStart.parentName,
+                        category = pillarStart.category,
+                        isAbon = pillarStart.isAbon
+                    ).toLineDomainModel()
+                )
+                ObjectType.LINEABON10 -> repository.saveAbonLine10(
+                    ObjectDisplayable(
+                        tplnr = pillarStart.tplnr,
+                        name = pillarStart.parentName,
+                        category = pillarStart.category,
+                        isAbon = pillarStart.isAbon
+                    ).toLineDomainModel()
+                )
+            }
+            /*repository.saveLine(
+                ObjectDisplayable(
+                    tplnr = pillarStart.tplnr,
+                    name = pillarStart.parentName
+                ).toLineDomainModel()
+            )*/
         }
     }
 
     fun clearCoord(pillar: OprDisplayable?) {
-        if(pillar?.order != 1) {
+       // if (pillar?.order != 1) {
             val pillarNew = pillar?.copy(lat = "0.0", lng = "0.0")
             viewModelScope.launch(Dispatchers.IO) {
                 pillarNew?.toDomainModel()?.let { repository.savePillar(it) }
             }
-        }
+       // }
     }
 
     fun deleteOpr(pillar: OprDisplayable?) {
@@ -110,6 +151,10 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             repository.savePillar(opr.toDomainModel())
         }
+    }
+
+    companion object {
+
     }
 
     /*fun getLineList10() {

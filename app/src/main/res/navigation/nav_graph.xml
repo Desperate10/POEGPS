@@ -24,5 +24,14 @@
         <argument
             android:name="pltxt"
             app:argType="string" />
+        <argument
+            android:name="objectType"
+            app:argType="com.poe.poegps.feature.presentation.model.ObjectType" />
+        <argument
+            android:name="category"
+            app:argType="string" />
+        <argument
+            android:name="isAbon"
+            app:argType="boolean" />
     </fragment>
 </navigation>

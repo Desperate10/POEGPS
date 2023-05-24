@@ -137,4 +137,5 @@
     <string name="choose_action">Виберіть дію</string>
     <string name="create_otp">Створити відпайку</string>
     <string name="delete_opr">Видалити опору</string>
+    <string name="abon">Абон</string>
 </resources>

@@ -5,27 +5,38 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.poe.poegps.feature.data.local.entity.Line04DbModel
-import com.poe.poegps.feature.data.local.entity.LinePillarDbModel
-import com.poe.poegps.feature.data.local.entity.PillarDbModel
-import com.poe.poegps.feature.data.local.entity.PsDbModel
-import com.poe.poegps.feature.data.local.entity.TpDbModel
+import com.poe.poegps.feature.data.local.entity.*
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ObjectsDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertLine(line: Line04DbModel)
+    suspend fun insertLine04(line: Line04DbModel)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertLine10(line: Line10DbModel)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAbonLine04(line: AbonLine04DbModel)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAbonLine10(line: AbonLine10DbModel)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTp(tp: TpDbModel)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAbonTp(tp: AbonTpDbModel)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPs(ps: PsDbModel)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertPillar(pillar: PillarDbModel)
+    suspend fun insertPillar04(pillar: Pillar04DbModel)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPillar10(pillar: Pillar10DbModel)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun copyPillarForOtp(pillar: LinePillarDbModel)
@@ -40,10 +51,19 @@ interface ObjectsDao {
     fun getTps(): Flow<List<TpDbModel>>
 
     @Query("SELECT * FROM line04 WHERE tplnr LIKE '%-L' || :tplnr || '%' GROUP BY name")
-    fun getLines(tplnr: String): Flow<List<Line04DbModel>>
+    fun getLines04(tplnr: String): Flow<List<Line04DbModel>>
 
-    @Query("SELECT * FROM line04 WHERE name LIKE 'ПЛ%'")
-    fun getLineList10(): Flow<List<Line04DbModel>>
+    @Query("SELECT * FROM line10 WHERE tplnr LIKE '%-L' || :tplnr || '%' GROUP BY name")
+    fun getLines10(tplnr: String): Flow<List<Line10DbModel>>
+
+    @Query("SELECT * FROM abon_line04 WHERE tplnr LIKE '%-L' || :tplnr || '%' GROUP BY name")
+    fun getAbonLines04(tplnr: String): Flow<List<AbonLine04DbModel>>
+
+    @Query("SELECT * FROM abon_line10 WHERE tplnr LIKE '%-L' || :tplnr || '%' GROUP BY name")
+    fun getAbonLines10(tplnr: String): Flow<List<AbonLine10DbModel>>
+
+    @Query("SELECT * FROM line10 WHERE name LIKE 'ПЛ%'")
+    fun getLineList10(): Flow<List<Line10DbModel>>
 
     @Query("SELECT * FROM line04 WHERE name LIKE 'ПЛ%'")
     fun getLineList04(): Flow<List<Line04DbModel>>
@@ -51,8 +71,11 @@ interface ObjectsDao {
     @Query("SELECT * FROM line_pillar WHERE parentName LIKE :pltxt")
     fun getPillarsOfLine(pltxt: String): Flow<List<LinePillarDbModel>>
 
-    @Query("SELECT * FROM pillar WHERE tplnr LIKE :tplnr")
-    fun getPillarsByTplnr(tplnr: String): Flow<List<PillarDbModel>>
+    @Query("SELECT * FROM pillars04 WHERE tplnr LIKE :tplnr")
+    fun getPillars04ByTplnr(tplnr: String): Flow<List<Pillar04DbModel>>
+
+    @Query("SELECT * FROM pillars10 WHERE tplnr LIKE :tplnr")
+    fun getPillars10ByTplnr(tplnr: String): Flow<List<Pillar10DbModel>>
 
     @Query("SELECT * FROM tp WHERE tplnr LIKE '%-P'|| :tplnr || '%'")
     fun getTp(tplnr: String): Flow<List<TpDbModel>>
@@ -61,5 +84,30 @@ interface ObjectsDao {
     suspend fun getParentName(tplnr: String): String
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertOtpaika(otpaika: Line04DbModel)
+    suspend fun insertOtpaika04(otpaika: Line04DbModel)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOtpaika10(otpaika: Line10DbModel)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAbonOtpaika04(otpaika: AbonLine04DbModel)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAbonOtpaika10(otpaika: AbonLine10DbModel)
+
+    @Query("DELETE FROM line04 WHERE name LIKE :pltxt")
+    suspend fun deleteLine04(pltxt: String)
+
+    @Query("DELETE FROM line10 WHERE name LIKE :pltxt")
+    suspend fun deleteLine10(pltxt: String)
+
+    @Query("DELETE FROM abon_line04 WHERE name LIKE :pltxt")
+    suspend fun deleteAbonLine04(pltxt: String)
+
+    @Query("DELETE FROM abon_line10 WHERE name LIKE :pltxt")
+    suspend fun deleteAbonLine10(pltxt: String)
+
+    @Query("DELETE FROM line_pillar WHERE parentName LIKE :pltxt")
+    fun deleteSavedPillars(pltxt: String)
+
 }

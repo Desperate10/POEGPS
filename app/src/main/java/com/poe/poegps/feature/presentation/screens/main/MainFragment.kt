@@ -22,6 +22,7 @@ import com.poe.poegps.databinding.FragmentMainBinding
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.presentation.CoroutinesErrorHandler
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
+import com.poe.poegps.feature.presentation.model.ObjectType
 import com.poe.poegps.feature.presentation.screens.main.adapter.ObjectsAdapter
 import com.poe.poegps.feature.presentation.screens.main.dialog.SearchObjectDialog
 import com.poe.poegps.feature.presentation.screens.main.spinner.ObjectsSpinnerAdapter
@@ -101,18 +102,20 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
         }
         collectLifecycleFlow(viewModel.objectsList) { objectsList ->
             adapter.submitList(objectsList)
-            Log.d("testim", "objectsList: $objectsList")
-            Log.d("testim", "objectsList: ${adapter.itemCount}")
         }
         collectLifecycleFlow(viewModel.filial) { filial ->
             if (filial == "00") {
                 chooseYourFilialDialog()
             }
         }
+        collectLifecycleFlow(viewModel.message) { message ->
+            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun setupObjectSpinner() {
         binding.objectSpinner.adapter = ObjectsSpinnerAdapter(requireContext())
+        binding.objectSpinner.onItemSelectedListener = this
     }
 
     override fun onClick(obj: ObjectDisplayable) {
@@ -125,10 +128,20 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.deleteOtp -> {
+                    if (!obj.name.contains("ПЛ")) {
+                        viewModel.deleteObject(obj.name)
+                    } else {
+                        Toast.makeText(
+                            requireContext(),
+                            "Неможна видалити магістральну лінію",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                     true
                 }
 
                 R.id.sendObject -> {
+                    //viewModel.sendObject(obj.name)
                     true
                 }
 
@@ -146,14 +159,67 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
         searchView.imeOptions = EditorInfo.IME_ACTION_DONE
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(tplnr: String?): Boolean {
-                tplnr?.let {
-                    viewModel.searchObject(tplnr, object : CoroutinesErrorHandler {
+                    when(viewModel.spinnerObjectType.value) {
+                        ObjectType.LINE04 -> {
+                            tplnr?.let {
+                                viewModel.searchLine04(it, object : CoroutinesErrorHandler {
+                                    override fun onError(message: String) {
+                                        Toast.makeText(
+                                            requireContext(),
+                                            "Error! $message",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                })
+                            }
+                        }
+                        ObjectType.LINE10 -> {
+                            tplnr?.let {
+                                viewModel.searchLine10(it, object : CoroutinesErrorHandler {
+                                    override fun onError(message: String) {
+                                        Toast.makeText(
+                                            requireContext(),
+                                            "Error! $message",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                })
+                            }
+
+                        }
+                        ObjectType.LINEABON04 -> {
+                            tplnr?.let {
+                                viewModel.searchAbonLine04(it, object : CoroutinesErrorHandler {
+                                    override fun onError(message: String) {
+                                        Toast.makeText(
+                                            requireContext(),
+                                            "Error! $message",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                })
+                            }
+                        }
+                        ObjectType.LINEABON10 -> {
+                            tplnr?.let {
+                                viewModel.searchAbonLine10(it, object : CoroutinesErrorHandler {
+                                    override fun onError(message: String) {
+                                        Toast.makeText(
+                                            requireContext(),
+                                            "Error! $message",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                })
+                            }
+                        }
+                    }
+                    /*viewModel.searchObject(tplnr, object : CoroutinesErrorHandler {
                         override fun onError(message: String) {
                             Toast.makeText(requireContext(), "Error! $message", Toast.LENGTH_SHORT)
                                 .show()
                         }
-                    })
-                }
+                    })*/
                 return false
             }
 
@@ -190,7 +256,7 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
     override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
         when (parent?.id) {
             R.id.object_spinner -> {
-                val item = parent.getItemAtPosition(position) as String
+                val item = parent.getItemAtPosition(position) as ObjectType
                 viewModel.selectedObjectType(item)
             }
         }
@@ -201,6 +267,9 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
             MainFragmentDirections.actionMainFragmentToEditorFragment(
                 obj.tplnr,
                 obj.name,
+                viewModel.spinnerObjectType.value,
+                obj.category,
+                obj.isAbon
             )
         )
     }
