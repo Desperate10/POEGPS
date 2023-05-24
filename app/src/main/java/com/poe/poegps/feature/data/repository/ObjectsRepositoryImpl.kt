@@ -109,7 +109,7 @@ class ObjectsRepositoryImpl @Inject constructor(
                     objectsDao.insertPillar04(it.to04DbModel())
                 }
             }
-        /*objectsApi.getPillarObjects10(filial, "Bearer $token")
+        objectsApi.getPillarObjects10(filial, "Bearer $token")
             .map { pillar ->
                 pillar.toDomainModel()
             }
@@ -117,7 +117,7 @@ class ObjectsRepositoryImpl @Inject constructor(
                 pillars.map {
                     objectsDao.insertPillar10(it.to10DbModel())
                 }
-            }*/
+            }
     }
 
     override fun searchLine04(tplnr: String): Flow<List<Line>> {

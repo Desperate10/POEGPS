@@ -79,6 +79,15 @@ fun TpObjectsDTO.toDomainModel() = Tp(
     isAbon = false
 )
 
+fun PsModelDTO.toDomainModel() = Tp(
+    id = 0,
+    tplnr = tplnr,
+    name = pltxt,
+    lat = lat,
+    lng = lng,
+    isAbon = false
+)
+
 fun TpObjectsAbonDTO.toDomainModel() = Tp(
     id = 0,
     name = pltxt,

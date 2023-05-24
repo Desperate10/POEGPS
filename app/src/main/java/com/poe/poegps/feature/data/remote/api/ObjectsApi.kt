@@ -25,7 +25,7 @@ interface ObjectsApi {
     suspend fun getAbonTpObjects(@Query("filial") filial: String, @Header("Authorization") token: String): List<TpObjectsAbonDTO>
 
     @GET("ps")
-    suspend fun getPsObjects(@Header("Authorization") token: String): List<TpObjectsDTO>
+    suspend fun getPsObjects(@Header("Authorization") token: String): List<PsModelDTO>
 
     @GET("lines10")
     suspend fun getLine10Objects(@Query("filial") filial: String, @Header("Authorization") token: String): List<LineObjects10DTO>
