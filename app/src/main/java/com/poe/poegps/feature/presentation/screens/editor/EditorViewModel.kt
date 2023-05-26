@@ -116,6 +116,12 @@ class EditorViewModel @Inject constructor(
                         isAbon = pillarStart.isAbon
                     ).toLineDomainModel()
                 )
+                ObjectType.LINE35 -> TODO()
+                ObjectType.LINE110 -> TODO()
+                ObjectType.LINE154 -> TODO()
+                ObjectType.LINEABON35 -> TODO()
+                ObjectType.LINEABON110 -> TODO()
+                ObjectType.LINEABON154 -> TODO()
             }
             /*repository.saveLine(
                 ObjectDisplayable(

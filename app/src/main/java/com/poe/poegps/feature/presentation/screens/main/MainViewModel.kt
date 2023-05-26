@@ -1,6 +1,5 @@
 package com.poe.poegps.feature.presentation.screens.main
 
-import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.poe.poegps.feature.data.remote.model.LoginResponse
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
@@ -46,7 +45,7 @@ class MainViewModel @Inject constructor(
     private val _state = MutableStateFlow<ObjectState>(ObjectState.initial)
     val state: StateFlow<ObjectState> = _state
 
-    private val _tokenValidity = MutableStateFlow<ApiResponse<Boolean>>(ApiResponse.Loading)
+    private val _tokenValidity = MutableStateFlow<Boolean>(true)
     val tokenValidity = _tokenValidity
 
     private val _message = MutableSharedFlow<String>()
@@ -58,7 +57,9 @@ class MainViewModel @Inject constructor(
                 withContext(Dispatchers.Main) {
                     token.value = it
                 }
+                tokenCheck(it)
             }
+
         }
         viewModelScope.launch(Dispatchers.IO) {
             filialManager.getFilial().collect {
@@ -131,6 +132,12 @@ class MainViewModel @Inject constructor(
         repository.auth(login, password)
     }
 
+    private fun tokenCheck(
+        token: String?
+    ) {
+        repository.checkTokenValidity(token ?: "")
+    }
+
     fun saveToken(token: String) {
         viewModelScope.launch(Dispatchers.IO) {
             tokenManager.saveToken(token)
@@ -181,11 +188,15 @@ class MainViewModel @Inject constructor(
         repository.searchLine10(tplnr).map { it.map { it.toObjectDisplayable() } }
     }
 
-    fun searchAbonLine04(tplnr: String, coroutineErrorHandler: CoroutinesErrorHandler) =
+    fun searchLine(tplnr: String, coroutineErrorHandler: CoroutinesErrorHandler) =
         baseRequest(
             _objectsList, coroutineErrorHandler
         ) {
-            repository.searchLine04(tplnr).map { it.map { it.toObjectDisplayable() } }
+            if (_spinnerObjectType.value == ObjectType.LINE04) {
+                repository.searchLine04(tplnr).map { it.map { it.toObjectDisplayable() } }
+            } else {
+                repository.searchAbonLine04(tplnr).map { it.map { it.toObjectDisplayable() } }
+            }
         }
 
     fun searchAbonLine10(tplnr: String, coroutineErrorHandler: CoroutinesErrorHandler) =
@@ -202,6 +213,12 @@ class MainViewModel @Inject constructor(
                 ObjectType.LINE10 -> repository.deleteLine10(name)
                 ObjectType.LINEABON04 -> repository.deleteAbonLine04(name)
                 ObjectType.LINEABON10 -> repository.deleteAbonLine10(name)
+                ObjectType.LINE35 -> TODO()
+                ObjectType.LINE110 -> TODO()
+                ObjectType.LINE154 -> TODO()
+                ObjectType.LINEABON35 -> TODO()
+                ObjectType.LINEABON110 -> TODO()
+                ObjectType.LINEABON154 -> TODO()
             }
         }
     }

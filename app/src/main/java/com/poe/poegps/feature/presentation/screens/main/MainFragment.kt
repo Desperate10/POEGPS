@@ -67,8 +67,21 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
     }
 
     private fun collectViewModel() {
-        collectLifecycleFlow(viewModel.token) { token ->
-            if (token.isEmpty()) {
+        collectLifecycleFlow(viewModel.tokenValidity) { token ->
+            when (token) {
+                ApiResponse.Success(data = true) -> {
+                    Log.d("testim", "zashlo")
+                    viewModel.authorization("poegis",
+                        "123Qwerty",
+                        object : CoroutinesErrorHandler {
+                            override fun onError(message: String) {
+                                Toast.makeText(context, "Error! $message", Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+                        })
+                } else ->{}
+            }
+            /*if (token.) {
                 withContext(Dispatchers.IO) {
                     viewModel.authorization("poegis",
                         "123Qwerty",
@@ -79,7 +92,7 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                             }
                         })
                 }
-            }
+            }*/
         }
         collectLifecycleFlow(viewModel.loginResponse) { loginResponse ->
             when (loginResponse) {
@@ -162,7 +175,7 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                     when(viewModel.spinnerObjectType.value) {
                         ObjectType.LINE04 -> {
                             tplnr?.let {
-                                viewModel.searchLine04(it, object : CoroutinesErrorHandler {
+                                viewModel.searchLine(it, object : CoroutinesErrorHandler {
                                     override fun onError(message: String) {
                                         Toast.makeText(
                                             requireContext(),
@@ -185,11 +198,49 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                                     }
                                 })
                             }
-
+                        }
+                        ObjectType.LINE35 -> {
+                            /*tplnr?.let {
+                                viewModel.searchLine35(it, object : CoroutinesErrorHandler {
+                                    override fun onError(message: String) {
+                                        Toast.makeText(
+                                            requireContext(),
+                                            "Error! $message",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                })
+                            }*/
+                        }
+                        ObjectType.LINE110 -> {
+                            /*tplnr?.let {
+                                viewModel.searchLine110(it, object : CoroutinesErrorHandler {
+                                    override fun onError(message: String) {
+                                        Toast.makeText(
+                                            requireContext(),
+                                            "Error! $message",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                })
+                            }*/
+                        }
+                        ObjectType.LINE154 -> {
+                            /*tplnr?.let {
+                                viewModel.searchLine154(it, object : CoroutinesErrorHandler {
+                                    override fun onError(message: String) {
+                                        Toast.makeText(
+                                            requireContext(),
+                                            "Error! $message",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                })
+                            }*/
                         }
                         ObjectType.LINEABON04 -> {
                             tplnr?.let {
-                                viewModel.searchAbonLine04(it, object : CoroutinesErrorHandler {
+                                viewModel.searchLine(it, object : CoroutinesErrorHandler {
                                     override fun onError(message: String) {
                                         Toast.makeText(
                                             requireContext(),
@@ -212,6 +263,45 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                                     }
                                 })
                             }
+                        }
+                        ObjectType.LINEABON35 -> {
+                            tplnr?.let {
+                               /* viewModel.searchAbonLine35(it, object : CoroutinesErrorHandler {
+                                    override fun onError(message: String) {
+                                        Toast.makeText(
+                                            requireContext(),
+                                            "Error! $message",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                })*/
+                            }
+                        }
+                        ObjectType.LINEABON110 -> {
+                            /*tplnr?.let {
+                                viewModel.searchAbonLine110(it, object : CoroutinesErrorHandler {
+                                    override fun onError(message: String) {
+                                        Toast.makeText(
+                                            requireContext(),
+                                            "Error! $message",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                })
+                            }*/
+                        }
+                        ObjectType.LINEABON154 -> {
+                            /*tplnr?.let {
+                                viewModel.searchAbonLine154(it, object : CoroutinesErrorHandler {
+                                    override fun onError(message: String) {
+                                        Toast.makeText(
+                                            requireContext(),
+                                            "Error! $message",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                })
+                            }*/
                         }
                     }
                     /*viewModel.searchObject(tplnr, object : CoroutinesErrorHandler {

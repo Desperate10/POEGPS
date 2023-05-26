@@ -12,7 +12,7 @@ interface ObjectsRepository {
     //логин
     fun auth(login: String, password: String): Flow<ApiResponse<LoginResponse>>
 
-    fun checkTokenValidity(token: String): Flow<ApiResponse<Boolean>>
+    fun checkTokenValidity(token: String): Flow<Boolean>
 
     //загрузка линий из апи
     suspend fun downloadLines(filial: String, token: String)
