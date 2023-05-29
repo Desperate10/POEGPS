@@ -5,7 +5,10 @@ import com.poe.poegps.feature.data.local.dao.ObjectsDao
 import com.poe.poegps.feature.data.mapper.*
 import com.poe.poegps.feature.data.remote.api.ObjectsApi
 import com.poe.poegps.feature.data.remote.model.LoginRequest
+import com.poe.poegps.feature.data.remote.model.LoginResponse
 import com.poe.poegps.feature.data.remote.model.PsModelDTO
+import com.poe.poegps.feature.data.remote.model.SavePillarsResponse
+import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.data.remote.utils.apiRequestFlow
 import com.poe.poegps.feature.domain.model.Line
 import com.poe.poegps.feature.domain.model.Pillar
@@ -24,6 +27,15 @@ class ObjectsRepositoryImpl @Inject constructor(
     override fun auth(login: String, password: String) = apiRequestFlow {
         objectsApi.auth(LoginRequest(login, password))
     }
+
+    override fun uploadSavedPillars(token: String): Flow<ApiResponse<SavePillarsResponse>> {
+        return apiRequestFlow {
+            val data = objectsDao.getSavedPillars()
+            //Log.d("testim", data.map { it.toDTObject()} .toString())
+            objectsApi.uploadSavedPillars(token = token, pillars = data.map { it.toDTObject() })
+        }
+    }
+
 
     override suspend fun downloadLines(filial: String, token: String) {
         objectsApi.getLine04Objects(filial, "Bearer $token")
@@ -96,11 +108,11 @@ class ObjectsRepositoryImpl @Inject constructor(
                 objectsDao.insertPs(pss)
                 Log.d("testim", "downloadPss: $pss")
             }
-            /*.also { pss ->
-                pss.map {
-                    objectsDao.insertPs(it.toPsDbModel())
-                }
-            }*/
+        /*.also { pss ->
+            pss.map {
+                objectsDao.insertPs(it.toPsDbModel())
+            }
+        }*/
     }
 
     override suspend fun downloadPillars(filial: String, token: String) {

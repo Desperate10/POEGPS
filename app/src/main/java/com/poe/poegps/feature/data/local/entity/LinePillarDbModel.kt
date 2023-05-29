@@ -15,5 +15,6 @@ data class LinePillarDbModel(
     val wire: String,
     val lat: String,
     val lng: String,
-    val isAbon: Boolean
+    val isAbon: Boolean,
+    val isSent: Boolean = false
 )

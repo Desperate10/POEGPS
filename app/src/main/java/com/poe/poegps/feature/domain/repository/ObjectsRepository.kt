@@ -1,6 +1,7 @@
 package com.poe.poegps.feature.domain.repository
 
 import com.poe.poegps.feature.data.remote.model.LoginResponse
+import com.poe.poegps.feature.data.remote.model.SavePillarsResponse
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.domain.model.Line
 import com.poe.poegps.feature.domain.model.Pillar
@@ -11,6 +12,9 @@ interface ObjectsRepository {
 
     //логин
     fun auth(login: String, password: String): Flow<ApiResponse<LoginResponse>>
+
+    //Выгрузка опор из БД
+    fun uploadSavedPillars(token: String): Flow<ApiResponse<SavePillarsResponse>>
 
     //загрузка линий из апи
     suspend fun downloadLines(filial: String, token: String)

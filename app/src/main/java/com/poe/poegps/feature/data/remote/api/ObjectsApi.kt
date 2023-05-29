@@ -1,7 +1,9 @@
 package com.poe.poegps.feature.data.remote.api
 
+import com.poe.poegps.feature.data.local.entity.LinePillarDbModel
 import com.poe.poegps.feature.data.remote.model.*
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
+import com.poe.poegps.feature.domain.model.Pillar
 import kotlinx.coroutines.flow.Flow
 import retrofit2.Response
 import retrofit2.http.Body
@@ -46,4 +48,7 @@ interface ObjectsApi {
 
     @GET("abonlines04")
     suspend fun getLine04AbonObjects(@Query("filial") filial: String, @Header("Authorization") token: String): List<LineObjects04AbonDTO>
+    @Headers("Content-Type: application/json;charset=UTF-8")
+    @POST("save")
+    suspend fun uploadSavedPillars(@Body pillars: List<LinePillarDTO>, @Header("Authorization") token: String): Response<SavePillarsResponse>
 }

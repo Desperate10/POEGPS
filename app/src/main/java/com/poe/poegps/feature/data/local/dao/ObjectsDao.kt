@@ -47,6 +47,9 @@ interface ObjectsDao {
     @Delete
     suspend fun deletePillar(pillar: LinePillarDbModel)
 
+    @Query("SELECT * FROM line_pillar WHERE isSent = 0")
+    suspend fun getSavedPillars(): List<LinePillarDbModel>
+
     @Query("SELECT * FROM tp")
     fun getTps(): Flow<List<TpDbModel>>
 

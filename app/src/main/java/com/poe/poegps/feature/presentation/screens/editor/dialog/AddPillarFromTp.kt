@@ -24,6 +24,7 @@ import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 class AddPillarFromTp: DialogFragment() {
     private lateinit var pltxt: String
     private lateinit var tplnr: String
+    private lateinit var ucat: String
     private var isAbon = false
     private val viewModel by viewModels<EditorViewModel>(ownerProducer = { requireParentFragment() })
 
@@ -42,6 +43,7 @@ class AddPillarFromTp: DialogFragment() {
         arguments?.let {
             pltxt = it.getString(PLTXT).toString()
             tplnr = it.getString(TPLNR).toString()
+            ucat = it.getString(UCAT).toString()
             isAbon = it.getBoolean(ISABON)
         }
     }
@@ -74,7 +76,7 @@ class AddPillarFromTp: DialogFragment() {
                 tplnr = tplnr,
                 name = spinnerValue.name,
                 parentName = pltxt,
-                category = spinnerValue.category,
+                category = ucat,
                 isAbon = spinnerValue.isAbon,
                 pillarType = PillarType.PILLAR.name,
                 wire = spinnerValue.wire,
@@ -92,12 +94,14 @@ class AddPillarFromTp: DialogFragment() {
     companion object {
         private const val PLTXT = "pltxt"
         private const val TPLNR = "tplnr"
+        private const val UCAT = "ucat"
         private const val ISABON = "isAbon"
 
-        fun newInstance(pltxt: String, tplnr: String, isAbon: Boolean): AddPillarFromTp {
+        fun newInstance(pltxt: String, tplnr: String, ucat: String, isAbon: Boolean): AddPillarFromTp {
             val args = Bundle()
             args.putString(PLTXT, pltxt)
             args.putString(TPLNR, tplnr)
+            args.putString(UCAT, ucat)
             args.putBoolean(ISABON, isAbon)
             val fragment = AddPillarFromTp()
             fragment.arguments = args

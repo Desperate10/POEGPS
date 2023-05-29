@@ -140,4 +140,5 @@
     <string name="abon">Абон</string>
     <string name="menu_add_saved_tp">Додати ТП</string>
     <string name="menu_add_abon_saved_tp">Додати абон. ТП</string>
+    <string name="upload">Вивантажити</string>
 </resources>

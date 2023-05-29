@@ -2,6 +2,7 @@ package com.poe.poegps.feature.presentation.screens.main
 
 import androidx.lifecycle.viewModelScope
 import com.poe.poegps.feature.data.remote.model.LoginResponse
+import com.poe.poegps.feature.data.remote.model.SavePillarsResponse
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.data.remote.utils.FilialManager
 import com.poe.poegps.feature.data.remote.utils.TokenManager
@@ -41,6 +42,9 @@ class MainViewModel @Inject constructor(
 
     private val _loginResponse = MutableStateFlow<ApiResponse<LoginResponse>>(ApiResponse.Loading)
     val loginResponse = _loginResponse
+
+    private val _uploadResponse = MutableStateFlow<ApiResponse<SavePillarsResponse>>(ApiResponse.Loading)
+    val uploadResponse = _uploadResponse
 
     private val _state = MutableStateFlow<ObjectState>(ObjectState.initial)
     val state: StateFlow<ObjectState> = _state
@@ -260,6 +264,14 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             filialManager.saveFilial(filial)
         }
+    }
+
+    fun uploadObjectsFromDb(
+        coroutineErrorHandler: CoroutinesErrorHandler
+    ) = baseRequest(
+        _uploadResponse, coroutineErrorHandler
+    ) {
+        repository.uploadSavedPillars(token.value ?: "")
     }
 
 }

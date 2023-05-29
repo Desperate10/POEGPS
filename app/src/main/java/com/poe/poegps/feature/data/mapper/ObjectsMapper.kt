@@ -253,6 +253,19 @@ fun LinePillarDbModel.toDomainModel() = Pillar(
     lng = lng
 )
 
+fun LinePillarDbModel.toDTObject() = LinePillarDTO(
+    tplnr = tplnr,
+    opr = name,
+    lineName = parentName,
+    ucat = category,
+    isAbon = isAbon,
+    pillarType = pillarType,
+    wire = wire,
+    lat = lat,
+    lng = lng,
+    isSent = isSent
+)
+
 fun Pillar.toLinePillarDbModel() = LinePillarDbModel(
     id = id,
     tplnr = tplnr,

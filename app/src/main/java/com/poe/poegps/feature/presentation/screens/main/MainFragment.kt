@@ -95,6 +95,29 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                 }
             }
         }
+        collectLifecycleFlow(viewModel.uploadResponse) {uploadResponse ->
+            when (uploadResponse) {
+                is ApiResponse.Error -> Toast.makeText(
+                    requireContext(),
+                    uploadResponse.message,
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                ApiResponse.Loading -> {}/*Toast.makeText(
+                    requireContext(),
+                    "Loading...",
+                    Toast.LENGTH_SHORT
+                ).show()*/
+
+                is ApiResponse.Success -> {
+                    Toast.makeText(
+                        requireContext(),
+                        "Дані успішно відправлені",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
         collectLifecycleFlow(viewModel.objectsList) { objectsList ->
             adapter.submitList(objectsList)
         }
@@ -340,6 +363,15 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
 
             R.id.download -> {
                 viewModel.loadObjectsToDb()
+                true
+            }
+            R.id.upload -> {
+                viewModel.uploadObjectsFromDb(object: CoroutinesErrorHandler {
+                    override fun onError(message: String) {
+                        Toast.makeText(requireContext(), "Error! $message", Toast.LENGTH_SHORT)
+                            .show()
+                    }
+                })
                 true
             }
 

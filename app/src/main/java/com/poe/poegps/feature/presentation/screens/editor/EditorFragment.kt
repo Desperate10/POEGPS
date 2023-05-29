@@ -28,6 +28,7 @@ import com.poe.poegps.feature.presentation.screens.editor.dialog.*
 import dagger.hilt.android.AndroidEntryPoint
 import gromov.ramdomusertestcase.core.extension.autoCleaned
 import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
+import java.util.Locale
 
 @AndroidEntryPoint
 class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationListener,
@@ -132,13 +133,13 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
                 true
             }
             R.id.add_savedtp_from_small -> {
-                val dialog = AddPillarFromTp.newInstance(args.pltxt, args.tplnr, false)
+                val dialog = AddPillarFromTp.newInstance(args.pltxt, args.tplnr, args.category, false)
                 dialog.setListener(this)
                 dialog.show(childFragmentManager, "CreateSavedTp04DialogFragment")
                 true
             }
             R.id.add_saved_abon_tp_from_small -> {
-                val dialog = AddPillarFromTp.newInstance(args.pltxt, args.tplnr, true)
+                val dialog = AddPillarFromTp.newInstance(args.pltxt, args.tplnr, args.category, true)
                 dialog.setListener(this)
                 dialog.show(childFragmentManager, "CreateSavedTp04DialogFragment")
                 true
@@ -332,6 +333,7 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
 
     private fun formatLocationLat(location: Location?): String {
         return if (location == null) "" else String.format(
+            Locale.US,
             "%1$.5f",
             location.latitude
         )
@@ -340,6 +342,7 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
 
     private fun formatLocationLng(location: Location?): String {
         return if (location == null) "" else String.format(
+            Locale.US,
             "%1$.5f",
             location.longitude
         )
