@@ -12,6 +12,7 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import com.poe.poegps.R
 import com.poe.poegps.feature.presentation.model.OprDisplayable
+import com.poe.poegps.feature.presentation.model.PillarType
 import com.poe.poegps.feature.presentation.screens.editor.EditorViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
@@ -87,6 +88,7 @@ class ChoosePillarFrom10DialogFragment : DialogFragment() {
                 parentName = lineName,
                 category = pillarSpinner.category,
                 isAbon = pillarSpinner.isAbon,
+                pillarType = PillarType.PILLAR.name,
                 wire = spinnerValue,
                 lat = pillarSpinner.lat,
                 lng = pillarSpinner.lng

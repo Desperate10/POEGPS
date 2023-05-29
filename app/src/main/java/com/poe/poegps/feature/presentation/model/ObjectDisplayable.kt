@@ -9,6 +9,7 @@ data class ObjectDisplayable(
     var tplnr: String,
     val name: String,
     val category: String,
+    val pillarType: String,
     val isAbon: Boolean
 ) : Parcelable {
     override fun toString(): String {

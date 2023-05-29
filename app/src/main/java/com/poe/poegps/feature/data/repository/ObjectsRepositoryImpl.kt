@@ -5,9 +5,11 @@ import com.poe.poegps.feature.data.local.dao.ObjectsDao
 import com.poe.poegps.feature.data.mapper.*
 import com.poe.poegps.feature.data.remote.api.ObjectsApi
 import com.poe.poegps.feature.data.remote.model.LoginRequest
+import com.poe.poegps.feature.data.remote.model.PsModelDTO
 import com.poe.poegps.feature.data.remote.utils.apiRequestFlow
 import com.poe.poegps.feature.domain.model.Line
 import com.poe.poegps.feature.domain.model.Pillar
+import com.poe.poegps.feature.domain.model.Ps
 import com.poe.poegps.feature.domain.model.Tp
 import com.poe.poegps.feature.domain.repository.ObjectsRepository
 import kotlinx.coroutines.flow.Flow
@@ -76,6 +78,7 @@ class ObjectsRepositoryImpl @Inject constructor(
         //abon
         objectsApi.getAbonTpObjects(filial, "Bearer $token")
             .map { tp ->
+                Log.d("testim", "downloadAbonTp: $tp")
                 tp.toDomainModel()
             }
             .also { tps ->
@@ -88,14 +91,16 @@ class ObjectsRepositoryImpl @Inject constructor(
     override suspend fun downloadPss(token: String) {
         objectsApi.getPsObjects("Bearer $token")
             .map { ps ->
-                ps.toDomainModel()
+                val domain = ps.toDomainModel()
+                val pss = domain.toPsDbModel()
+                objectsDao.insertPs(pss)
+                Log.d("testim", "downloadPss: $pss")
             }
-            .also { pss ->
+            /*.also { pss ->
                 pss.map {
-                    Log.d("testim", "downloadPss: $it")
                     objectsDao.insertPs(it.toPsDbModel())
                 }
-            }
+            }*/
     }
 
     override suspend fun downloadPillars(filial: String, token: String) {
@@ -164,6 +169,15 @@ class ObjectsRepositoryImpl @Inject constructor(
             }
     }
 
+    override fun searchPS(tplnr: String): Flow<List<Tp>> {
+        return objectsDao.getTp(tplnr)
+            .map { tp ->
+                tp.map {
+                    it.toDomainModel()
+                }
+            }
+    }
+
     override fun getLineList10(): Flow<List<Line>> {
         return objectsDao.getLineList10()
             .map {
@@ -223,10 +237,6 @@ class ObjectsRepositoryImpl @Inject constructor(
 
     override suspend fun getParentName(tplnr: String): String {
         return objectsDao.getParentName(tplnr)
-    }
-
-    override fun checkTokenValidity(token: String) = apiRequestFlow {
-        objectsApi.checkTokenValidity("Bearer $token")
     }
 
     override suspend fun saveLine04(line: Line) {

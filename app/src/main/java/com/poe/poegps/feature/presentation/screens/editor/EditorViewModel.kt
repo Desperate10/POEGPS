@@ -89,6 +89,7 @@ class EditorViewModel @Inject constructor(
                         tplnr = pillarStart.tplnr,
                         name = pillarStart.parentName,
                         category = pillarStart.category,
+                        pillarType = pillarStart.pillarType,
                         isAbon = pillarStart.isAbon
                     ).toLineDomainModel()
                 )
@@ -97,6 +98,7 @@ class EditorViewModel @Inject constructor(
                         tplnr = pillarStart.tplnr,
                         name = pillarStart.parentName,
                         category = pillarStart.category,
+                        pillarType = pillarStart.pillarType,
                         isAbon = pillarStart.isAbon
                     ).toLineDomainModel()
                 )
@@ -105,6 +107,7 @@ class EditorViewModel @Inject constructor(
                         tplnr = pillarStart.tplnr,
                         name = pillarStart.parentName,
                         category = pillarStart.category,
+                        pillarType = pillarStart.pillarType,
                         isAbon = pillarStart.isAbon
                     ).toLineDomainModel()
                 )
@@ -113,15 +116,19 @@ class EditorViewModel @Inject constructor(
                         tplnr = pillarStart.tplnr,
                         name = pillarStart.parentName,
                         category = pillarStart.category,
+                        pillarType = pillarStart.pillarType,
                         isAbon = pillarStart.isAbon
                     ).toLineDomainModel()
                 )
-                ObjectType.LINE35 -> TODO()
-                ObjectType.LINE110 -> TODO()
-                ObjectType.LINE154 -> TODO()
-                ObjectType.LINEABON35 -> TODO()
-                ObjectType.LINEABON110 -> TODO()
-                ObjectType.LINEABON154 -> TODO()
+                /* ObjectType.LINE35 -> TODO()
+                 ObjectType.LINE110 -> TODO()
+                 ObjectType.LINE154 -> TODO()
+                 ObjectType.LINEABON35 -> TODO()
+                 ObjectType.LINEABON110 -> TODO()
+                 ObjectType.LINEABON154 -> TODO()*/
+                ObjectType.TP -> TODO()
+                ObjectType.TPABON -> TODO()
+                ObjectType.PS -> TODO()
             }
             /*repository.saveLine(
                 ObjectDisplayable(

@@ -11,9 +11,11 @@ import android.widget.Spinner
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import com.poe.poegps.R
+import com.poe.poegps.feature.domain.model.Pillar
 import com.poe.poegps.feature.presentation.mapper.toOprDisplayable
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.OprDisplayable
+import com.poe.poegps.feature.presentation.model.PillarType
 import com.poe.poegps.feature.presentation.screens.editor.EditorViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
@@ -22,6 +24,7 @@ import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 class AddPillarFromTp: DialogFragment() {
     private lateinit var pltxt: String
     private lateinit var tplnr: String
+    private var isAbon = false
     private val viewModel by viewModels<EditorViewModel>(ownerProducer = { requireParentFragment() })
 
     interface Listener {
@@ -39,6 +42,7 @@ class AddPillarFromTp: DialogFragment() {
         arguments?.let {
             pltxt = it.getString(PLTXT).toString()
             tplnr = it.getString(TPLNR).toString()
+            isAbon = it.getBoolean(ISABON)
         }
     }
 
@@ -72,6 +76,7 @@ class AddPillarFromTp: DialogFragment() {
                 parentName = pltxt,
                 category = spinnerValue.category,
                 isAbon = spinnerValue.isAbon,
+                pillarType = PillarType.PILLAR.name,
                 wire = spinnerValue.wire,
                 lat = spinnerValue.lat,
                 lng = spinnerValue.lng
@@ -87,12 +92,13 @@ class AddPillarFromTp: DialogFragment() {
     companion object {
         private const val PLTXT = "pltxt"
         private const val TPLNR = "tplnr"
-        private const val ORDER = "order"
+        private const val ISABON = "isAbon"
 
-        fun newInstance(pltxt: String, tplnr: String): AddPillarFromTp {
+        fun newInstance(pltxt: String, tplnr: String, isAbon: Boolean): AddPillarFromTp {
             val args = Bundle()
             args.putString(PLTXT, pltxt)
             args.putString(TPLNR, tplnr)
+            args.putBoolean(ISABON, isAbon)
             val fragment = AddPillarFromTp()
             fragment.arguments = args
             return fragment

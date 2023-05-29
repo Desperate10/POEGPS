@@ -57,7 +57,6 @@ class MainViewModel @Inject constructor(
                 withContext(Dispatchers.Main) {
                     token.value = it
                 }
-                tokenCheck(it)
             }
 
         }
@@ -132,11 +131,6 @@ class MainViewModel @Inject constructor(
         repository.auth(login, password)
     }
 
-    private fun tokenCheck(
-        token: String?
-    ) {
-        repository.checkTokenValidity(token ?: "")
-    }
 
     fun saveToken(token: String) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -206,6 +200,17 @@ class MainViewModel @Inject constructor(
             repository.searchLine10(tplnr).map { it.map { it.toObjectDisplayable() } }
         }
 
+    fun searchTp(tplnr: String, coroutineErrorHandler: CoroutinesErrorHandler) = baseRequest(
+        _objectsList,
+        coroutineErrorHandler
+    ) {
+        if (_spinnerObjectType.value == ObjectType.TP) {
+            repository.searchTP(tplnr, false).map { it.map { it.toObjectDisplayable() } }
+        } else {
+            repository.searchTP(tplnr, true).map { it.map { it.toObjectDisplayable() } }
+        }
+    }
+
     fun deleteObject(name: String) {
         viewModelScope.launch(Dispatchers.IO) {
             when (_spinnerObjectType.value) {
@@ -213,12 +218,15 @@ class MainViewModel @Inject constructor(
                 ObjectType.LINE10 -> repository.deleteLine10(name)
                 ObjectType.LINEABON04 -> repository.deleteAbonLine04(name)
                 ObjectType.LINEABON10 -> repository.deleteAbonLine10(name)
-                ObjectType.LINE35 -> TODO()
+                /*ObjectType.LINE35 -> TODO()
                 ObjectType.LINE110 -> TODO()
                 ObjectType.LINE154 -> TODO()
                 ObjectType.LINEABON35 -> TODO()
                 ObjectType.LINEABON110 -> TODO()
-                ObjectType.LINEABON154 -> TODO()
+                ObjectType.LINEABON154 -> TODO()*/
+                ObjectType.TP -> TODO()
+                ObjectType.TPABON -> TODO()
+                ObjectType.PS -> TODO()
             }
         }
     }

@@ -6,12 +6,14 @@ import com.poe.poegps.feature.domain.model.Line
 import com.poe.poegps.feature.domain.model.Pillar
 import com.poe.poegps.feature.domain.model.Ps
 import com.poe.poegps.feature.domain.model.Tp
+import com.poe.poegps.feature.presentation.model.PillarType
 
 fun LineObjects04DTO.toDomainModel() = Line(
     id = 0,
     tplnr = tplnr,
     name = pltxt,
     category = "0,4 кВ",
+    pillarType = PillarType.PILLAR.name,
     isAbon = false
 )
 
@@ -20,6 +22,7 @@ fun LineObjects10DTO.toDomainModel() = Line(
     tplnr = tplnr,
     name = pltxt,
     category = "10 кВ",
+    pillarType = PillarType.PILLAR.name,
     isAbon = false
 )
 
@@ -28,6 +31,7 @@ fun LineObjects04AbonDTO.toDomainModel() = Line(
     tplnr = tplnr,
     name = pltxt,
     category = "0,4 кВ",
+    pillarType = PillarType.PILLAR.name,
     isAbon = true
 )
 
@@ -36,6 +40,7 @@ fun LineObjects10AbonDTO.toDomainModel() = Line(
     tplnr = tplnr,
     name = pltxt,
     category = "10 кВ",
+    pillarType = PillarType.PILLAR.name,
     isAbon = true
 )
 
@@ -44,6 +49,7 @@ fun Line04DbModel.toDomainModel() = Line(
     tplnr = tplnr,
     name = name,
     category = "0,4 кВ",
+    pillarType = PillarType.PILLAR.name,
     isAbon = false
 )
 
@@ -52,6 +58,7 @@ fun Line10DbModel.toDomainModel() = Line(
     tplnr = tplnr,
     name = name,
     category = "10 кВ",
+    pillarType = PillarType.PILLAR.name,
     isAbon = false
 )
 
@@ -59,6 +66,7 @@ fun AbonLine04DbModel.toDomainModel() = Line(
     id = 0,
     tplnr = tplnr,
     name = name,
+    pillarType = PillarType.PILLAR.name,
     category = "0,4 кВ",
     isAbon = true
 )
@@ -68,6 +76,7 @@ fun AbonLine10DbModel.toDomainModel() = Line(
     tplnr = tplnr,
     name = name,
     category = "10 кВ",
+    pillarType = PillarType.PILLAR.name,
     isAbon = true
 )
 
@@ -77,6 +86,7 @@ fun TpObjectsDTO.toDomainModel() = Tp(
     name = pltxt,
     lat = lat,
     lng = lng,
+    pillarType = PillarType.TP.name,
     isAbon = false
 )
 
@@ -84,6 +94,7 @@ fun PsModelDTO.toDomainModel() = Ps(
     id = 0,
     tplnr = tplnr,
     pltxt = pltxt,
+    pillarType = PillarType.PS.name,
     lat = lat,
     lng = lng
 )
@@ -92,6 +103,7 @@ fun TpObjectsAbonDTO.toDomainModel() = Tp(
     id = 0,
     name = pltxt,
     tplnr = tplnr,
+    pillarType = PillarType.TP.name,
     lat = lat,
     lng = lng,
     isAbon = true
@@ -113,7 +125,7 @@ fun Tp.toAbonDbModel() = AbonTpDbModel(
 
 fun Ps.toPsDbModel() = PsDbModel(
     tplnr = tplnr,
-    name = pltxt,
+    pltxt = pltxt,
     lat = lat,
     lng = lng
 )
@@ -143,16 +155,18 @@ fun TpDbModel.toDomainModel() = Tp(
     tplnr = tplnr,
     name = pltxt,
     isAbon = false,
+    pillarType = PillarType.TP.name,
     lat = lat,
     lng = lng
 )
 
 fun PsDbModel.toDomainModel() = Ps(
     id= id,
-    tplnr = tplnr,
-    pltxt = name,
-    lat = lat,
-    lng = lng
+    tplnr = tplnr?:"",
+    pltxt = pltxt?:"",
+    pillarType = PillarType.PS.name,
+    lat = lat?:"0.0",
+    lng = lng?:"0.0"
 )
 
 fun PillarObjects04DTO.toDomainModel() = Pillar(
@@ -162,6 +176,7 @@ fun PillarObjects04DTO.toDomainModel() = Pillar(
     parentName = "",
     category = "0,4 кВ",
     isAbon = false,
+    pillarType = PillarType.PILLAR.name,
     wire = wire,
     lat = lat,
     lng = lng
@@ -173,6 +188,7 @@ fun PillarObjects10DTO.toDomainModel() = Pillar(
     name = pltxt,
     parentName = "",
     category = "10 кВ",
+    pillarType = PillarType.PILLAR.name,
     isAbon = false,
     wire = wire,
     lat = lat,
@@ -204,6 +220,7 @@ fun Pillar04DbModel.toDomainModel() = Pillar(
     name = name,
     parentName = "",
     category = "0,4 кВ",
+    pillarType = PillarType.PILLAR.name,
     isAbon = false,
     wire = wire,
     lat = lat,
@@ -216,6 +233,7 @@ fun Pillar10DbModel.toDomainModel() = Pillar(
     name = name,
     parentName = "",
     category = "10 кВ",
+    pillarType = PillarType.PILLAR.name,
     isAbon = false,
     wire = wire,
     lat = lat,
@@ -229,6 +247,7 @@ fun LinePillarDbModel.toDomainModel() = Pillar(
     parentName = parentName,
     category = category,
     isAbon = isAbon,
+    pillarType = pillarType,
     wire = wire,
     lat = lat,
     lng = lng
@@ -240,6 +259,7 @@ fun Pillar.toLinePillarDbModel() = LinePillarDbModel(
     name = name,
     parentName = parentName,
     category = category,
+    pillarType = pillarType,
     isAbon = isAbon,
     wire = wire,
     lat = lat,

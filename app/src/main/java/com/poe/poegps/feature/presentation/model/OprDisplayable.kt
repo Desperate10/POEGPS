@@ -11,6 +11,7 @@ data class OprDisplayable(
     var parentName: String,
     val category: String,
     val isAbon: Boolean,
+    val pillarType: String,
     var lat: String= "0.0",
     var lng: String= "0.0",
     val wire: String=""

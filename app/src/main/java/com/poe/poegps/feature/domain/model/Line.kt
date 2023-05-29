@@ -5,5 +5,6 @@ data class Line(
     val name: String,
     val tplnr: String,
     val category: String,
+    val pillarType: String,
     val isAbon: Boolean
 )

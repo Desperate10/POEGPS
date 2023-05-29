@@ -12,8 +12,6 @@ interface ObjectsRepository {
     //логин
     fun auth(login: String, password: String): Flow<ApiResponse<LoginResponse>>
 
-    fun checkTokenValidity(token: String): Flow<Boolean>
-
     //загрузка линий из апи
     suspend fun downloadLines(filial: String, token: String)
 
@@ -40,6 +38,9 @@ interface ObjectsRepository {
 
     //Получение ТП из БД по клику
     fun searchTP(tplnr: String, abonState: Boolean): Flow<List<Tp>>
+
+    //Получение ПС из БД по клику
+    fun searchPS(tplnr: String): Flow<List<Tp>>
 
     //Получение списка линий по категории
     fun getLineList10(): Flow<List<Line>>

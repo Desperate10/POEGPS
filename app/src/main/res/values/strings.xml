@@ -138,4 +138,6 @@
     <string name="create_otp">Створити відпайку</string>
     <string name="delete_opr">Видалити опору</string>
     <string name="abon">Абон</string>
+    <string name="menu_add_saved_tp">Додати ТП</string>
+    <string name="menu_add_abon_saved_tp">Додати абон. ТП</string>
 </resources>

@@ -7,8 +7,8 @@ import androidx.room.PrimaryKey
 data class PsDbModel(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val name: String,
-    val tplnr: String,
-    val lng: String,
-    val lat: String
+    val tplnr: String? = "no tplnr",
+    val pltxt: String? = "no name",
+    val lng: String? = "0.0",
+    val lat: String? = "0.0"
 )

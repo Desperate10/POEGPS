@@ -3,7 +3,6 @@ package com.poe.poegps.feature.presentation.screens.main
 import android.Manifest
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.util.Log
 import android.view.*
 import android.view.inputmethod.EditorInfo
 import android.widget.*
@@ -29,8 +28,6 @@ import com.poe.poegps.feature.presentation.screens.main.spinner.ObjectsSpinnerAd
 import dagger.hilt.android.AndroidEntryPoint
 import gromov.ramdomusertestcase.core.extension.autoCleaned
 import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
 class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvider,
@@ -67,32 +64,17 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
     }
 
     private fun collectViewModel() {
-        collectLifecycleFlow(viewModel.tokenValidity) { token ->
-            when (token) {
-                ApiResponse.Success(data = true) -> {
-                    Log.d("testim", "zashlo")
-                    viewModel.authorization("poegis",
-                        "123Qwerty",
-                        object : CoroutinesErrorHandler {
-                            override fun onError(message: String) {
-                                Toast.makeText(context, "Error! $message", Toast.LENGTH_SHORT)
-                                    .show()
-                            }
-                        })
-                } else ->{}
+        collectLifecycleFlow(viewModel.token) { token ->
+            if (token.isEmpty()) {
+                viewModel.authorization("poegis",
+                    "123Qwerty",
+                    object : CoroutinesErrorHandler {
+                        override fun onError(message: String) {
+                            Toast.makeText(context, "Error! $message", Toast.LENGTH_SHORT)
+                                .show()
+                        }
+                    })
             }
-            /*if (token.) {
-                withContext(Dispatchers.IO) {
-                    viewModel.authorization("poegis",
-                        "123Qwerty",
-                        object : CoroutinesErrorHandler {
-                            override fun onError(message: String) {
-                                Toast.makeText(context, "Error! $message", Toast.LENGTH_SHORT)
-                                    .show()
-                            }
-                        })
-                }
-            }*/
         }
         collectLifecycleFlow(viewModel.loginResponse) { loginResponse ->
             when (loginResponse) {
@@ -102,11 +84,11 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                     Toast.LENGTH_SHORT
                 ).show()
 
-                ApiResponse.Loading -> Toast.makeText(
+                ApiResponse.Loading -> {}/*Toast.makeText(
                     requireContext(),
                     "Loading...",
                     Toast.LENGTH_SHORT
-                ).show()
+                ).show()*/
 
                 is ApiResponse.Success -> {
                     viewModel.saveToken(loginResponse.data.jwt)
@@ -172,144 +154,171 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
         searchView.imeOptions = EditorInfo.IME_ACTION_DONE
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(tplnr: String?): Boolean {
-                    when(viewModel.spinnerObjectType.value) {
-                        ObjectType.LINE04 -> {
-                            tplnr?.let {
-                                viewModel.searchLine(it, object : CoroutinesErrorHandler {
-                                    override fun onError(message: String) {
-                                        Toast.makeText(
-                                            requireContext(),
-                                            "Error! $message",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                })
-                            }
-                        }
-                        ObjectType.LINE10 -> {
-                            tplnr?.let {
-                                viewModel.searchLine10(it, object : CoroutinesErrorHandler {
-                                    override fun onError(message: String) {
-                                        Toast.makeText(
-                                            requireContext(),
-                                            "Error! $message",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                })
-                            }
-                        }
-                        ObjectType.LINE35 -> {
-                            /*tplnr?.let {
-                                viewModel.searchLine35(it, object : CoroutinesErrorHandler {
-                                    override fun onError(message: String) {
-                                        Toast.makeText(
-                                            requireContext(),
-                                            "Error! $message",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                })
-                            }*/
-                        }
-                        ObjectType.LINE110 -> {
-                            /*tplnr?.let {
-                                viewModel.searchLine110(it, object : CoroutinesErrorHandler {
-                                    override fun onError(message: String) {
-                                        Toast.makeText(
-                                            requireContext(),
-                                            "Error! $message",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                })
-                            }*/
-                        }
-                        ObjectType.LINE154 -> {
-                            /*tplnr?.let {
-                                viewModel.searchLine154(it, object : CoroutinesErrorHandler {
-                                    override fun onError(message: String) {
-                                        Toast.makeText(
-                                            requireContext(),
-                                            "Error! $message",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                })
-                            }*/
-                        }
-                        ObjectType.LINEABON04 -> {
-                            tplnr?.let {
-                                viewModel.searchLine(it, object : CoroutinesErrorHandler {
-                                    override fun onError(message: String) {
-                                        Toast.makeText(
-                                            requireContext(),
-                                            "Error! $message",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                })
-                            }
-                        }
-                        ObjectType.LINEABON10 -> {
-                            tplnr?.let {
-                                viewModel.searchAbonLine10(it, object : CoroutinesErrorHandler {
-                                    override fun onError(message: String) {
-                                        Toast.makeText(
-                                            requireContext(),
-                                            "Error! $message",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                })
-                            }
-                        }
-                        ObjectType.LINEABON35 -> {
-                            tplnr?.let {
-                               /* viewModel.searchAbonLine35(it, object : CoroutinesErrorHandler {
-                                    override fun onError(message: String) {
-                                        Toast.makeText(
-                                            requireContext(),
-                                            "Error! $message",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                })*/
-                            }
-                        }
-                        ObjectType.LINEABON110 -> {
-                            /*tplnr?.let {
-                                viewModel.searchAbonLine110(it, object : CoroutinesErrorHandler {
-                                    override fun onError(message: String) {
-                                        Toast.makeText(
-                                            requireContext(),
-                                            "Error! $message",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                })
-                            }*/
-                        }
-                        ObjectType.LINEABON154 -> {
-                            /*tplnr?.let {
-                                viewModel.searchAbonLine154(it, object : CoroutinesErrorHandler {
-                                    override fun onError(message: String) {
-                                        Toast.makeText(
-                                            requireContext(),
-                                            "Error! $message",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                })
-                            }*/
+                when (viewModel.spinnerObjectType.value) {
+                    ObjectType.LINE04 -> {
+                        tplnr?.let {
+                            viewModel.searchLine(it, object : CoroutinesErrorHandler {
+                                override fun onError(message: String) {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Error! $message",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            })
                         }
                     }
-                    /*viewModel.searchObject(tplnr, object : CoroutinesErrorHandler {
-                        override fun onError(message: String) {
-                            Toast.makeText(requireContext(), "Error! $message", Toast.LENGTH_SHORT)
-                                .show()
+                    ObjectType.LINE10 -> {
+                        tplnr?.let {
+                            viewModel.searchLine10(it, object : CoroutinesErrorHandler {
+                                override fun onError(message: String) {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Error! $message",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            })
                         }
-                    })*/
+                    }
+                    /*ObjectType.LINE35 -> {
+                        *//*tplnr?.let {
+                            viewModel.searchLine35(it, object : CoroutinesErrorHandler {
+                                override fun onError(message: String) {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Error! $message",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            })
+                        }*//*
+                    }
+                    ObjectType.LINE110 -> {
+                        *//*tplnr?.let {
+                            viewModel.searchLine110(it, object : CoroutinesErrorHandler {
+                                override fun onError(message: String) {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Error! $message",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            })
+                        }*//*
+                    }
+                    ObjectType.LINE154 -> {
+                        *//*tplnr?.let {
+                            viewModel.searchLine154(it, object : CoroutinesErrorHandler {
+                                override fun onError(message: String) {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Error! $message",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            })
+                        }*//*
+                    }*/
+                    ObjectType.LINEABON04 -> {
+                        tplnr?.let {
+                            viewModel.searchLine(it, object : CoroutinesErrorHandler {
+                                override fun onError(message: String) {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Error! $message",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            })
+                        }
+                    }
+                    ObjectType.LINEABON10 -> {
+                        tplnr?.let {
+                            viewModel.searchAbonLine10(it, object : CoroutinesErrorHandler {
+                                override fun onError(message: String) {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Error! $message",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            })
+                        }
+                    }
+                    /*ObjectType.LINEABON35 -> {
+                        tplnr?.let {
+                            *//* viewModel.searchAbonLine35(it, object : CoroutinesErrorHandler {
+                                 override fun onError(message: String) {
+                                     Toast.makeText(
+                                         requireContext(),
+                                         "Error! $message",
+                                         Toast.LENGTH_SHORT
+                                     ).show()
+                                 }
+                             })*//*
+                        }
+                    }
+                    ObjectType.LINEABON110 -> {
+                        *//*tplnr?.let {
+                            viewModel.searchAbonLine110(it, object : CoroutinesErrorHandler {
+                                override fun onError(message: String) {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Error! $message",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            })
+                        }*//*
+                    }
+                    ObjectType.LINEABON154 -> {
+                        *//*tplnr?.let {
+                            viewModel.searchAbonLine154(it, object : CoroutinesErrorHandler {
+                                override fun onError(message: String) {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Error! $message",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            })
+                        }*//*
+                    }*/
+                    ObjectType.TP -> {
+                        tplnr?.let {
+                            viewModel.searchTp(it, object : CoroutinesErrorHandler {
+                                override fun onError(message: String) {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Error! $message",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            })
+                        }
+                    }
+                    ObjectType.TPABON -> {
+                        tplnr?.let {
+                            viewModel.searchTp(it, object : CoroutinesErrorHandler {
+                                override fun onError(message: String) {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Error! $message",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            })
+                        }
+                    }
+                    ObjectType.PS -> TODO()
+                }
+                /*viewModel.searchObject(tplnr, object : CoroutinesErrorHandler {
+                    override fun onError(message: String) {
+                        Toast.makeText(requireContext(), "Error! $message", Toast.LENGTH_SHORT)
+                            .show()
+                    }
+                })*/
                 return false
             }
 
@@ -359,7 +368,8 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                 obj.name,
                 viewModel.spinnerObjectType.value,
                 obj.category,
-                obj.isAbon
+                obj.isAbon,
+                obj.pillarType
             )
         )
     }

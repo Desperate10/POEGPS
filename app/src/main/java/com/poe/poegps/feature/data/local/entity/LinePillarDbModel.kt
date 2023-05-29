@@ -11,6 +11,7 @@ data class LinePillarDbModel(
     val name: String,
     val parentName:String,
     val category: String,
+    val pillarType: String,
     val wire: String,
     val lat: String,
     val lng: String,

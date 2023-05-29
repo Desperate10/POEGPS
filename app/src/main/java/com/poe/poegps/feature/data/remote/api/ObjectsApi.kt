@@ -1,6 +1,8 @@
 package com.poe.poegps.feature.data.remote.api
 
 import com.poe.poegps.feature.data.remote.model.*
+import com.poe.poegps.feature.data.remote.utils.ApiResponse
+import kotlinx.coroutines.flow.Flow
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET

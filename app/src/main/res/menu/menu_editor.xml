@@ -9,7 +9,10 @@
         android:title="@string/menu_add_saved_0_4"/>
     <item
         android:id="@+id/add_savedtp_from_small"
-        android:title="@string/menu_add_saved_tp_0_4"/>
+        android:title="@string/menu_add_saved_tp"/>
+    <item
+        android:id="@+id/add_saved_abon_tp_from_small"
+        android:title="@string/menu_add_abon_saved_tp"/>
     <item
         android:id="@+id/add_opr"
         android:title="@string/menu_add_opr"

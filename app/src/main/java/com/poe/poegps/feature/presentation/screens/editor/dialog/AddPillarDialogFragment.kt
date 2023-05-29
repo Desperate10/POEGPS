@@ -12,6 +12,7 @@ import android.widget.Spinner
 import androidx.fragment.app.DialogFragment
 import com.poe.poegps.R
 import com.poe.poegps.feature.presentation.model.OprDisplayable
+import com.poe.poegps.feature.presentation.model.PillarType
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -80,6 +81,7 @@ class AddPillarDialogFragment : DialogFragment() {
                 name = oprNameTxt,
                 parentName = lineName,
                 category = category,
+                pillarType = PillarType.PILLAR.name,
                 isAbon = isAbon,
                 wire = spinnerValue
             )

@@ -132,7 +132,13 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
                 true
             }
             R.id.add_savedtp_from_small -> {
-                val dialog = AddPillarFromTp.newInstance(args.pltxt, args.tplnr)
+                val dialog = AddPillarFromTp.newInstance(args.pltxt, args.tplnr, false)
+                dialog.setListener(this)
+                dialog.show(childFragmentManager, "CreateSavedTp04DialogFragment")
+                true
+            }
+            R.id.add_saved_abon_tp_from_small -> {
+                val dialog = AddPillarFromTp.newInstance(args.pltxt, args.tplnr, true)
                 dialog.setListener(this)
                 dialog.show(childFragmentManager, "CreateSavedTp04DialogFragment")
                 true
@@ -177,13 +183,13 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
         dialog.show(childFragmentManager, "ChoosePillarFrom04DialogFragment")
     }
 
-    private fun onCreateStartDialog() {
+    /*private fun onCreateStartDialog() {
         if (adapter.itemCount == 0) {
             val dialog = AddPillarFromTp.newInstance(args.pltxt, args.tplnr)
             dialog.setListener(this)
             dialog.show(childFragmentManager, "CreateSavedTp04DialogFragment")
         }
-    }
+    }*/
 
 
     override fun onSavedPillar04Adding(obj: ObjectDisplayable) {

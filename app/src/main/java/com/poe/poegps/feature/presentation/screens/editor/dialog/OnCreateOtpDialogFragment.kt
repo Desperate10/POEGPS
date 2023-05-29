@@ -13,6 +13,7 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import com.poe.poegps.R
 import com.poe.poegps.feature.presentation.model.OprDisplayable
+import com.poe.poegps.feature.presentation.model.PillarType
 import com.poe.poegps.feature.presentation.screens.editor.EditorViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -83,6 +84,7 @@ class OnCreateOtpDialogFragment : DialogFragment() {
                 name = oprNameTxt,
                 parentName = lineName,
                 category = opr!!.category,
+                pillarType = PillarType.PILLAR.name,
                 isAbon = opr!!.isAbon,
                 wire = spinnerValue
             )

@@ -11,14 +11,18 @@ fun Line.toObjectDisplayable() = ObjectDisplayable(
     tplnr = tplnr,
     name = name,
     category = category,
+    pillarType = pillarType,
     isAbon = isAbon
 )
 
-/*fun Tp.toObjectDisplayable() = ObjectDisplayable(
+fun Tp.toObjectDisplayable() = ObjectDisplayable(
     id = id,
     tplnr = tplnr,
-    name = name
-)*/
+    name = name,
+    category = "",//добавить категорию к запросу тп и пс
+    pillarType = pillarType,
+    isAbon = isAbon
+)
 
 fun Tp.toOprDisplayable() = OprDisplayable(
     id = id,
@@ -26,6 +30,7 @@ fun Tp.toOprDisplayable() = OprDisplayable(
     parentName = "",
     category = "",
     isAbon = isAbon,
+    pillarType = pillarType,
     lat = lat,
     lng = lng,
     tplnr = tplnr
@@ -37,6 +42,7 @@ fun Pillar.toOprDisplayable() = OprDisplayable(
     parentName = parentName,
     category = category,
     isAbon = isAbon,
+    pillarType = pillarType,
     lat = lat,
     lng = lng,
     tplnr = tplnr,
@@ -50,6 +56,7 @@ fun OprDisplayable.toDomainModel() = Pillar(
     parentName = parentName,
     category = category,
     isAbon = isAbon,
+    pillarType = pillarType,
     wire = wire,
     lat = lat,
     lng = lng
@@ -66,6 +73,7 @@ fun ObjectDisplayable.toLineDomainModel() = Line(
     id = id,
     tplnr = tplnr,
     name = name,
+    pillarType = pillarType,
     category = category,
     isAbon = isAbon
 )

@@ -30,7 +30,7 @@ interface ObjectsDao {
     suspend fun insertAbonTp(tp: AbonTpDbModel)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertPs(ps: PsDbModel)
+    suspend fun insertPs(ps: PsDbModel): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPillar04(pillar: Pillar04DbModel)
@@ -79,6 +79,9 @@ interface ObjectsDao {
 
     @Query("SELECT * FROM tp WHERE tplnr LIKE '%-P'|| :tplnr || '%'")
     fun getTp(tplnr: String): Flow<List<TpDbModel>>
+
+    @Query("SELECT * FROM ps WHERE tplnr LIKE '%-P'|| :tplnr || '%'")
+    fun getPs(tplnr: String): Flow<List<PsDbModel>>
 
     @Query("SELECT name FROM line04 WHERE tplnr LIKE :tplnr")
     suspend fun getParentName(tplnr: String): String

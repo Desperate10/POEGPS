@@ -7,6 +7,7 @@ data class Pillar(
     val parentName: String,
     val category: String,
     val wire: String,
+    val pillarType: String,
     val lng: String,
     val lat: String,
     val isAbon: Boolean
