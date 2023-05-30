@@ -2,6 +2,7 @@ package com.poe.poegps.feature.presentation.mapper
 
 import com.poe.poegps.feature.domain.model.Line
 import com.poe.poegps.feature.domain.model.Pillar
+import com.poe.poegps.feature.domain.model.Ps
 import com.poe.poegps.feature.domain.model.Tp
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.OprDisplayable
@@ -19,7 +20,7 @@ fun Tp.toObjectDisplayable() = ObjectDisplayable(
     id = id,
     tplnr = tplnr,
     name = name,
-    category = "",//добавить категорию к запросу тп и пс
+    category = "10 кВ",//добавить категорию к запросу тп и пс
     pillarType = pillarType,
     isAbon = isAbon
 )
@@ -34,6 +35,15 @@ fun Tp.toOprDisplayable() = OprDisplayable(
     lat = lat,
     lng = lng,
     tplnr = tplnr
+)
+
+fun Ps.toObjectDisplayable() = ObjectDisplayable(
+    id = id,
+    tplnr = tplnr,
+    name = pltxt,
+    category = "",//добавить категорию к запросу тп и пс
+    pillarType = pillarType,
+    isAbon = false
 )
 
 fun Pillar.toOprDisplayable() = OprDisplayable(

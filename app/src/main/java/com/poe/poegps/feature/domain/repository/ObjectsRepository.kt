@@ -5,6 +5,7 @@ import com.poe.poegps.feature.data.remote.model.SavePillarsResponse
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.domain.model.Line
 import com.poe.poegps.feature.domain.model.Pillar
+import com.poe.poegps.feature.domain.model.Ps
 import com.poe.poegps.feature.domain.model.Tp
 import kotlinx.coroutines.flow.Flow
 
@@ -14,7 +15,7 @@ interface ObjectsRepository {
     fun auth(login: String, password: String): Flow<ApiResponse<LoginResponse>>
 
     //Выгрузка опор из БД
-    fun uploadSavedPillars(token: String): Flow<ApiResponse<SavePillarsResponse>>
+    fun uploadSavedPillars(token: String): Flow<SavePillarsResponse>
 
     //загрузка линий из апи
     suspend fun downloadLines(filial: String, token: String)
@@ -44,7 +45,7 @@ interface ObjectsRepository {
     fun searchTP(tplnr: String, abonState: Boolean): Flow<List<Tp>>
 
     //Получение ПС из БД по клику
-    fun searchPS(tplnr: String): Flow<List<Tp>>
+    fun searchPS(tplnr: String): Flow<List<Ps>>
 
     //Получение списка линий по категории
     fun getLineList10(): Flow<List<Line>>

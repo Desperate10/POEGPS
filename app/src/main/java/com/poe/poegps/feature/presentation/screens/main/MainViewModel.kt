@@ -1,5 +1,6 @@
 package com.poe.poegps.feature.presentation.screens.main
 
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.poe.poegps.feature.data.remote.model.LoginResponse
 import com.poe.poegps.feature.data.remote.model.SavePillarsResponse
@@ -16,10 +17,7 @@ import com.poe.poegps.feature.presentation.model.ObjectType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -41,10 +39,10 @@ class MainViewModel @Inject constructor(
     val objectsList = _objectsList
 
     private val _loginResponse = MutableStateFlow<ApiResponse<LoginResponse>>(ApiResponse.Loading)
-    val loginResponse = _loginResponse
+    val loginResponse = _loginResponse.stateIn(viewModelScope, SharingStarted.Lazily, ApiResponse.Loading)
 
-    private val _uploadResponse = MutableStateFlow<ApiResponse<SavePillarsResponse>>(ApiResponse.Loading)
-    val uploadResponse = _uploadResponse
+    private val _uploadResponse = MutableStateFlow<SavePillarsResponse>(SavePillarsResponse(false, ""))
+    val uploadResponse = _uploadResponse.stateIn(viewModelScope, SharingStarted.Lazily, SavePillarsResponse(false, ""))
 
     private val _state = MutableStateFlow<ObjectState>(ObjectState.initial)
     val state: StateFlow<ObjectState> = _state
@@ -215,6 +213,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun searchPs(tplnr: String, coroutineErrorHandler: CoroutinesErrorHandler) = baseRequest(
+        _objectsList, coroutineErrorHandler
+    ) {
+        repository.searchPS(tplnr).map { it.map { it.toObjectDisplayable() } }
+    }
+
     fun deleteObject(name: String) {
         viewModelScope.launch(Dispatchers.IO) {
             when (_spinnerObjectType.value) {
@@ -272,6 +276,10 @@ class MainViewModel @Inject constructor(
         _uploadResponse, coroutineErrorHandler
     ) {
         repository.uploadSavedPillars(token.value ?: "")
+    }
+
+    fun resetResponse() {
+        _uploadResponse.value = SavePillarsResponse(false, "")
     }
 
 }

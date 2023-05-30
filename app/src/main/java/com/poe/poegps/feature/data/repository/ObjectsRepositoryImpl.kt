@@ -16,6 +16,7 @@ import com.poe.poegps.feature.domain.model.Ps
 import com.poe.poegps.feature.domain.model.Tp
 import com.poe.poegps.feature.domain.repository.ObjectsRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -28,12 +29,13 @@ class ObjectsRepositoryImpl @Inject constructor(
         objectsApi.auth(LoginRequest(login, password))
     }
 
-    override fun uploadSavedPillars(token: String): Flow<ApiResponse<SavePillarsResponse>> {
-        return apiRequestFlow {
+    override fun uploadSavedPillars(token: String): Flow<SavePillarsResponse> = flow {
+       // return apiRequestFlow {
             val data = objectsDao.getSavedPillars()
             //Log.d("testim", data.map { it.toDTObject()} .toString())
-            objectsApi.uploadSavedPillars(token = token, pillars = data.map { it.toDTObject() })
-        }
+          val response = objectsApi.uploadSavedPillars(token = "Bearer $token", pillars = data.map { it.toDTObject() })
+            response.body()?.let { emit(it) }
+      //  }
     }
 
 
@@ -90,14 +92,16 @@ class ObjectsRepositoryImpl @Inject constructor(
         //abon
         objectsApi.getAbonTpObjects(filial, "Bearer $token")
             .map { tp ->
-                Log.d("testim", "downloadAbonTp: $tp")
-                tp.toDomainModel()
+                val domain = tp.toDomainModel()
+                val tps = domain.toAbonDbModel()
+                Log.d("testim", tps.toString())
+                objectsDao.insertAbonTp(tps)
             }
-            .also { tps ->
+            /*.also { tps ->
                 tps.map {
                     objectsDao.insertAbonTp(it.toAbonDbModel())
                 }
-            }
+            }*/
     }
 
     override suspend fun downloadPss(token: String) {
@@ -106,7 +110,6 @@ class ObjectsRepositoryImpl @Inject constructor(
                 val domain = ps.toDomainModel()
                 val pss = domain.toPsDbModel()
                 objectsDao.insertPs(pss)
-                Log.d("testim", "downloadPss: $pss")
             }
         /*.also { pss ->
             pss.map {
@@ -181,8 +184,8 @@ class ObjectsRepositoryImpl @Inject constructor(
             }
     }
 
-    override fun searchPS(tplnr: String): Flow<List<Tp>> {
-        return objectsDao.getTp(tplnr)
+    override fun searchPS(tplnr: String): Flow<List<Ps>> {
+        return objectsDao.getPs(tplnr)
             .map { tp ->
                 tp.map {
                     it.toDomainModel()

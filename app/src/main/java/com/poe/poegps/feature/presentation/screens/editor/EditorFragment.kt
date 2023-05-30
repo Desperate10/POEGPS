@@ -254,7 +254,6 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
             pillar, which ->
             when (which) {
                 getString(R.string.createOtp) -> {
-                    Log.d("EditorFragment", "createOtp")
                     val dialog =  OnCreateOtpDialogFragment.newInstance(pillar)
                     dialog.setListener(this)
                     dialog.show(childFragmentManager, "CreateOtpaykaDialogFragment")

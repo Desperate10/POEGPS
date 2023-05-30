@@ -3,6 +3,7 @@ package com.poe.poegps.feature.presentation.screens.main
 import android.Manifest
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.util.Log
 import android.view.*
 import android.view.inputmethod.EditorInfo
 import android.widget.*
@@ -96,18 +97,26 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
             }
         }
         collectLifecycleFlow(viewModel.uploadResponse) {uploadResponse ->
-            when (uploadResponse) {
+            if (uploadResponse.message.isNotEmpty()) {
+                Toast.makeText(
+                    requireContext(),
+                    uploadResponse.message,
+                    Toast.LENGTH_SHORT
+                ).show()
+                viewModel.resetResponse()
+            }
+            /*when (uploadResponse) {
                 is ApiResponse.Error -> Toast.makeText(
                     requireContext(),
                     uploadResponse.message,
                     Toast.LENGTH_SHORT
                 ).show()
 
-                ApiResponse.Loading -> {}/*Toast.makeText(
+                ApiResponse.Loading -> {}*//*Toast.makeText(
                     requireContext(),
                     "Loading...",
                     Toast.LENGTH_SHORT
-                ).show()*/
+                ).show()*//*
 
                 is ApiResponse.Success -> {
                     Toast.makeText(
@@ -116,7 +125,7 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                         Toast.LENGTH_SHORT
                     ).show()
                 }
-            }
+            }*/
         }
         collectLifecycleFlow(viewModel.objectsList) { objectsList ->
             adapter.submitList(objectsList)
@@ -334,7 +343,19 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                             })
                         }
                     }
-                    ObjectType.PS -> TODO()
+                    ObjectType.PS -> {
+                        tplnr?.let {
+                            viewModel.searchPs(it, object : CoroutinesErrorHandler {
+                                override fun onError(message: String) {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Error! $message",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            })
+                        }
+                    }
                 }
                 /*viewModel.searchObject(tplnr, object : CoroutinesErrorHandler {
                     override fun onError(message: String) {

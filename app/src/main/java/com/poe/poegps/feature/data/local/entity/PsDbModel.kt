@@ -9,6 +9,7 @@ data class PsDbModel(
     val id: Int = 0,
     val tplnr: String? = "no tplnr",
     val pltxt: String? = "no name",
+    val category: String?,
     val lng: String? = "0.0",
     val lat: String? = "0.0"
 )
