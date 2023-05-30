@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.permissionx.guolindev.PermissionX
 import com.poe.poegps.R
 import com.poe.poegps.databinding.FragmentMainBinding
+import com.poe.poegps.feature.data.remote.model.upload.UploadState
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.presentation.CoroutinesErrorHandler
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
@@ -126,6 +127,33 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                     ).show()
                 }
             }*/
+        }
+        collectLifecycleFlow(viewModel.uploadState) { state ->
+            when(state) {
+                UploadState.Loading -> {
+                    Toast.makeText(
+                        requireContext(),
+                        "Завантаження даних...",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                UploadState.Complete -> {
+                    Toast.makeText(
+                        requireContext(),
+                        "Дані завантажено",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                is UploadState.Error -> TODO()
+                UploadState.Idle -> {}
+                is UploadState.Progress -> {
+                    Toast.makeText(
+                        requireContext(),
+                        "Завантажено ${state.percentage}%",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
         }
         collectLifecycleFlow(viewModel.objectsList) { objectsList ->
             adapter.submitList(objectsList)

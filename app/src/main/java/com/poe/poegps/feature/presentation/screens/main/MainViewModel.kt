@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.poe.poegps.feature.data.remote.model.LoginResponse
 import com.poe.poegps.feature.data.remote.model.SavePillarsResponse
+import com.poe.poegps.feature.data.remote.model.upload.UploadState
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.data.remote.utils.FilialManager
 import com.poe.poegps.feature.data.remote.utils.TokenManager
@@ -31,6 +32,9 @@ class MainViewModel @Inject constructor(
 
     val token = MutableStateFlow<String?>("")
     val filial = MutableStateFlow<String?>("")
+
+    private val _uploadState = MutableStateFlow<UploadState>(UploadState.Idle)
+    val uploadState: StateFlow<UploadState> = _uploadState
 
     private val _spinnerObjectType = MutableStateFlow(ObjectType.LINE04)
     val spinnerObjectType = _spinnerObjectType
@@ -90,6 +94,9 @@ class MainViewModel @Inject constructor(
                 }
             }) {
                 repository.downloadLines(filial.value!!, token.value ?: "")
+                    .collect {
+                        _uploadState.value = it
+                    }
             }
             viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, error ->
                 object : CoroutinesErrorHandler {

@@ -8,6 +8,7 @@ import com.poe.poegps.feature.data.remote.model.LoginRequest
 import com.poe.poegps.feature.data.remote.model.LoginResponse
 import com.poe.poegps.feature.data.remote.model.PsModelDTO
 import com.poe.poegps.feature.data.remote.model.SavePillarsResponse
+import com.poe.poegps.feature.data.remote.model.upload.UploadState
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.data.remote.utils.apiRequestFlow
 import com.poe.poegps.feature.domain.model.Line
@@ -15,15 +16,16 @@ import com.poe.poegps.feature.domain.model.Pillar
 import com.poe.poegps.feature.domain.model.Ps
 import com.poe.poegps.feature.domain.model.Tp
 import com.poe.poegps.feature.domain.repository.ObjectsRepository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 
 class ObjectsRepositoryImpl @Inject constructor(
     private val objectsDao: ObjectsDao,
     private val objectsApi: ObjectsApi
 ) : ObjectsRepository {
+
+    private val _uploadState = MutableStateFlow<UploadState>(UploadState.Idle)
+    val uploadState: StateFlow<UploadState> = _uploadState.asStateFlow()
 
     override fun auth(login: String, password: String) = apiRequestFlow {
         objectsApi.auth(LoginRequest(login, password))
@@ -32,14 +34,75 @@ class ObjectsRepositoryImpl @Inject constructor(
     override fun uploadSavedPillars(token: String): Flow<SavePillarsResponse> = flow {
        // return apiRequestFlow {
             val data = objectsDao.getSavedPillars()
-            //Log.d("testim", data.map { it.toDTObject()} .toString())
+            //Заменить на возврат респонса
           val response = objectsApi.uploadSavedPillars(token = "Bearer $token", pillars = data.map { it.toDTObject() })
             response.body()?.let { emit(it) }
       //  }
     }
 
 
-    override suspend fun downloadLines(filial: String, token: String) {
+    override fun downloadLines(filial: String, token: String): Flow<UploadState> = flow {
+
+        try {
+            emit(UploadState.Loading)
+
+            val line04Objects = objectsApi.getLine04Objects(filial, "Bearer $token")
+                .map { line ->
+                    line.toDomainModel()
+                }
+                .toList()
+
+            // Обновите прогресс загрузки
+            emit(UploadState.Progress(50))
+
+            // Загрузка данных objectsApi.getLine10Objects()
+            val line10Objects = objectsApi.getLine10Objects(filial, "Bearer $token")
+                .map { line ->
+                    line.toDomainModel()
+                }
+                .toList()
+
+            // Обновите прогресс загрузки
+            emit(UploadState.Progress(50))
+
+            // Загрузка данных objectsApi.getLine04AbonObjects()
+            val line04AbonObjects = objectsApi.getLine04AbonObjects(filial, "Bearer $token")
+                .map { line ->
+                    line.toDomainModel()
+                }
+                .toList()
+
+            // Обновите прогресс загрузки
+            emit(UploadState.Progress(75))
+
+            // Загрузка данных objectsApi.getLine10AbonObjects()
+            val line10AbonObjects = objectsApi.getLine10AbonObjects(filial, "Bearer $token")
+                .map { line ->
+                    line.toDomainModel()
+                }
+                .toList()
+
+            // Обновите прогресс загрузки
+            emit(UploadState.Progress(100))
+
+            line04Objects.map { line ->
+                objectsDao.insertLine04(line.toLine04DbModel())
+            }
+            line10Objects.map { line ->
+                objectsDao.insertLine10(line.toLine10DbModel())
+            }
+            line04AbonObjects.map { line ->
+                objectsDao.insertAbonLine04(line.toAbonLine04DbModel())
+            }
+            line10AbonObjects.map { line ->
+                objectsDao.insertAbonLine10(line.toAbonLine10DbModel())
+            }
+
+            emit(UploadState.Complete)
+        } catch (e: Exception) {
+            emit(UploadState.Error("Помилка завантаження даних"))
+        }
+/*
         objectsApi.getLine04Objects(filial, "Bearer $token")
             .map { line ->
                 line.toDomainModel()
@@ -76,7 +139,7 @@ class ObjectsRepositoryImpl @Inject constructor(
                 lines.map {
                     objectsDao.insertAbonLine10(it.toAbonLine10DbModel())
                 }
-            }
+            }*/
     }
 
     override suspend fun downloadTPs(filial: String, token: String) {
