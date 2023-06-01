@@ -4,10 +4,7 @@ import android.util.Log
 import com.poe.poegps.feature.data.local.dao.ObjectsDao
 import com.poe.poegps.feature.data.mapper.*
 import com.poe.poegps.feature.data.remote.api.ObjectsApi
-import com.poe.poegps.feature.data.remote.model.LoginRequest
-import com.poe.poegps.feature.data.remote.model.LoginResponse
-import com.poe.poegps.feature.data.remote.model.PsModelDTO
-import com.poe.poegps.feature.data.remote.model.SavePillarsResponse
+import com.poe.poegps.feature.data.remote.model.*
 import com.poe.poegps.feature.data.remote.model.upload.UploadState
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.data.remote.utils.apiRequestFlow
@@ -48,7 +45,7 @@ class ObjectsRepositoryImpl @Inject constructor(
 
             val line04Objects = objectsApi.getLine04Objects(filial, "Bearer $token")
                 .map { line ->
-                    line.toDomainModel()
+                    line?.toDomainModel()
                 }
                 .toList()
 
@@ -58,7 +55,7 @@ class ObjectsRepositoryImpl @Inject constructor(
             // Загрузка данных objectsApi.getLine10Objects()
             val line10Objects = objectsApi.getLine10Objects(filial, "Bearer $token")
                 .map { line ->
-                    line.toDomainModel()
+                    line?.toDomainModel()
                 }
                 .toList()
 
@@ -66,36 +63,58 @@ class ObjectsRepositoryImpl @Inject constructor(
             emit(UploadState.Progress(50))
 
             // Загрузка данных objectsApi.getLine04AbonObjects()
-            val line04AbonObjects = objectsApi.getLine04AbonObjects(filial, "Bearer $token")
-                .map { line ->
-                    line.toDomainModel()
+            val response = objectsApi.getLine04AbonObjects(filial, "Bearer $token")
+            if (response.isSuccessful) {
+                if (response.code() != 204) {
+                    response.body()
+                        ?.map { line ->
+                            line.toDomainModel()
+                        }.also { lines ->
+                            lines?.map {
+                                objectsDao.insertAbonLine04IfNotExist(it.toAbonLine04DbModel())
+                            }
+                        }
+
                 }
-                .toList()
+            } else {
+                emit(UploadState.Error("Помилка завантаження абон. ліній 04"))
+            }
 
             // Обновите прогресс загрузки
             emit(UploadState.Progress(75))
 
             // Загрузка данных objectsApi.getLine10AbonObjects()
-            val line10AbonObjects = objectsApi.getLine10AbonObjects(filial, "Bearer $token")
-                .map { line ->
-                    line.toDomainModel()
+            val responseAbon10 = objectsApi.getLine10AbonObjects(filial, "Bearer $token")
+            if (responseAbon10.isSuccessful) {
+                if (responseAbon10.code() != 204) {
+                    responseAbon10.body()
+                        ?.map { line ->
+                            line.toDomainModel()
+                        }.also { lines ->
+                            lines?.map {
+                                objectsDao.insertAbonLine10IfNotExist(it.toAbonLine10DbModel())
+                            }
+                        }
                 }
-                .toList()
+            } else {
+                emit(UploadState.Error("Помилка завантаження абон. ліній 04"))
+            }
 
             // Обновите прогресс загрузки
             emit(UploadState.Progress(100))
 
             line04Objects.map { line ->
-                objectsDao.insertLine04IfNotExist(line.toLine04DbModel())
+                line?.let { objectsDao.insertLine04IfNotExist(line.toLine04DbModel()) }
             }
             line10Objects.map { line ->
-                objectsDao.insertLine10IfNotExist(line.toLine10DbModel())
+                line?.let{ objectsDao.insertLine10IfNotExist(line.toLine10DbModel()) }
             }
-            line04AbonObjects.map { line ->
-                objectsDao.insertAbonLine04IfNotExist(line.toAbonLine04DbModel())
-            }
+            /*line04AbonObjects.map { line ->
+                line.let { objectsDao.insertAbonLine04IfNotExist(line.toAbonLine04DbModel()) }
+            }*/
             line10AbonObjects.map { line ->
-                objectsDao.insertAbonLine10IfNotExist(line.toAbonLine10DbModel())
+                line?.let { objectsDao.insertAbonLine10IfNotExist(it.toAbonLine10DbModel()) }
+               // objectsDao.insertAbonLine10IfNotExist(line.toAbonLine10DbModel())
             }
 
             emit(UploadState.Complete)
