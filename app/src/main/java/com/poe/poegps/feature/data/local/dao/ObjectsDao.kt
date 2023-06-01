@@ -11,6 +11,87 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ObjectsDao {
 
+    suspend fun insertLine04IfNotExist(line: Line04DbModel) {
+        if (getLine04(line.tplnr) == null) {
+            insertLine04(line)
+        }
+    }
+    @Query("SELECT * FROM line04 WHERE tplnr = :tplnr LIMIT 1")
+    suspend fun getLine04(tplnr: String): Line04DbModel?
+
+    suspend fun insertLine10IfNotExist(line: Line10DbModel) {
+        if (getLine10(line.tplnr) == null) {
+            insertLine10(line)
+        }
+    }
+
+    @Query("SELECT * FROM line10 WHERE tplnr = :tplnr LIMIT 1")
+    suspend fun getLine10(tplnr: String): Line10DbModel?
+
+    suspend fun insertAbonLine04IfNotExist(line: AbonLine04DbModel) {
+        if (getAbonLine04(line.tplnr) == null) {
+            insertAbonLine04(line)
+        }
+    }
+    @Query("SELECT * FROM abon_line04 WHERE tplnr = :tplnr LIMIT 1")
+    suspend fun getAbonLine04(tplnr: String): AbonLine04DbModel?
+
+    suspend fun insertAbonLine10IfNotExist(line: AbonLine10DbModel) {
+        if (getAbonLine10(line.tplnr) == null) {
+            insertAbonLine10(line)
+        }
+    }
+
+    @Query("SELECT * FROM abon_line10 WHERE tplnr = :tplnr LIMIT 1")
+    suspend fun getAbonLine10(tplnr: String): AbonLine10DbModel?
+
+    suspend fun insertTpIfNotExist(tp: TpDbModel) {
+        if (getSingleTp(tp.tplnr) == null) {
+            insertTp(tp)
+        }
+    }
+
+    @Query("SELECT * FROM tp WHERE tplnr = :tplnr LIMIT 1")
+    suspend fun getSingleTp(tplnr: String): TpDbModel?
+
+    suspend fun insertAbonTpIfNotExist(tp: AbonTpDbModel) {
+        if (getSingleAbonTp(tp.tplnr) == null) {
+            insertAbonTp(tp)
+        }
+    }
+
+    @Query("SELECT * FROM abon_tp WHERE tplnr = :tplnr LIMIT 1")
+    suspend fun getSingleAbonTp(tplnr: String): AbonTpDbModel?
+
+    suspend fun insertPsIfNotExist(ps: PsDbModel) {
+        if (getSinglePs(ps.tplnr) == null) {
+            insertPs(ps)
+        }
+    }
+
+    @Query("SELECT * FROM ps WHERE tplnr = :tplnr LIMIT 1")
+    suspend fun getSinglePs(tplnr: String): PsDbModel?
+
+    suspend fun insertPillar04IfNotExist(pillar: Pillar04DbModel) {
+        if (getSinglePillar04(pillar.tplnr, pillar.name) == null) {
+            insertPillar04(pillar)
+        }
+    }
+
+    @Query("SELECT * FROM pillars04 WHERE tplnr = :tplnr AND name = :name LIMIT 1")
+    suspend fun getSinglePillar04(tplnr: String, name: String): Pillar04DbModel?
+
+    suspend fun insertPillar10IfNotExist(pillar: Pillar10DbModel) {
+        if (getSinglePillar10(pillar.tplnr, pillar.name) == null) {
+            insertPillar10(pillar)
+        }
+    }
+
+    @Query("SELECT * FROM pillars10 WHERE tplnr = :tplnr AND name = :name LIMIT 1")
+    suspend fun getSinglePillar10(tplnr: String, name: String): Pillar10DbModel?
+
+
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLine04(line: Line04DbModel)
 
@@ -30,7 +111,7 @@ interface ObjectsDao {
     suspend fun insertAbonTp(tp: AbonTpDbModel)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertPs(ps: PsDbModel): Long
+    suspend fun insertPs(ps: PsDbModel)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPillar04(pillar: Pillar04DbModel)

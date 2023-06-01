@@ -86,60 +86,23 @@ class ObjectsRepositoryImpl @Inject constructor(
             emit(UploadState.Progress(100))
 
             line04Objects.map { line ->
-                objectsDao.insertLine04(line.toLine04DbModel())
+                objectsDao.insertLine04IfNotExist(line.toLine04DbModel())
             }
             line10Objects.map { line ->
-                objectsDao.insertLine10(line.toLine10DbModel())
+                objectsDao.insertLine10IfNotExist(line.toLine10DbModel())
             }
             line04AbonObjects.map { line ->
-                objectsDao.insertAbonLine04(line.toAbonLine04DbModel())
+                objectsDao.insertAbonLine04IfNotExist(line.toAbonLine04DbModel())
             }
             line10AbonObjects.map { line ->
-                objectsDao.insertAbonLine10(line.toAbonLine10DbModel())
+                objectsDao.insertAbonLine10IfNotExist(line.toAbonLine10DbModel())
             }
 
             emit(UploadState.Complete)
         } catch (e: Exception) {
+            Log.d("testim", e.toString())
             emit(UploadState.Error("Помилка завантаження даних"))
         }
-/*
-        objectsApi.getLine04Objects(filial, "Bearer $token")
-            .map { line ->
-                line.toDomainModel()
-            }
-            .also { lines ->
-                lines.map {
-                    objectsDao.insertLine04(it.toLine04DbModel())
-                }
-            }
-        objectsApi.getLine10Objects(filial, "Bearer $token")
-            .map { line ->
-                line.toDomainModel()
-            }
-            .also { lines ->
-                lines.map {
-                    objectsDao.insertLine10(it.toLine10DbModel())
-                }
-            }
-        //abon
-        objectsApi.getLine04AbonObjects(filial, "Bearer $token")
-            .map { line ->
-                line.toDomainModel()
-            }
-            .also { lines ->
-                lines.map {
-                    objectsDao.insertAbonLine04(it.toAbonLine04DbModel())
-                }
-            }
-        objectsApi.getLine10AbonObjects(filial, "Bearer $token")
-            .map { line ->
-                line.toDomainModel()
-            }
-            .also { lines ->
-                lines.map {
-                    objectsDao.insertAbonLine10(it.toAbonLine10DbModel())
-                }
-            }*/
     }
 
     override suspend fun downloadTPs(filial: String, token: String) {
@@ -149,7 +112,8 @@ class ObjectsRepositoryImpl @Inject constructor(
             }
             .also { tps ->
                 tps.map {
-                    objectsDao.insertTp(it.toDbModel())
+                    objectsDao.insertTpIfNotExist(it.toDbModel())
+                    //objectsDao.insertTp(it.toDbModel())
                 }
             }
         //abon
@@ -157,8 +121,9 @@ class ObjectsRepositoryImpl @Inject constructor(
             .map { tp ->
                 val domain = tp.toDomainModel()
                 val tps = domain.toAbonDbModel()
-                Log.d("testim", tps.toString())
-                objectsDao.insertAbonTp(tps)
+                    //Log.d("testim", tps.toString())
+                objectsDao.insertAbonTpIfNotExist(tps)
+                //objectsDao.insertAbonTp(tps)
             }
             /*.also { tps ->
                 tps.map {
@@ -172,7 +137,7 @@ class ObjectsRepositoryImpl @Inject constructor(
             .map { ps ->
                 val domain = ps.toDomainModel()
                 val pss = domain.toPsDbModel()
-                objectsDao.insertPs(pss)
+                objectsDao.insertPsIfNotExist(pss)
             }
         /*.also { pss ->
             pss.map {
@@ -188,7 +153,7 @@ class ObjectsRepositoryImpl @Inject constructor(
             }
             .also { pillars ->
                 pillars.map {
-                    objectsDao.insertPillar04(it.to04DbModel())
+                    objectsDao.insertPillar04IfNotExist(it.to04DbModel())
                 }
             }
         objectsApi.getPillarObjects10(filial, "Bearer $token")
@@ -197,7 +162,7 @@ class ObjectsRepositoryImpl @Inject constructor(
             }
             .also { pillars ->
                 pillars.map {
-                    objectsDao.insertPillar10(it.to10DbModel())
+                    objectsDao.insertPillar10IfNotExist(it.to10DbModel())
                 }
             }
     }

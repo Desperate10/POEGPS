@@ -144,7 +144,14 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                         Toast.LENGTH_SHORT
                     ).show()
                 }
-                is UploadState.Error -> TODO()
+                is UploadState.Error -> {
+                    Log.d("testim", state.message)
+                    Toast.makeText(
+                        requireContext(),
+                        "Помилка завантаження даних",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
                 UploadState.Idle -> {}
                 is UploadState.Progress -> {
                     Toast.makeText(
