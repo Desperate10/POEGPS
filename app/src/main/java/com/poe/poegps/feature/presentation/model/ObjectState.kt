@@ -42,6 +42,7 @@ enum class ObjectType(val type: String) {
 enum class PillarType(val type: String) {
     PILLAR("Опора"),
     TP("ТП"),
+    ABONTP("ТП"),
     PS("ПС")
 }
 

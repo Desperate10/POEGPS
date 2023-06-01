@@ -101,6 +101,15 @@ interface ObjectsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAbonOtpaika10(otpaika: AbonLine10DbModel)
 
+    @Query("UPDATE tp SET lng = :lng, lat = :lat WHERE tplnr LIKE :tplnr")
+    suspend fun updateTpCoordinates(tplnr: String, lng: String, lat: String)
+
+    @Query("UPDATE abon_tp SET lng = :lng, lat = :lat WHERE tplnr LIKE :tplnr")
+    suspend fun updateAbonTpCoordinates(tplnr: String, lng: String, lat: String)
+
+    @Query("UPDATE ps SET lng = :lng, lat = :lat WHERE tplnr LIKE :tplnr")
+    suspend fun updatePsCoordinates(tplnr: String, lng: String, lat: String)
+
     @Query("DELETE FROM line04 WHERE name LIKE :pltxt")
     suspend fun deleteLine04(pltxt: String)
 
