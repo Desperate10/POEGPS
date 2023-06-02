@@ -437,8 +437,40 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
     }
 
     private fun navigateToEditObjectFragment(obj: ObjectDisplayable) {
+        when (viewModel.spinnerObjectType.value) {
+            ObjectType.LINE04 -> {
+                navigateToEditorFragment(obj)
+            }
+            ObjectType.LINE10 -> {
+                navigateToEditorFragment(obj)
+            }
+            ObjectType.LINEABON04 -> {
+                navigateToEditorFragment(obj)
+            }
+            ObjectType.LINEABON10 -> {
+                navigateToEditorFragment(obj)
+            }
+            ObjectType.TP -> navigateToTpEditorFragment(obj)
+            ObjectType.TPABON -> navigateToTpEditorFragment(obj)
+        }
+    }
+
+    private fun navigateToEditorFragment(obj: ObjectDisplayable) {
         findNavController().navigate(
             MainFragmentDirections.actionMainFragmentToEditorFragment(
+                obj.tplnr,
+                obj.name,
+                viewModel.spinnerObjectType.value,
+                obj.category,
+                obj.isAbon,
+                obj.pillarType
+            )
+        )
+    }
+
+    private fun navigateToTpEditorFragment(obj: ObjectDisplayable) {
+        findNavController().navigate(
+            MainFragmentDirections.actionMainFragmentToTpEditorFragment(
                 obj.tplnr,
                 obj.name,
                 viewModel.spinnerObjectType.value,
