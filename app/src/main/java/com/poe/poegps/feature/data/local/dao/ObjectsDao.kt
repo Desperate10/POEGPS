@@ -128,7 +128,7 @@ interface ObjectsDao {
     @Delete
     suspend fun deletePillar(pillar: LinePillarDbModel)
 
-    @Query("SELECT * FROM line_pillar WHERE isSent = 0")
+    @Query("SELECT * FROM line_pillar WHERE lat <> '0.0' AND isSent = 0")
     suspend fun getSavedPillars(): List<LinePillarDbModel>
 
     @Query("SELECT * FROM tp WHERE lat <> '0.0' ORDER BY pltxt ASC")

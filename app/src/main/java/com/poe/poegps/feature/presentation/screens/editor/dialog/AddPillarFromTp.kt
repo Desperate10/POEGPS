@@ -80,10 +80,10 @@ class AddPillarFromTp: DialogFragment() {
                 id = 0,
                 tplnr = tplnr,
                 name = spinnerValue.name,
-                parentName = pltxt,
+                parentName = viewModel.lineName.value.toString(),
                 category = ucat,
                 isAbon = spinnerValue.isAbon,
-                pillarType = PillarType.PILLAR.name,
+                pillarType = spinnerValue.pillarType,
                 wire = spinnerValue.wire,
                 lat = spinnerValue.lat,
                 lng = spinnerValue.lng
