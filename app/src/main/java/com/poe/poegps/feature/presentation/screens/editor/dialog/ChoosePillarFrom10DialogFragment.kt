@@ -72,7 +72,7 @@ class ChoosePillarFrom10DialogFragment : DialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val coordSpinner = view.findViewById<Spinner>(R.id.coordSpinner)
-        collectLifecycleFlow(viewModel.getPillarList(tplnr)) {
+        collectLifecycleFlow(viewModel.getPillar10List(tplnr)) {
             coordSpinner.adapter = ArrayAdapter(requireActivity(), android.R.layout.simple_list_item_1, it)
         }
         val wireSpinner = view.findViewById<Spinner>(R.id.wireSpinner)

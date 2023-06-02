@@ -131,8 +131,11 @@ interface ObjectsDao {
     @Query("SELECT * FROM line_pillar WHERE isSent = 0")
     suspend fun getSavedPillars(): List<LinePillarDbModel>
 
-    @Query("SELECT * FROM tp")
+    @Query("SELECT * FROM tp WHERE lat <> '0.0' ORDER BY pltxt ASC")
     fun getTps(): Flow<List<TpDbModel>>
+
+    @Query("SELECT * FROM abon_tp WHERE lat <> '0.0' ORDER BY pltxt ASC")
+    fun getAbonTps(): Flow<List<TpDbModel>>
 
     @Query("SELECT * FROM line04 WHERE tplnr LIKE '%-L' || :tplnr || '%' GROUP BY name")
     fun getLines04(tplnr: String): Flow<List<Line04DbModel>>

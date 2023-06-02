@@ -105,8 +105,8 @@ fun TpObjectsAbonDTO.toDomainModel() = Tp(
     name = pltxt,
     tplnr = tplnr,
     pillarType = PillarType.ABONTP.name,
-    lat = lat,
-    lng = lng,
+    lat = lat ?: "0.0",
+    lng = lng ?: "0.0",
     isAbon = true
 )
 
@@ -164,9 +164,9 @@ fun TpDbModel.toDomainModel() = Tp(
 
 fun PsDbModel.toDomainModel() = Ps(
     id= id,
-    tplnr = tplnr?:"",
-    pltxt = pltxt?:"",
-    category = category?:"",
+    tplnr = tplnr,
+    pltxt = pltxt,
+    category = category,
     pillarType = PillarType.PS.name,
     lat = lat?:"0.0",
     lng = lng?:"0.0"

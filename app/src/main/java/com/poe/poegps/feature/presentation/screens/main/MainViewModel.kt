@@ -220,12 +220,6 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun searchPs(tplnr: String, coroutineErrorHandler: CoroutinesErrorHandler) = baseRequest(
-        _objectsList, coroutineErrorHandler
-    ) {
-        repository.searchPS(tplnr).map { it.map { it.toObjectDisplayable() } }
-    }
-
     fun deleteObject(name: String) {
         viewModelScope.launch(Dispatchers.IO) {
             when (_spinnerObjectType.value) {
@@ -241,7 +235,6 @@ class MainViewModel @Inject constructor(
                 ObjectType.LINEABON154 -> TODO()*/
                 ObjectType.TP -> TODO()
                 ObjectType.TPABON -> TODO()
-                ObjectType.PS -> TODO()
             }
         }
     }

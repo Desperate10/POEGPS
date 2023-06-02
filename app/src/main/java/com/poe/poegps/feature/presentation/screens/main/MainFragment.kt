@@ -378,19 +378,6 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                             })
                         }
                     }
-                    ObjectType.PS -> {
-                        tplnr?.let {
-                            viewModel.searchPs(it, object : CoroutinesErrorHandler {
-                                override fun onError(message: String) {
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "Error! $message",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            })
-                        }
-                    }
                 }
                 /*viewModel.searchObject(tplnr, object : CoroutinesErrorHandler {
                     override fun onError(message: String) {
@@ -481,7 +468,7 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
         val alertDialog = builder.create()
         alertDialog.show()
         val create = dialogView.findViewById<Button>(R.id.choose)
-        create.setOnClickListener { view: View? ->
+        create.setOnClickListener {
             val filial = spinner.selectedItem.toString().take(2)
             viewModel.selectedFilial(filial)
             alertDialog.cancel()

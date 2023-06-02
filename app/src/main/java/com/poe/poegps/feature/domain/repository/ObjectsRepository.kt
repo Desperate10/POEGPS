@@ -54,9 +54,11 @@ interface ObjectsRepository {
     fun getLineList04(): Flow<List<Line>>
 
     //Получение списка ТП из БД
-    fun getTpList(): Flow<List<Tp>>
+    fun getTpList(isAbon: Boolean): Flow<List<Tp>>
 
-    fun getPillarList(tplnr: String): Flow<List<Pillar>>
+    fun getPillar04List(tplnr: String): Flow<List<Pillar>>
+
+    fun getPillar10List(tplnr: String): Flow<List<Pillar>>
 
     fun getSavedPillars(pltxt: String): Flow<List<Pillar>>
 

@@ -53,8 +53,13 @@ class EditorViewModel @Inject constructor(
         _lineName.value = lineName
     }
 
-    fun getPillarList(tplnr: String) =
-        repository.getPillarList(tplnr).map { list ->
+    fun getPillar04List(tplnr: String) =
+        repository.getPillar04List(tplnr).map { list ->
+            list.map { opr -> opr.toOprDisplayable() }
+        }
+
+    fun getPillar10List(tplnr: String) =
+        repository.getPillar10List(tplnr).map { list ->
             list.map { opr -> opr.toOprDisplayable() }
         }
 
@@ -69,7 +74,7 @@ class EditorViewModel @Inject constructor(
         }
 
     fun getTpList(isAbon: Boolean) =
-        repository.getTpList().map { list ->
+        repository.getTpList(isAbon).map { list ->
             list.map { tp -> tp.toOprDisplayable() }
         }
 
@@ -128,7 +133,6 @@ class EditorViewModel @Inject constructor(
                  ObjectType.LINEABON154 -> TODO()*/
                 ObjectType.TP -> TODO()
                 ObjectType.TPABON -> TODO()
-                ObjectType.PS -> TODO()
             }
             /*repository.saveLine(
                 ObjectDisplayable(

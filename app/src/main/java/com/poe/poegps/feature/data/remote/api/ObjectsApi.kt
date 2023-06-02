@@ -35,10 +35,10 @@ interface ObjectsApi {
     suspend fun getPillarObjects10(@Query("filial") filial: String, @Header("Authorization") token: String): List<PillarObjects10DTO>
 
     @GET("abonlines10")
-    suspend fun getLine10AbonObjects(@Query("filial") filial: String, @Header("Authorization") token: String): Response<List<LineObjects10AbonDTO>?>
+    suspend fun getLine10AbonObjects(@Query("filial") filial: String, @Header("Authorization") token: String): List<LineObjects10AbonDTO?>
 
     @GET("abonlines04")
-    suspend fun getLine04AbonObjects(@Query("filial") filial: String, @Header("Authorization") token: String): Response<List<LineObjects04AbonDTO>?>
+    suspend fun getLine04AbonObjects(@Query("filial") filial: String, @Header("Authorization") token: String): List<LineObjects04AbonDTO?>
 
     @POST("save")
     suspend fun uploadSavedPillars(@Body pillars: List<LinePillarDTO>, @Header("Authorization") token: String): Response<SavePillarsResponse>

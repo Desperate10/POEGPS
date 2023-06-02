@@ -4,9 +4,9 @@ import android.util.Log
 import com.poe.poegps.feature.data.local.dao.ObjectsDao
 import com.poe.poegps.feature.data.mapper.*
 import com.poe.poegps.feature.data.remote.api.ObjectsApi
-import com.poe.poegps.feature.data.remote.model.*
+import com.poe.poegps.feature.data.remote.model.LoginRequest
+import com.poe.poegps.feature.data.remote.model.SavePillarsResponse
 import com.poe.poegps.feature.data.remote.model.upload.UploadState
-import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.data.remote.utils.apiRequestFlow
 import com.poe.poegps.feature.domain.model.Line
 import com.poe.poegps.feature.domain.model.Pillar
@@ -64,41 +64,18 @@ class ObjectsRepositoryImpl @Inject constructor(
 
             // Загрузка данных objectsApi.getLine04AbonObjects()
             val response = objectsApi.getLine04AbonObjects(filial, "Bearer $token")
-            if (response.isSuccessful) {
-                if (response.code() != 204) {
-                    response.body()
-                        ?.map { line ->
-                            line.toDomainModel()
-                        }.also { lines ->
-                            lines?.map {
-                                objectsDao.insertAbonLine04IfNotExist(it.toAbonLine04DbModel())
-                            }
-                        }
-
-                }
-            } else {
-                emit(UploadState.Error("Помилка завантаження абон. ліній 04"))
-            }
+            val line04AbonObjects = response.map { line ->
+                line?.toDomainModel()
+            }.toList()
 
             // Обновите прогресс загрузки
             emit(UploadState.Progress(75))
 
             // Загрузка данных objectsApi.getLine10AbonObjects()
             val responseAbon10 = objectsApi.getLine10AbonObjects(filial, "Bearer $token")
-            if (responseAbon10.isSuccessful) {
-                if (responseAbon10.code() != 204) {
-                    responseAbon10.body()
-                        ?.map { line ->
-                            line.toDomainModel()
-                        }.also { lines ->
-                            lines?.map {
-                                objectsDao.insertAbonLine10IfNotExist(it.toAbonLine10DbModel())
-                            }
-                        }
-                }
-            } else {
-                emit(UploadState.Error("Помилка завантаження абон. ліній 04"))
-            }
+            val line10AbonObjects = responseAbon10.map { line ->
+                line?.toDomainModel()
+            }.toList()
 
             // Обновите прогресс загрузки
             emit(UploadState.Progress(100))
@@ -109,9 +86,9 @@ class ObjectsRepositoryImpl @Inject constructor(
             line10Objects.map { line ->
                 line?.let{ objectsDao.insertLine10IfNotExist(line.toLine10DbModel()) }
             }
-            /*line04AbonObjects.map { line ->
-                line.let { objectsDao.insertAbonLine04IfNotExist(line.toAbonLine04DbModel()) }
-            }*/
+            line04AbonObjects.map { line ->
+                line?.let { objectsDao.insertAbonLine04IfNotExist(line.toAbonLine04DbModel()) }
+            }
             line10AbonObjects.map { line ->
                 line?.let { objectsDao.insertAbonLine10IfNotExist(it.toAbonLine10DbModel()) }
                // objectsDao.insertAbonLine10IfNotExist(line.toAbonLine10DbModel())
@@ -258,17 +235,35 @@ class ObjectsRepositoryImpl @Inject constructor(
             }
     }
 
-    override fun getTpList(): Flow<List<Tp>> {
-        return objectsDao.getTps()
-            .map { tp ->
-                tp.map {
+    override fun getTpList(isAbon: Boolean): Flow<List<Tp>> {
+        return if(!isAbon) {
+            objectsDao.getTps()
+                .map { tp ->
+                    tp.map {
+                        it.toDomainModel()
+                    }
+                }
+        } else {
+            objectsDao.getAbonTps()
+                .map { tp ->
+                    tp.map {
+                        it.toDomainModel()
+                    }
+                }
+        }
+    }
+
+    override fun getPillar04List(tplnr: String): Flow<List<Pillar>> {
+        return objectsDao.getPillars04ByTplnr(tplnr)
+            .map { pillar ->
+                pillar.map {
                     it.toDomainModel()
                 }
             }
     }
 
-    override fun getPillarList(tplnr: String): Flow<List<Pillar>> {
-        return objectsDao.getPillars04ByTplnr(tplnr)
+    override fun getPillar10List(tplnr: String): Flow<List<Pillar>> {
+        return objectsDao.getPillars10ByTplnr(tplnr)
             .map { pillar ->
                 pillar.map {
                     it.toDomainModel()

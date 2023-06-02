@@ -35,8 +35,8 @@ enum class ObjectType(val type: String) {
     LINEABON110("Лінія 110 абон"),
     LINEABON154("Лінія 154 абон"),*/
     TP("ТП"),
-    TPABON("ТП абон"),
-    PS("ПС"),
+    TPABON("ТП абон")
+    //PS("ПС"),
 }
 
 enum class PillarType(val type: String) {

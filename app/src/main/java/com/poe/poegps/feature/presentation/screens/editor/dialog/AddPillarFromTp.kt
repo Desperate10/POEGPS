@@ -8,6 +8,7 @@ import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.Spinner
+import android.widget.Toast
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import com.poe.poegps.R
@@ -57,15 +58,19 @@ class AddPillarFromTp: DialogFragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val view = inflater.inflate(R.layout.create_saved_opr, container, false)
-        return view
+        return inflater.inflate(R.layout.create_saved_opr, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         val tpSpinner = view.findViewById<Spinner>(R.id.lineSpinner)
-        collectLifecycleFlow(viewModel.getTpList(false)) {
+        collectLifecycleFlow(viewModel.getTpList(isAbon)) {
+            if (it.isEmpty()) {
+                Toast.makeText(requireContext(), "ТП з координатами немає", Toast.LENGTH_SHORT).show()
+                dismiss()
+                return@collectLifecycleFlow
+            }
             tpSpinner.adapter = ArrayAdapter(requireActivity(), android.R.layout.simple_list_item_1, it)
         }
 
