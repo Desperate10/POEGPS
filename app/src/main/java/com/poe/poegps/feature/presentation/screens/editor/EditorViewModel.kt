@@ -170,10 +170,6 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    companion object {
-
-    }
-
     /*fun getLineList10() {
         viewModelScope.launch(Dispatchers.IO) {
             repository.getLineList10().collectLatest {

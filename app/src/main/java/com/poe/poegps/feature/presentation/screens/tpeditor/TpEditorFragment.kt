@@ -7,9 +7,13 @@ import android.location.Location
 import android.location.LocationManager
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.permissionx.guolindev.PermissionX
@@ -17,14 +21,15 @@ import com.poe.poegps.R
 import com.poe.poegps.databinding.FragmentTpEditorBinding
 import com.poe.poegps.feature.data.remote.utils.MyLocationListener
 import com.poe.poegps.feature.presentation.screens.editor.EditorFragment
-import com.poe.poegps.feature.presentation.screens.editor.EditorFragmentArgs
 import com.poe.poegps.feature.presentation.screens.editor.dialog.LocationToggleDialogFragment
+import com.poe.poegps.feature.presentation.screens.tpeditor.dialog.OnTpLongClickDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
 import gromov.ramdomusertestcase.core.extension.autoCleaned
 import java.util.*
 
 @AndroidEntryPoint
-class TpEditorFragment : Fragment(), View.OnClickListener, MyLocationListener {
+class TpEditorFragment : Fragment(), View.OnClickListener, MyLocationListener,
+    OnTpLongClickDialogFragment.Listener{
 
     private val args: TpEditorFragmentArgs by lazy {
         TpEditorFragmentArgs.fromBundle(requireArguments())
@@ -60,16 +65,23 @@ class TpEditorFragment : Fragment(), View.OnClickListener, MyLocationListener {
         return binding.root
     }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        //ЗАпрос объекта по тех месту и отображение данных
+        //передача сюда только тплнр и что за объект( в какой таблице искать)
+        //внутри проверять если лат и лнг не 0.0 то кнопку снятия координат делать неактивной
+        binding.oprItemLl.setOnLongClickListener {
+            OnTpLongClickDialogFragment.newInstance(childFragmentManager, args.tplnr)
+            true
+        }
+    }
+
     override fun onClick(v: View?) {
         when (v?.id) {
             R.id.back_btn -> {
                 findNavController().popBackStack()
             }
         }
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
     }
 
     override fun onLocationChanged(location: Location) {
@@ -156,6 +168,12 @@ class TpEditorFragment : Fragment(), View.OnClickListener, MyLocationListener {
             binding.include.GPSLongitude.text = "0.0"
             binding.include.GPSAccuracy.text = "000.0"
         }
+    }
+
+    override fun onTpCoordCleared(tplnr: String) {
+        binding.lat.text = "0.0"
+        binding.lng.text = "0.0"
+        binding.takeCoord.isEnabled = true
     }
 
 
