@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.poe.poegps.feature.data.remote.model.LoginResponse
 import com.poe.poegps.feature.data.remote.model.SavePillarsResponse
+import com.poe.poegps.feature.data.remote.model.TokenCheckResponse
 import com.poe.poegps.feature.data.remote.model.upload.UploadState
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.data.remote.utils.FilialManager
@@ -21,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.lang.Thread.State
 import javax.inject.Inject
 
 @HiltViewModel
@@ -51,8 +53,8 @@ class MainViewModel @Inject constructor(
     private val _state = MutableStateFlow<ObjectState>(ObjectState.initial)
     val state: StateFlow<ObjectState> = _state
 
-    private val _tokenValidity = MutableStateFlow<Boolean>(true)
-    val tokenValidity = _tokenValidity
+    private val _tokenValidity = MutableStateFlow<ApiResponse<TokenCheckResponse>>(ApiResponse.Loading)
+    val tokenValidity: StateFlow<ApiResponse<TokenCheckResponse>> = _tokenValidity
 
     private val _message = MutableSharedFlow<String>()
     val message = _message
@@ -138,6 +140,14 @@ class MainViewModel @Inject constructor(
         _loginResponse, coroutineErrorHandler
     ) {
         repository.auth(login, password)
+    }
+
+    fun tokenCheck(
+        coroutineErrorHandler: CoroutinesErrorHandler
+    ) = baseRequest(
+        _tokenValidity, coroutineErrorHandler
+    ) {
+        repository.tokenCheck(token.value ?: "")
     }
 
 

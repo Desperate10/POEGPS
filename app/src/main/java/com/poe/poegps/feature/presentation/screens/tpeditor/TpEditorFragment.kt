@@ -15,16 +15,20 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.permissionx.guolindev.PermissionX
 import com.poe.poegps.R
 import com.poe.poegps.databinding.FragmentTpEditorBinding
 import com.poe.poegps.feature.data.remote.utils.MyLocationListener
+import com.poe.poegps.feature.presentation.model.OprDisplayable
 import com.poe.poegps.feature.presentation.screens.editor.EditorFragment
+import com.poe.poegps.feature.presentation.screens.editor.EditorViewModel
 import com.poe.poegps.feature.presentation.screens.editor.dialog.LocationToggleDialogFragment
 import com.poe.poegps.feature.presentation.screens.tpeditor.dialog.OnTpLongClickDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
 import gromov.ramdomusertestcase.core.extension.autoCleaned
+import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 import java.util.*
 
 @AndroidEntryPoint
@@ -34,6 +38,10 @@ class TpEditorFragment : Fragment(), View.OnClickListener, MyLocationListener,
     private val args: TpEditorFragmentArgs by lazy {
         TpEditorFragmentArgs.fromBundle(requireArguments())
     }
+
+    private lateinit var tpToSave: OprDisplayable
+
+    private val viewModel by viewModels<TpEditorViewModel>()
 
     private var binding : FragmentTpEditorBinding by autoCleaned()
 
@@ -67,13 +75,30 @@ class TpEditorFragment : Fragment(), View.OnClickListener, MyLocationListener,
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        //ЗАпрос объекта по тех месту и отображение данных
-        //передача сюда только тплнр и что за объект( в какой таблице искать)
-        //внутри проверять если лат и лнг не 0.0 то кнопку снятия координат делать неактивной
+
+        collectLifecycleFlow(viewModel.tpObject) { tp ->
+            binding.opr.text = tp.name
+            binding.lat.text = tp.lat
+            binding.lng.text = tp.lng
+            if (tp.lat != "0.0" && tp.lng != "0.0") {
+                binding.takeCoord.isEnabled = false
+            }
+            tpToSave = tp.copy()
+        }
+
         binding.oprItemLl.setOnLongClickListener {
             OnTpLongClickDialogFragment.newInstance(childFragmentManager, args.tplnr)
             true
         }
+
+        binding.takeCoord.setOnClickListener {
+            binding.lat.text = binding.include.GPSLatitude.text
+            binding.lng.text = binding.include.GPSLongitude.text
+            binding.takeCoord.isEnabled = false
+            viewModel.saveTpCoord(tpToSave.copy(lat = binding.lat.text.toString(), lng = binding.lng.text.toString()))
+        }
+
+        viewModel.fetchTpObject(args.tplnr, args.isAbon)
     }
 
     override fun onClick(v: View?) {

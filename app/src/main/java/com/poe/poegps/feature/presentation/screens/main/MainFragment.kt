@@ -25,6 +25,7 @@ import com.poe.poegps.feature.presentation.CoroutinesErrorHandler
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.ObjectType
 import com.poe.poegps.feature.presentation.screens.main.adapter.ObjectsAdapter
+import com.poe.poegps.feature.presentation.screens.main.dialog.LoginDialogFragment
 import com.poe.poegps.feature.presentation.screens.main.dialog.SearchObjectDialog
 import com.poe.poegps.feature.presentation.screens.main.spinner.ObjectsSpinnerAdapter
 import dagger.hilt.android.AndroidEntryPoint
@@ -66,7 +67,22 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
     }
 
     private fun collectViewModel() {
-        collectLifecycleFlow(viewModel.token) { token ->
+        collectLifecycleFlow(viewModel.tokenValidity) { tokenResponse ->
+            when (tokenResponse) {
+                is ApiResponse.Success -> {
+                    if (tokenResponse.data.message == "true") {
+                        LoginDialogFragment().show(childFragmentManager, "login")
+                    }
+                }
+                is ApiResponse.Error -> {
+                    Toast.makeText(requireContext(), "Error! ${tokenResponse.message}", Toast.LENGTH_SHORT)
+                        .show()
+                }
+                else -> {}
+            }
+
+        }
+        /*collectLifecycleFlow(viewModel.token) { token ->
             if (token.isEmpty()) {
                 viewModel.authorization("poegis",
                     "123Qwerty",
@@ -77,7 +93,7 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                         }
                     })
             }
-        }
+        }*/
         collectLifecycleFlow(viewModel.loginResponse) { loginResponse ->
             when (loginResponse) {
                 is ApiResponse.Error -> Toast.makeText(
@@ -173,6 +189,11 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
         collectLifecycleFlow(viewModel.message) { message ->
             Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         }
+        viewModel.tokenCheck(object : CoroutinesErrorHandler {
+            override fun onError(message: String) {
+                Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+            }
+        })
     }
 
     private fun setupObjectSpinner() {

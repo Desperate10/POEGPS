@@ -2,10 +2,7 @@ package com.poe.poegps.feature.data.mapper
 
 import com.poe.poegps.feature.data.local.entity.*
 import com.poe.poegps.feature.data.remote.model.*
-import com.poe.poegps.feature.domain.model.Line
-import com.poe.poegps.feature.domain.model.Pillar
-import com.poe.poegps.feature.domain.model.Ps
-import com.poe.poegps.feature.domain.model.Tp
+import com.poe.poegps.feature.domain.model.*
 import com.poe.poegps.feature.presentation.model.PillarType
 
 fun LineObjects04DTO.toDomainModel() = Line(
@@ -162,6 +159,16 @@ fun TpDbModel.toDomainModel() = Tp(
     lng = lng
 )
 
+fun AbonTpDbModel.toDomainModel() = Tp(
+    id= id,
+    tplnr = tplnr,
+    name = pltxt,
+    isAbon = false,
+    pillarType = PillarType.ABONTP.name,
+    lat = lat,
+    lng = lng
+)
+
 fun PsDbModel.toDomainModel() = Ps(
     id= id,
     tplnr = tplnr,
@@ -280,4 +287,16 @@ fun Pillar.toLinePillarDbModel() = LinePillarDbModel(
     wire = wire,
     lat = lat,
     lng = lng
+)
+
+fun WireDTO.toWire() = Wire(
+    name = name
+)
+
+fun Wire.toWire04DbModel() = Wire04DbModel(
+    name = name
+)
+
+fun Wire.toWire10DbModel() = Wire10DbModel(
+    name = name
 )

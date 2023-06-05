@@ -6,14 +6,18 @@ import com.poe.poegps.feature.data.mapper.*
 import com.poe.poegps.feature.data.remote.api.ObjectsApi
 import com.poe.poegps.feature.data.remote.model.LoginRequest
 import com.poe.poegps.feature.data.remote.model.SavePillarsResponse
+import com.poe.poegps.feature.data.remote.model.TokenCheckResponse
 import com.poe.poegps.feature.data.remote.model.upload.UploadState
+import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.data.remote.utils.apiRequestFlow
 import com.poe.poegps.feature.domain.model.Line
 import com.poe.poegps.feature.domain.model.Pillar
 import com.poe.poegps.feature.domain.model.Ps
 import com.poe.poegps.feature.domain.model.Tp
 import com.poe.poegps.feature.domain.repository.ObjectsRepository
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class ObjectsRepositoryImpl @Inject constructor(
@@ -21,20 +25,26 @@ class ObjectsRepositoryImpl @Inject constructor(
     private val objectsApi: ObjectsApi
 ) : ObjectsRepository {
 
-    private val _uploadState = MutableStateFlow<UploadState>(UploadState.Idle)
-    val uploadState: StateFlow<UploadState> = _uploadState.asStateFlow()
-
     override fun auth(login: String, password: String) = apiRequestFlow {
         objectsApi.auth(LoginRequest(login, password))
     }
 
+    override fun tokenCheck(token: String): Flow<ApiResponse<TokenCheckResponse>> {
+        return apiRequestFlow {
+            objectsApi.checkTokenValidity(token)
+        }
+    }
+
+
     override fun uploadSavedPillars(token: String): Flow<SavePillarsResponse> = flow {
-       // return apiRequestFlow {
-            val data = objectsDao.getSavedPillars()
-            //Заменить на возврат респонса
-          val response = objectsApi.uploadSavedPillars(token = "Bearer $token", pillars = data.map { it.toDTObject() })
-            response.body()?.let { emit(it) }
-      //  }
+        // return apiRequestFlow {
+        val data = objectsDao.getSavedPillars()
+        //Заменить на возврат респонса
+        val response = objectsApi.uploadSavedPillars(
+            token = "Bearer $token",
+            pillars = data.map { it.toDTObject() })
+        response.body()?.let { emit(it) }
+        //  }
     }
 
 
@@ -84,14 +94,14 @@ class ObjectsRepositoryImpl @Inject constructor(
                 line?.let { objectsDao.insertLine04IfNotExist(line.toLine04DbModel()) }
             }
             line10Objects.map { line ->
-                line?.let{ objectsDao.insertLine10IfNotExist(line.toLine10DbModel()) }
+                line?.let { objectsDao.insertLine10IfNotExist(line.toLine10DbModel()) }
             }
             line04AbonObjects.map { line ->
                 line?.let { objectsDao.insertAbonLine04IfNotExist(line.toAbonLine04DbModel()) }
             }
             line10AbonObjects.map { line ->
                 line?.let { objectsDao.insertAbonLine10IfNotExist(it.toAbonLine10DbModel()) }
-               // objectsDao.insertAbonLine10IfNotExist(line.toAbonLine10DbModel())
+                // objectsDao.insertAbonLine10IfNotExist(line.toAbonLine10DbModel())
             }
 
             emit(UploadState.Complete)
@@ -117,15 +127,15 @@ class ObjectsRepositoryImpl @Inject constructor(
             .map { tp ->
                 val domain = tp.toDomainModel()
                 val tps = domain.toAbonDbModel()
-                    //Log.d("testim", tps.toString())
+                //Log.d("testim", tps.toString())
                 objectsDao.insertAbonTpIfNotExist(tps)
                 //objectsDao.insertAbonTp(tps)
             }
-            /*.also { tps ->
-                tps.map {
-                    objectsDao.insertAbonTp(it.toAbonDbModel())
-                }
-            }*/
+        /*.also { tps ->
+            tps.map {
+                objectsDao.insertAbonTp(it.toAbonDbModel())
+            }
+        }*/
     }
 
     override suspend fun downloadPss(token: String) {
@@ -159,6 +169,25 @@ class ObjectsRepositoryImpl @Inject constructor(
             .also { pillars ->
                 pillars.map {
                     objectsDao.insertPillar10IfNotExist(it.to10DbModel())
+                }
+            }
+    }
+
+    override suspend fun downloadWires04(token: String) {
+        objectsApi.getWire04("Bearer $token")
+            .map { wire ->
+                wire.toWire()
+            }.also {
+                it.map { wire ->
+                    objectsDao.insertWire04IfNotExist(wire.toWire04DbModel())
+                }
+            }
+        objectsApi.getWire10("Bearer $token")
+            .map { wire ->
+                wire.toWire()
+            }.also {
+                it.map { wire ->
+                    objectsDao.insertWire10IfNotExist(wire.toWire10DbModel())
                 }
             }
     }
@@ -200,7 +229,7 @@ class ObjectsRepositoryImpl @Inject constructor(
     }
 
     override fun searchTP(tplnr: String, abonState: Boolean): Flow<List<Tp>> {
-        return objectsDao.getTp(tplnr)
+        return objectsDao.getTpFlow(tplnr)
             .map { tp ->
                 tp.map {
                     it.toDomainModel()
@@ -236,7 +265,7 @@ class ObjectsRepositoryImpl @Inject constructor(
     }
 
     override fun getTpList(isAbon: Boolean): Flow<List<Tp>> {
-        return if(!isAbon) {
+        return if (!isAbon) {
             objectsDao.getTps()
                 .map { tp ->
                     tp.map {
@@ -250,6 +279,14 @@ class ObjectsRepositoryImpl @Inject constructor(
                         it.toDomainModel()
                     }
                 }
+        }
+    }
+
+    override suspend fun getSingleTpObject(tplnr: String, isAbon: Boolean): Tp {
+        return if (!isAbon) {
+            objectsDao.getSingleTp(tplnr).toDomainModel()
+        } else {
+            objectsDao.getSingleAbonTp(tplnr).toDomainModel()
         }
     }
 
@@ -311,6 +348,10 @@ class ObjectsRepositoryImpl @Inject constructor(
 
     override suspend fun saveAbonLine10(line: Line) {
         objectsDao.insertAbonOtpaika10(line.toAbonLine10DbModel())
+    }
+
+    override suspend fun saveTpCoord(pillar: Pillar) {
+        objectsDao.saveTpCoordIfNotExist(pillar.toLinePillarDbModel())
     }
 
     override suspend fun deleteLine04(pltxt: String) {

@@ -2,6 +2,7 @@ package com.poe.poegps.feature.domain.repository
 
 import com.poe.poegps.feature.data.remote.model.LoginResponse
 import com.poe.poegps.feature.data.remote.model.SavePillarsResponse
+import com.poe.poegps.feature.data.remote.model.TokenCheckResponse
 import com.poe.poegps.feature.data.remote.model.upload.UploadState
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.domain.model.Line
@@ -14,6 +15,9 @@ interface ObjectsRepository {
 
     //логин
     fun auth(login: String, password: String): Flow<ApiResponse<LoginResponse>>
+
+    //Проверка токена авторизации
+    fun tokenCheck(token: String): Flow<ApiResponse<TokenCheckResponse>>
 
     //Выгрузка опор из БД
     fun uploadSavedPillars(token: String): Flow<SavePillarsResponse>
@@ -29,6 +33,9 @@ interface ObjectsRepository {
 
     //Получение списка опор из апи
     suspend fun downloadPillars(filial: String, token: String)
+
+    //Получение списка проводов
+    suspend fun downloadWires04(token: String)
 
     //Получение линий 10 из БД
     fun searchLine10(tplnr: String): Flow<List<Line>>
@@ -56,6 +63,8 @@ interface ObjectsRepository {
     //Получение списка ТП из БД
     fun getTpList(isAbon: Boolean): Flow<List<Tp>>
 
+    suspend fun getSingleTpObject(tplnr: String, isAbon: Boolean): Tp
+
     fun getPillar04List(tplnr: String): Flow<List<Pillar>>
 
     fun getPillar10List(tplnr: String): Flow<List<Pillar>>
@@ -77,6 +86,8 @@ interface ObjectsRepository {
     suspend fun saveAbonLine04(line: Line)
 
     suspend fun saveAbonLine10(line: Line)
+
+    suspend fun saveTpCoord(pillar: Pillar)
 
     suspend fun deleteLine04(pltxt: String)
 

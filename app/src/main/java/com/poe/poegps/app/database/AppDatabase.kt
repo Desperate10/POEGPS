@@ -22,6 +22,8 @@ import com.poe.poegps.feature.data.local.entity.*
         Line154DbModel::class,
         Pillar04DbModel::class,
         Pillar10DbModel::class,
+        Wire04DbModel::class,
+        Wire10DbModel::class,
         LinePillarDbModel::class
     ],
     version = 1,

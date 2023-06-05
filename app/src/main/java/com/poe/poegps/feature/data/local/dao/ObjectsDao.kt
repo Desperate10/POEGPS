@@ -52,7 +52,7 @@ interface ObjectsDao {
     }
 
     @Query("SELECT * FROM tp WHERE tplnr = :tplnr LIMIT 1")
-    suspend fun getSingleTp(tplnr: String): TpDbModel?
+    suspend fun getSingleTp(tplnr: String): TpDbModel
 
     suspend fun insertAbonTpIfNotExist(tp: AbonTpDbModel) {
         if (getSingleAbonTp(tp.tplnr) == null) {
@@ -61,7 +61,7 @@ interface ObjectsDao {
     }
 
     @Query("SELECT * FROM abon_tp WHERE tplnr = :tplnr LIMIT 1")
-    suspend fun getSingleAbonTp(tplnr: String): AbonTpDbModel?
+    suspend fun getSingleAbonTp(tplnr: String): AbonTpDbModel
 
     suspend fun insertPsIfNotExist(ps: PsDbModel) {
         if (getSinglePs(ps.tplnr) == null) {
@@ -90,7 +90,38 @@ interface ObjectsDao {
     @Query("SELECT * FROM pillars10 WHERE tplnr = :tplnr AND name = :name LIMIT 1")
     suspend fun getSinglePillar10(tplnr: String, name: String): Pillar10DbModel?
 
+    suspend fun insertWire04IfNotExist(wire: Wire04DbModel) {
+        if (getSingleWire04(wire.name) == null) {
+            insertWire04(wire)
+        }
+    }
 
+    @Query("SELECT * FROM wire04 WHERE name = :name LIMIT 1")
+    suspend fun getSingleWire04(name: String): Wire04DbModel?
+
+    suspend fun insertWire10IfNotExist(wire: Wire10DbModel) {
+        if (getSingleWire10(wire.name) == null) {
+            insertWire10(wire)
+        }
+    }
+
+    @Query("SELECT * FROM wire04 WHERE name = :name LIMIT 1")
+    suspend fun getSingleWire10(name: String): Wire10DbModel?
+
+    @Query("SELECT * FROM linepillar WHERE tplnr = :tplnr LIMIT 1")
+    suspend fun tpAlreadySaved(tplnr: String): LinePillarDbModel?
+
+    suspend fun saveTpCoordIfNotExist(tp: LinePillarDbModel) {
+        if (tpAlreadySaved(tp.tplnr) == null) {
+            insertSavedPillar(tp)
+        }
+    }
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWire04(wire: Wire04DbModel)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWire10(wire: Wire10DbModel)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLine04(line: Line04DbModel)
@@ -165,7 +196,7 @@ interface ObjectsDao {
     fun getPillars10ByTplnr(tplnr: String): Flow<List<Pillar10DbModel>>
 
     @Query("SELECT * FROM tp WHERE tplnr LIKE '%-P'|| :tplnr || '%'")
-    fun getTp(tplnr: String): Flow<List<TpDbModel>>
+    fun getTpFlow(tplnr: String): Flow<List<TpDbModel>>
 
     @Query("SELECT * FROM ps WHERE tplnr LIKE '%-P'|| :tplnr || '%'")
     fun getPs(tplnr: String): Flow<List<PsDbModel>>
@@ -208,5 +239,6 @@ interface ObjectsDao {
 
     @Query("DELETE FROM line_pillar WHERE parentName LIKE :pltxt")
     fun deleteSavedPillars(pltxt: String)
+
 
 }
