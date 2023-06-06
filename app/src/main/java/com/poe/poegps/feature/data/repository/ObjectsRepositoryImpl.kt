@@ -332,6 +332,10 @@ class ObjectsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun updateStatus(tplnrList: List<String>) {
+        objectsDao.updateStatus(tplnrList)
+    }
+
     override suspend fun savePillar(pillar: Pillar): Long {
         return objectsDao.insertSavedPillar(pillar.toLinePillarDbModel())
     }

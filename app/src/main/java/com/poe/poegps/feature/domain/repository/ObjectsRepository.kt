@@ -95,5 +95,6 @@ interface ObjectsRepository {
     suspend fun deleteAbonLine10(pltxt: String)
 
     fun getWireList(category: String): Flow<List<Wire>>
+    suspend fun updateStatus(tplnrList: List<String>)
 
 }
