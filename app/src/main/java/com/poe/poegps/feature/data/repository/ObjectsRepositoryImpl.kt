@@ -393,7 +393,7 @@ class ObjectsRepositoryImpl @Inject constructor(
         deleteSavedPillars(pltxt)
     }
 
-    private fun deleteSavedPillars(pltxt: String) {
+    private suspend fun deleteSavedPillars(pltxt: String) {
         objectsDao.deleteSavedPillars(pltxt)
     }
 

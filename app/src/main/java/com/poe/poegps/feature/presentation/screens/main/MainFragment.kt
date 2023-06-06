@@ -154,6 +154,7 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
             when (tokenResponse) {
                 is ApiResponse.Success -> {
                     if (tokenResponse.data.error) {
+                        Log.d("testim", "token is invalid")
                         val dialog = LoginDialogFragment()
                         dialog.setListener(this)
                         dialog.show(childFragmentManager, "login")

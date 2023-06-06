@@ -165,7 +165,7 @@ class MainViewModel @Inject constructor(
         repository.auth(login, password)
     }
 
-    fun tokenCheck(
+    private fun tokenCheck(
         coroutineErrorHandler: CoroutinesErrorHandler
     ) = baseRequest(
         _tokenValidity, coroutineErrorHandler

@@ -131,8 +131,9 @@ class EditorViewModel @Inject constructor(
                  ObjectType.LINEABON35 -> TODO()
                  ObjectType.LINEABON110 -> TODO()
                  ObjectType.LINEABON154 -> TODO()*/
-                ObjectType.TP -> TODO()
-                ObjectType.TPABON -> TODO()
+                ObjectType.TP -> {
+                }
+                ObjectType.TPABON -> {}
             }
             /*repository.saveLine(
                 ObjectDisplayable(

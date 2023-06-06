@@ -262,7 +262,7 @@ interface ObjectsDao {
     @Query("DELETE FROM line_pillar WHERE parentName LIKE :pltxt")
     suspend fun deleteSavedPillars(pltxt: String)
 
-    @Query("UPDATE line_pillar SET isSent = 1 WHERE tplnr IN (:tplnrList)")
+    @Query("UPDATE line_pillar SET isSent = 1 WHERE tplnr NOT IN (:tplnrList)")
     suspend fun updateStatus(tplnrList: List<String>)
 
 
