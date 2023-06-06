@@ -7,13 +7,9 @@ import android.location.Location
 import android.location.LocationManager
 import android.os.Bundle
 import android.view.LayoutInflater
-import android.view.Menu
-import android.view.MenuInflater
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -23,7 +19,6 @@ import com.poe.poegps.databinding.FragmentTpEditorBinding
 import com.poe.poegps.feature.data.remote.utils.MyLocationListener
 import com.poe.poegps.feature.presentation.model.OprDisplayable
 import com.poe.poegps.feature.presentation.screens.editor.EditorFragment
-import com.poe.poegps.feature.presentation.screens.editor.EditorViewModel
 import com.poe.poegps.feature.presentation.screens.editor.dialog.LocationToggleDialogFragment
 import com.poe.poegps.feature.presentation.screens.tpeditor.dialog.OnTpLongClickDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
@@ -32,8 +27,7 @@ import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 import java.util.*
 
 @AndroidEntryPoint
-class TpEditorFragment : Fragment(), View.OnClickListener, MyLocationListener,
-    OnTpLongClickDialogFragment.Listener{
+class TpEditorFragment : Fragment(), View.OnClickListener, MyLocationListener {
 
     private val args: TpEditorFragmentArgs by lazy {
         TpEditorFragmentArgs.fromBundle(requireArguments())
@@ -76,6 +70,8 @@ class TpEditorFragment : Fragment(), View.OnClickListener, MyLocationListener,
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.tpName.text = args.pltxt
+
         collectLifecycleFlow(viewModel.tpObject) { tp ->
             binding.opr.text = tp.name
             binding.lat.text = tp.lat
@@ -86,19 +82,49 @@ class TpEditorFragment : Fragment(), View.OnClickListener, MyLocationListener,
             tpToSave = tp.copy()
         }
 
-        binding.oprItemLl.setOnLongClickListener {
-            OnTpLongClickDialogFragment.newInstance(childFragmentManager, args.tplnr)
+        binding.textViews.setOnLongClickListener {
+            OnTpLongClickDialogFragment.show(childFragmentManager, args.tplnr)
             true
         }
 
         binding.takeCoord.setOnClickListener {
-            binding.lat.text = binding.include.GPSLatitude.text
-            binding.lng.text = binding.include.GPSLongitude.text
-            binding.takeCoord.isEnabled = false
-            viewModel.saveTpCoord(tpToSave.copy(lat = binding.lat.text.toString(), lng = binding.lng.text.toString()))
+            if (binding.include.GPSLatitude.text != "0.0" && locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true) {
+                //viewModel.saveCoordinates(opr)
+                binding.lat.text = binding.include.GPSLatitude.text.toString()
+                binding.lng.text  = binding.include.GPSLongitude.text.toString()
+                binding.takeCoord.isEnabled = false
+                viewModel.saveTpCoord(tpToSave.copy(lat = binding.lat.text.toString(), lng = binding.lng.text.toString()))
+            } else if (binding.include.GPSLatitude.text == "0.0" && locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true) {
+                Toast.makeText(
+                    requireContext(),
+                    "Заждіть доки не знайдуться нові спутники!",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } else {
+                Toast.makeText(
+                    requireContext(),
+                    "Будь-ласка, ввімкніть GPS!",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
+        binding.backBtn.setOnClickListener(this)
 
         viewModel.fetchTpObject(args.tplnr, args.isAbon)
+        setupOnTpLongClickListener()
+    }
+
+    private fun setupOnTpLongClickListener() {
+        OnTpLongClickDialogFragment.setupListeners(childFragmentManager, viewLifecycleOwner) {
+                _, which ->
+            when (which) {
+                getString(R.string.clear_tp_coord) -> {
+                    binding.lat.text = "0.0"
+                    binding.lng.text = "0.0"
+                    binding.takeCoord.isEnabled = true
+                }
+            }
+        }
     }
 
     override fun onClick(v: View?) {
@@ -194,12 +220,5 @@ class TpEditorFragment : Fragment(), View.OnClickListener, MyLocationListener,
             binding.include.GPSAccuracy.text = "000.0"
         }
     }
-
-    override fun onTpCoordCleared(tplnr: String) {
-        binding.lat.text = "0.0"
-        binding.lng.text = "0.0"
-        binding.takeCoord.isEnabled = true
-    }
-
 
 }

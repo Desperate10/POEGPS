@@ -16,6 +16,7 @@ import com.poe.poegps.feature.presentation.model.OprDisplayable
 import com.poe.poegps.feature.presentation.model.PillarType
 import com.poe.poegps.feature.presentation.screens.editor.EditorViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 
 @AndroidEntryPoint
 class OnCreateOtpDialogFragment : DialogFragment() {
@@ -53,16 +54,7 @@ class OnCreateOtpDialogFragment : DialogFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val view = inflater.inflate(R.layout.create_opr, container, false)
-        val spinner = view.findViewById<Spinner>(R.id.wireSpinner)
-        spinner.adapter = ArrayAdapter(
-            requireActivity(),
-            android.R.layout.simple_list_item_1,
-            requireContext().resources.getStringArray(
-                R.array.wires
-            )
-        )
-        return view
+        return inflater.inflate(R.layout.create_opr, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -70,6 +62,13 @@ class OnCreateOtpDialogFragment : DialogFragment() {
 
         val oprName = view.findViewById<EditText>(R.id.oprName)
         val wireSpinner = view.findViewById<Spinner>(R.id.wireSpinner)
+        collectLifecycleFlow(viewModel.getWires(opr!!.category)) { wires ->
+            wireSpinner.adapter = ArrayAdapter(
+                requireActivity(),
+                android.R.layout.simple_list_item_1,
+                wires.map { it.name }
+            )
+        }
 
         view.findViewById<Button>(R.id.save).setOnClickListener {
             val oprNameTxt = oprName.text.toString()

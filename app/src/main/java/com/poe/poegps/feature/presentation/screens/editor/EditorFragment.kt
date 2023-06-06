@@ -112,22 +112,17 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
     override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
         return when (menuItem.itemId) {
             R.id.add_opr -> {
-                /*findNavController().navigate(EditorFragmentDirections.actionEditorFragmentToAddPillarDialogFragment(
-                    args.tplnr,
-                    adapter.itemCount + 1
-                   // requireContext().resources.getStringArray(R.array.wires)
-                ))*/
                 openCreatePillarDialog()
                 true
             }
             R.id.add_savedopr -> {
-                val dialog = AddPillarFromSaved10.newInstance()
+                val dialog = AddPillarFromSaved10.newInstance(args.category)
                 dialog.setListener(this)
                 dialog.show(childFragmentManager, "CreateSavedPillar10DialogFragment")
                 true
             }
             R.id.add_savedopr_from_small -> {
-                val dialog = AddPillarFromSaved04.newInstance()
+                val dialog = AddPillarFromSaved04.newInstance(args.category)
                 dialog.setListener(this)
                 dialog.show(childFragmentManager, "CreateSavedPillar04DialogFragment")
                 true
@@ -184,15 +179,6 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
         dialog.show(childFragmentManager, "ChoosePillarFrom04DialogFragment")
     }
 
-    /*private fun onCreateStartDialog() {
-        if (adapter.itemCount == 0) {
-            val dialog = AddPillarFromTp.newInstance(args.pltxt, args.tplnr)
-            dialog.setListener(this)
-            dialog.show(childFragmentManager, "CreateSavedTp04DialogFragment")
-        }
-    }*/
-
-
     override fun onSavedPillar04Adding(obj: ObjectDisplayable) {
         openChoosePillarFrom04Dialog(obj, args.tplnr)
     }
@@ -204,14 +190,6 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
     override fun onPillarAdded(pillar: OprDisplayable) {
         viewModel.addPillarToDisplay(pillar)
     }
-
-    /*override fun onSavedTpAdded(obj: OprDisplayable) {
-        viewModel.addPillarToDisplay(obj)
-    }*/
-
-    /*override fun onPillarChoose(pillar: OprDisplayable) {
-        viewModel.addPillarToDisplay(pillar)
-    }*/
 
     override fun onClick(v: View?) {
         when (v?.id) {
@@ -245,8 +223,6 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
 
     override fun onLongClick(opr: OprDisplayable) {
         OnPillarLongClickDialogFragment.show(childFragmentManager, opr)
-        /*val dialog = PillarLongClickDialogFragment.newInstance(opr)
-        dialog.show(childFragmentManager, "CreatePillarDialogFragment")*/
     }
 
     private fun setupPillarLongClickMenuDialog() {

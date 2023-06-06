@@ -19,7 +19,7 @@ import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 @AndroidEntryPoint
 class AddPillarFromSaved10: DialogFragment() {
 
-    private var lines: ArrayList<ObjectDisplayable>? = null
+    private lateinit var category: String
     private val viewModel by viewModels<EditorViewModel>(ownerProducer = { requireParentFragment() })
 
     interface Listener {
@@ -35,7 +35,7 @@ class AddPillarFromSaved10: DialogFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
-            lines = it.getParcelableArrayList(LINES)
+            category = it.getString(CATEGORY).toString()
         }
     }
 
@@ -47,26 +47,24 @@ class AddPillarFromSaved10: DialogFragment() {
         )
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val view = inflater.inflate(R.layout.create_saved_opr, container, false)
-        /*val spinner = view.findViewById<Spinner>(R.id.lineSpinner)
-        lines?.let {
-            spinner.adapter = ArrayAdapter(requireActivity(), android.R.layout.simple_list_item_1, it)
-        }*/
-        return view
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.create_saved_opr, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        //viewModel.getLineList10()
         val lineSpinner = view.findViewById<Spinner>(R.id.lineSpinner)
         collectLifecycleFlow(viewModel.getLineList10()) {
             lineSpinner.adapter = ArrayAdapter(requireActivity(), android.R.layout.simple_list_item_1, it)
         }
         view.findViewById<Button>(R.id.choose).setOnClickListener {
             val spinnerValue = lineSpinner.selectedItem as ObjectDisplayable
-            listener?.onSavedPillar10Adding(spinnerValue)
+            listener?.onSavedPillar10Adding(spinnerValue.copy(category = category))
             dismiss()
         }
         view.findViewById<Button>(R.id.cancel).setOnClickListener {
@@ -75,13 +73,13 @@ class AddPillarFromSaved10: DialogFragment() {
     }
 
     companion object {
-        private const val LINES = "lines"
+        private const val CATEGORY = "ucat"
 
-        fun newInstance(): AddPillarFromSaved10 {
-           // val args = Bundle()
-          //  args.putParcelableArrayList(LINES, lines)
+        fun newInstance(category: String): AddPillarFromSaved10 {
+            val args = Bundle()
+            args.putString(CATEGORY, category)
             val fragment = AddPillarFromSaved10()
-           // fragment.arguments = args
+            fragment.arguments = args
             return fragment
         }
     }

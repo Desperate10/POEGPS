@@ -57,15 +57,7 @@ class ChoosePillarFrom04DialogFragment : DialogFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val view = inflater.inflate(R.layout.choose_opr, container, false)
-        val wireSpinner = view.findViewById<Spinner>(R.id.wireSpinner)
-
-        wireSpinner.adapter =
-            ArrayAdapter(requireActivity(),
-                android.R.layout.simple_list_item_1,
-                requireContext().resources.getStringArray(R.array.wires)
-            )
-        return view
+        return inflater.inflate(R.layout.choose_opr, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -75,7 +67,15 @@ class ChoosePillarFrom04DialogFragment : DialogFragment() {
         collectLifecycleFlow(viewModel.getPillar04List(tplnr)) {
             coordSpinner.adapter = ArrayAdapter(requireActivity(), android.R.layout.simple_list_item_1, it)
         }
+
         val wireSpinner = view.findViewById<Spinner>(R.id.wireSpinner)
+        collectLifecycleFlow(viewModel.getWires("0,4")) { wires ->
+            wireSpinner.adapter = ArrayAdapter(
+                requireActivity(),
+                android.R.layout.simple_list_item_1,
+                wires.map { it.name }
+            )
+        }
 
         view.findViewById<Button>(R.id.save).setOnClickListener {
             val pillarSpinner = coordSpinner.selectedItem as OprDisplayable

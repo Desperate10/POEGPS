@@ -17,12 +17,9 @@ import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.ObjectState
 import com.poe.poegps.feature.presentation.model.ObjectType
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.lang.Thread.State
+import retrofit2.Response
 import javax.inject.Inject
 
 @HiltViewModel
@@ -32,7 +29,7 @@ class MainViewModel @Inject constructor(
     private val filialManager: FilialManager
 ) : BaseViewModel() {
 
-    val token = MutableStateFlow<String?>("")
+    private val token = MutableStateFlow<String?>("")
     val filial = MutableStateFlow<String?>("")
 
     private val _uploadState = MutableStateFlow<UploadState>(UploadState.Idle)
@@ -45,15 +42,22 @@ class MainViewModel @Inject constructor(
     val objectsList = _objectsList
 
     private val _loginResponse = MutableStateFlow<ApiResponse<LoginResponse>>(ApiResponse.Loading)
-    val loginResponse = _loginResponse.stateIn(viewModelScope, SharingStarted.Lazily, ApiResponse.Loading)
+    val loginResponse : StateFlow<ApiResponse<LoginResponse>> = _loginResponse
 
-    private val _uploadResponse = MutableStateFlow<SavePillarsResponse>(SavePillarsResponse(false, ""))
-    val uploadResponse = _uploadResponse.stateIn(viewModelScope, SharingStarted.Lazily, SavePillarsResponse(false, ""))
+    private val _uploadResponse =
+        MutableStateFlow<SavePillarsResponse>(SavePillarsResponse(false, "", emptyList()))
+
+    val uploadResponse = _uploadResponse.stateIn(
+        viewModelScope,
+        SharingStarted.Lazily,
+        SavePillarsResponse(false, "", emptyList())
+    )
 
     private val _state = MutableStateFlow<ObjectState>(ObjectState.initial)
     val state: StateFlow<ObjectState> = _state
 
-    private val _tokenValidity = MutableStateFlow<ApiResponse<TokenCheckResponse>>(ApiResponse.Loading)
+    private val _tokenValidity =
+        MutableStateFlow<ApiResponse<TokenCheckResponse>>(ApiResponse.Loading)
     val tokenValidity: StateFlow<ApiResponse<TokenCheckResponse>> = _tokenValidity
 
     private val _message = MutableSharedFlow<String>()
@@ -66,7 +70,6 @@ class MainViewModel @Inject constructor(
                     token.value = it
                 }
             }
-
         }
         viewModelScope.launch(Dispatchers.IO) {
             filialManager.getFilial().collect {
@@ -75,6 +78,16 @@ class MainViewModel @Inject constructor(
                     else filial.value = it
                 }
             }
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            delay(500)
+            tokenCheck(object : CoroutinesErrorHandler {
+                override fun onError(message: String) {
+                    viewModelScope.launch(Dispatchers.Main) {
+                        _message.emit("Не вдалося перевірити токен! Перевірте підключення до інтернету та спробуйте ще раз.")
+                    }
+                }
+            })
         }
     }
 
@@ -127,6 +140,16 @@ class MainViewModel @Inject constructor(
             }) {
                 repository.downloadPillars(filial.value!!, token.value ?: "")
             }
+            //добавить загрузку проводов
+            viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, error ->
+                object :CoroutinesErrorHandler {
+                    override fun onError(message: String) {
+                        error.localizedMessage ?: "Error occured! Please try again."
+                    }
+                }
+            }) {
+                repository.downloadWires(token.value ?: "")
+            }
         } else {
             viewModelScope.launch(Dispatchers.Main) {
                 _message.emit("Не выбрано філіал!")
@@ -148,6 +171,14 @@ class MainViewModel @Inject constructor(
         _tokenValidity, coroutineErrorHandler
     ) {
         repository.tokenCheck(token.value ?: "")
+    }
+
+    fun test() {
+        viewModelScope.launch(Dispatchers.IO) {
+            Log.d("testim", token.value.toString())
+            delay(1000)
+            Log.d("testim", token.value.toString())
+        }
     }
 
 
@@ -289,7 +320,13 @@ class MainViewModel @Inject constructor(
     }
 
     fun resetResponse() {
-        _uploadResponse.value = SavePillarsResponse(false, "")
+        _uploadResponse.value = SavePillarsResponse(false, "", emptyList())
+    }
+
+    fun updateStatus(tplnrList: List<String>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateStatus(tplnrList)
+        }
     }
 
 }

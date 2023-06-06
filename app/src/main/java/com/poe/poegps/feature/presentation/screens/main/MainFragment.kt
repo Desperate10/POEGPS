@@ -35,7 +35,8 @@ import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 @AndroidEntryPoint
 class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvider,
     SearchObjectDialog.OnInputListener,
-    AdapterView.OnItemSelectedListener {
+    AdapterView.OnItemSelectedListener,
+    LoginDialogFragment.Listener {
 
     private var binding: FragmentMainBinding by autoCleaned()
     private var adapter: ObjectsAdapter by autoCleaned()
@@ -67,48 +68,26 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
     }
 
     private fun collectViewModel() {
-        collectLifecycleFlow(viewModel.tokenValidity) { tokenResponse ->
-            when (tokenResponse) {
-                is ApiResponse.Success -> {
-                    if (tokenResponse.data.message == "true") {
-                        LoginDialogFragment().show(childFragmentManager, "login")
-                    }
-                }
-                is ApiResponse.Error -> {
-                    Toast.makeText(requireContext(), "Error! ${tokenResponse.message}", Toast.LENGTH_SHORT)
-                        .show()
-                }
-                else -> {}
-            }
-
-        }
-        /*collectLifecycleFlow(viewModel.token) { token ->
-            if (token.isEmpty()) {
-                viewModel.authorization("poegis",
-                    "123Qwerty",
-                    object : CoroutinesErrorHandler {
-                        override fun onError(message: String) {
-                            Toast.makeText(context, "Error! $message", Toast.LENGTH_SHORT)
-                                .show()
-                        }
-                    })
-            }
-        }*/
         collectLifecycleFlow(viewModel.loginResponse) { loginResponse ->
             when (loginResponse) {
-                is ApiResponse.Error -> Toast.makeText(
-                    requireContext(),
-                    loginResponse.message,
-                    Toast.LENGTH_SHORT
-                ).show()
-
-                ApiResponse.Loading -> {}/*Toast.makeText(
-                    requireContext(),
-                    "Loading...",
-                    Toast.LENGTH_SHORT
-                ).show()*/
+                is ApiResponse.Error -> {
+                    Toast.makeText(
+                        requireContext(),
+                        loginResponse.message,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    val dialog = LoginDialogFragment()
+                    dialog.setListener(this)
+                    dialog.show(childFragmentManager, "login")
+                }
+                ApiResponse.Loading -> {}
 
                 is ApiResponse.Success -> {
+                    Toast.makeText(
+                        requireContext(),
+                        "Вас авторизовано!",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     viewModel.saveToken(loginResponse.data.jwt)
                 }
             }
@@ -121,28 +100,10 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                     Toast.LENGTH_SHORT
                 ).show()
                 viewModel.resetResponse()
-            }
-            /*when (uploadResponse) {
-                is ApiResponse.Error -> Toast.makeText(
-                    requireContext(),
-                    uploadResponse.message,
-                    Toast.LENGTH_SHORT
-                ).show()
-
-                ApiResponse.Loading -> {}*//*Toast.makeText(
-                    requireContext(),
-                    "Loading...",
-                    Toast.LENGTH_SHORT
-                ).show()*//*
-
-                is ApiResponse.Success -> {
-                    Toast.makeText(
-                        requireContext(),
-                        "Дані успішно відправлені",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                if (!uploadResponse.error) {
+                    viewModel.updateStatus(uploadResponse.tplnrList)
                 }
-            }*/
+            }
         }
         collectLifecycleFlow(viewModel.uploadState) { state ->
             when(state) {
@@ -189,11 +150,23 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
         collectLifecycleFlow(viewModel.message) { message ->
             Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         }
-        viewModel.tokenCheck(object : CoroutinesErrorHandler {
-            override fun onError(message: String) {
-                Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+        collectLifecycleFlow(viewModel.tokenValidity) { tokenResponse ->
+            when (tokenResponse) {
+                is ApiResponse.Success -> {
+                    if (tokenResponse.data.error) {
+                        val dialog = LoginDialogFragment()
+                        dialog.setListener(this)
+                        dialog.show(childFragmentManager, "login")
+                    }
+                }
+                is ApiResponse.Error -> {
+                    Toast.makeText(requireContext(), "Error! ${tokenResponse.message}", Toast.LENGTH_SHORT)
+                        .show()
+                }
+                else -> {}
             }
-        })
+
+        }
     }
 
     private fun setupObjectSpinner() {
@@ -216,7 +189,7 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                     } else {
                         Toast.makeText(
                             requireContext(),
-                            "Неможна видалити магістральну лінію",
+                            "Неможливо видалити магістральну лінію",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -224,6 +197,11 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                 }
 
                 R.id.sendObject -> {
+                    Toast.makeText(
+                        requireContext(),
+                        "Функціонал буде реалізовано в наступній версії",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     //viewModel.sendObject(obj.name)
                     true
                 }
@@ -564,6 +542,17 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                     ).show()
                 }
             }
+    }
+
+    override fun onLoginSuccess(login: String, password: String) {
+        viewModel.authorization(
+            login,
+            password,
+            object : CoroutinesErrorHandler {
+                override fun onError(message: String) {
+                    Toast.makeText(context, "Error! $message", Toast.LENGTH_SHORT).show()
+                }
+            })
     }
 
 

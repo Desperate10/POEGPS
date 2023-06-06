@@ -4,7 +4,7 @@
 
     <item
         android:id="@+id/deleteOtp"
-        android:title="@string/deleteOtp"/>
+        android:title="@string/deleteObject"/>
 
     <item
         android:id="@+id/sendObject"

@@ -19,7 +19,7 @@ import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 @AndroidEntryPoint
 class AddPillarFromSaved04 : DialogFragment() {
 
-    private var lines: ArrayList<ObjectDisplayable>? = null
+    private lateinit var category : String
     private val viewModel by viewModels<EditorViewModel>(ownerProducer = { requireParentFragment() })
 
     interface Listener {
@@ -35,7 +35,7 @@ class AddPillarFromSaved04 : DialogFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
-            lines = it.getParcelableArrayList(LINES)
+            category = it.getString(CATEGORY).toString()
         }
     }
 
@@ -47,9 +47,12 @@ class AddPillarFromSaved04 : DialogFragment() {
         )
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val view = inflater.inflate(R.layout.create_saved_opr, container, false)
-        return view
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.create_saved_opr, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -61,7 +64,7 @@ class AddPillarFromSaved04 : DialogFragment() {
         }
         view.findViewById<Button>(R.id.choose).setOnClickListener {
             val spinnerValue = lineSpinner.selectedItem as ObjectDisplayable
-            listener?.onSavedPillar04Adding(spinnerValue)
+            listener?.onSavedPillar04Adding(spinnerValue.copy(category = category))
             dismiss()
         }
         view.findViewById<Button>(R.id.cancel).setOnClickListener {
@@ -70,13 +73,15 @@ class AddPillarFromSaved04 : DialogFragment() {
     }
 
     companion object {
-        private const val LINES = "lines"
+        private const val CATEGORY = "ucat"
 
-        fun newInstance(): AddPillarFromSaved04 {
-            //val args = Bundle()
-            //args.putParcelableArrayList(LINES, lines)
+        fun newInstance(
+            category: String
+        ): AddPillarFromSaved04 {
+            val args = Bundle()
+            args.putString(CATEGORY, category)
             val fragment = AddPillarFromSaved04()
-            //fragment.arguments = args
+            fragment.arguments = args
             return fragment
         }
     }

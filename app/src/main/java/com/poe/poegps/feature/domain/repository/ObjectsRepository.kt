@@ -5,10 +5,7 @@ import com.poe.poegps.feature.data.remote.model.SavePillarsResponse
 import com.poe.poegps.feature.data.remote.model.TokenCheckResponse
 import com.poe.poegps.feature.data.remote.model.upload.UploadState
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
-import com.poe.poegps.feature.domain.model.Line
-import com.poe.poegps.feature.domain.model.Pillar
-import com.poe.poegps.feature.domain.model.Ps
-import com.poe.poegps.feature.domain.model.Tp
+import com.poe.poegps.feature.domain.model.*
 import kotlinx.coroutines.flow.Flow
 
 interface ObjectsRepository {
@@ -35,7 +32,7 @@ interface ObjectsRepository {
     suspend fun downloadPillars(filial: String, token: String)
 
     //Получение списка проводов
-    suspend fun downloadWires04(token: String)
+    suspend fun downloadWires(token: String)
 
     //Получение линий 10 из БД
     fun searchLine10(tplnr: String): Flow<List<Line>>
@@ -96,5 +93,7 @@ interface ObjectsRepository {
     suspend fun deleteAbonLine04(pltxt: String)
 
     suspend fun deleteAbonLine10(pltxt: String)
+
+    fun getWireList(category: String): Flow<List<Wire>>
 
 }

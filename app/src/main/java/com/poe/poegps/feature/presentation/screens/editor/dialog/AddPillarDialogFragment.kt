@@ -10,10 +10,13 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Spinner
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.viewModels
 import com.poe.poegps.R
 import com.poe.poegps.feature.presentation.model.OprDisplayable
 import com.poe.poegps.feature.presentation.model.PillarType
+import com.poe.poegps.feature.presentation.screens.editor.EditorViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 
 @AndroidEntryPoint
 class AddPillarDialogFragment : DialogFragment() {
@@ -22,6 +25,8 @@ class AddPillarDialogFragment : DialogFragment() {
     private lateinit var lineName: String
     private lateinit var category: String
     private var isAbon: Boolean = false
+
+    private val viewModel by viewModels<EditorViewModel>(ownerProducer = { requireParentFragment() })
 
     interface Listener {
         fun onPillarAdded(pillar: OprDisplayable)
@@ -56,14 +61,7 @@ class AddPillarDialogFragment : DialogFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val view = inflater.inflate(R.layout.create_opr, container, false)
-        val spinner = view.findViewById<Spinner>(R.id.wireSpinner)
-        spinner.adapter = ArrayAdapter(
-            requireActivity(),
-            android.R.layout.simple_list_item_1,
-            requireContext().resources.getStringArray(R.array.wires)
-        )
-        return view
+        return inflater.inflate(R.layout.create_opr, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -72,10 +70,18 @@ class AddPillarDialogFragment : DialogFragment() {
         val oprName = view.findViewById<EditText>(R.id.oprName)
         val wireSpinner = view.findViewById<Spinner>(R.id.wireSpinner)
 
+        collectLifecycleFlow(viewModel.getWires(category)) { wires ->
+            wireSpinner.adapter = ArrayAdapter(
+                requireActivity(),
+                android.R.layout.simple_list_item_1,
+                wires.map { it.name }
+            )
+        }
+
         view.findViewById<Button>(R.id.save).setOnClickListener {
             val oprNameTxt = oprName.text.toString()
             val spinnerValue = wireSpinner.selectedItem.toString()
-            //viewModel.getParentName(tplnr)
+
             val pillar = OprDisplayable(
                 tplnr = tplnr,
                 name = oprNameTxt,

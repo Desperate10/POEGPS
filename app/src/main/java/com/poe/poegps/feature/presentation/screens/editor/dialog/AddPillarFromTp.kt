@@ -83,7 +83,7 @@ class AddPillarFromTp: DialogFragment() {
                 parentName = viewModel.lineName.value.toString(),
                 category = ucat,
                 isAbon = spinnerValue.isAbon,
-                pillarType = spinnerValue.pillarType,
+                pillarType = "",
                 wire = spinnerValue.wire,
                 lat = spinnerValue.lat,
                 lng = spinnerValue.lng

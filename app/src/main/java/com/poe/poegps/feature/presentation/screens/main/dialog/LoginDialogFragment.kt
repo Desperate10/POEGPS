@@ -8,16 +8,27 @@ import android.view.WindowManager
 import android.widget.EditText
 import android.widget.Toast
 import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import com.poe.poegps.R
 import com.poe.poegps.feature.presentation.CoroutinesErrorHandler
+import com.poe.poegps.feature.presentation.screens.editor.dialog.ChoosePillarFrom04DialogFragment
 import com.poe.poegps.feature.presentation.screens.main.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class LoginDialogFragment : DialogFragment() {
 
-    private val viewModel by viewModels<MainViewModel>(ownerProducer = { requireParentFragment() })
+    interface Listener {
+        fun onLoginSuccess(login: String, password: String)
+    }
+
+    private var listener: Listener? = null
+
+    fun setListener(listener: Listener) {
+        this.listener = listener
+    }
+
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -29,6 +40,7 @@ class LoginDialogFragment : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        isCancelable = false
         setupClickListeners(view)
     }
 
@@ -45,17 +57,14 @@ class LoginDialogFragment : DialogFragment() {
         val password = view.findViewById<EditText>(R.id.password)
 
         view.findViewById<View>(R.id.login_button).setOnClickListener {
-            viewModel.authorization(login.text.toString(),
-                password.text.toString(),
-                object : CoroutinesErrorHandler {
-                    override fun onError(message: String) {
-                        Toast.makeText(context, "Error! $message", Toast.LENGTH_SHORT).show()
-                    }
-                })
-            dismiss()
+            if (login.text.toString().isEmpty() || password.text.toString().isEmpty()) {
+                Toast.makeText(requireContext(), "Заповніть всі поля", Toast.LENGTH_SHORT).show()
+            } else {
+                listener?.onLoginSuccess(login.text.toString(), password.text.toString())
+                dismiss()
+            }
         }
 
     }
-
 
 }

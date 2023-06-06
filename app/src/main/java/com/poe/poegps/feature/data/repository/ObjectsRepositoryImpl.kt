@@ -10,10 +10,7 @@ import com.poe.poegps.feature.data.remote.model.TokenCheckResponse
 import com.poe.poegps.feature.data.remote.model.upload.UploadState
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.data.remote.utils.apiRequestFlow
-import com.poe.poegps.feature.domain.model.Line
-import com.poe.poegps.feature.domain.model.Pillar
-import com.poe.poegps.feature.domain.model.Ps
-import com.poe.poegps.feature.domain.model.Tp
+import com.poe.poegps.feature.domain.model.*
 import com.poe.poegps.feature.domain.repository.ObjectsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -173,7 +170,7 @@ class ObjectsRepositoryImpl @Inject constructor(
             }
     }
 
-    override suspend fun downloadWires04(token: String) {
+    override suspend fun downloadWires(token: String) {
         objectsApi.getWire04("Bearer $token")
             .map { wire ->
                 wire.toWire()
@@ -317,6 +314,24 @@ class ObjectsRepositoryImpl @Inject constructor(
             }
     }
 
+    override fun getWireList(category: String): Flow<List<Wire>> {
+        return if (category.contains("0,4")) {
+            objectsDao.getWire04()
+                .map { wire ->
+                    wire.map {
+                        it.toDomainModel()
+                    }
+                }
+        } else {
+            objectsDao.getWire10()
+                .map { wire ->
+                    wire.map {
+                        it.toDomainModel()
+                    }
+                }
+        }
+    }
+
     override suspend fun savePillar(pillar: Pillar): Long {
         return objectsDao.insertSavedPillar(pillar.toLinePillarDbModel())
     }
@@ -351,7 +366,7 @@ class ObjectsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveTpCoord(pillar: Pillar) {
-        objectsDao.saveTpCoordIfNotExist(pillar.toLinePillarDbModel())
+        objectsDao.saveNewTpCoord(pillar.toLinePillarDbModel())
     }
 
     override suspend fun deleteLine04(pltxt: String) {

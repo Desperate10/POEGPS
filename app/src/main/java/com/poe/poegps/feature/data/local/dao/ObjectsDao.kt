@@ -105,17 +105,30 @@ interface ObjectsDao {
         }
     }
 
-    @Query("SELECT * FROM wire04 WHERE name = :name LIMIT 1")
+    @Query("SELECT * FROM wire10 WHERE name = :name LIMIT 1")
     suspend fun getSingleWire10(name: String): Wire10DbModel?
 
     @Query("SELECT * FROM line_pillar WHERE tplnr = :tplnr LIMIT 1")
     suspend fun tpAlreadySaved(tplnr: String): LinePillarDbModel?
 
-    suspend fun saveTpCoordIfNotExist(tp: LinePillarDbModel) {
+    suspend fun saveNewTpCoord(tp: LinePillarDbModel) {
         if (tpAlreadySaved(tp.tplnr) == null) {
             insertSavedPillar(tp)
+        } else {
+            updateSavedPillar(tp.lat, tp.lng, tp.tplnr)
+        }
+        if (tp.isAbon) {
+            updateAbonTpCoords(tp.lat, tp.lng, tp.tplnr)
+        } else {
+            updateTpCoords(tp.lat, tp.lng, tp.tplnr)
         }
     }
+
+    @Query("UPDATE tp SET lat = :lat, lng = :lng  WHERE tplnr = :tplnr")
+    suspend fun updateTpCoords(lat: String, lng: String, tplnr: String)
+
+    @Query("UPDATE abon_tp SET lat = :lat, lng = :lng  WHERE tplnr = :tplnr")
+    suspend fun updateAbonTpCoords(lat: String, lng: String, tplnr: String)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWire04(wire: Wire04DbModel)
@@ -155,6 +168,9 @@ interface ObjectsDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSavedPillar(pillar: LinePillarDbModel): Long
+
+    @Query("UPDATE line_pillar SET lat = :lat, lng = :lng WHERE tplnr = :tplnr")
+    suspend fun updateSavedPillar(lat: String, lng: String, tplnr: String)
 
     @Delete
     suspend fun deletePillar(pillar: LinePillarDbModel)
@@ -200,6 +216,12 @@ interface ObjectsDao {
 
     @Query("SELECT * FROM ps WHERE tplnr LIKE '%-P'|| :tplnr || '%'")
     fun getPs(tplnr: String): Flow<List<PsDbModel>>
+
+    @Query("SELECT * FROM wire04")
+    fun getWire04(): Flow<List<Wire04DbModel>>
+
+    @Query("SELECT * FROM wire10")
+    fun getWire10(): Flow<List<Wire10DbModel>>
 
     @Query("SELECT name FROM line04 WHERE tplnr LIKE :tplnr")
     suspend fun getParentName(tplnr: String): String
