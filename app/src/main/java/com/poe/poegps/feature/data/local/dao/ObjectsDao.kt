@@ -108,7 +108,7 @@ interface ObjectsDao {
     @Query("SELECT * FROM wire04 WHERE name = :name LIMIT 1")
     suspend fun getSingleWire10(name: String): Wire10DbModel?
 
-    @Query("SELECT * FROM linepillar WHERE tplnr = :tplnr LIMIT 1")
+    @Query("SELECT * FROM line_pillar WHERE tplnr = :tplnr LIMIT 1")
     suspend fun tpAlreadySaved(tplnr: String): LinePillarDbModel?
 
     suspend fun saveTpCoordIfNotExist(tp: LinePillarDbModel) {

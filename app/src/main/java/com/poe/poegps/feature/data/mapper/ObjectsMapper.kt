@@ -294,9 +294,11 @@ fun WireDTO.toWire() = Wire(
 )
 
 fun Wire.toWire04DbModel() = Wire04DbModel(
+    id=0,
     name = name
 )
 
 fun Wire.toWire10DbModel() = Wire10DbModel(
+    id= 0,
     name = name
 )
