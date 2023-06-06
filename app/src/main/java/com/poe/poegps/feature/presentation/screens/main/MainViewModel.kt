@@ -63,7 +63,7 @@ class MainViewModel @Inject constructor(
     private val _message = MutableSharedFlow<String>()
     val message = _message
 
-    init {
+    fun initialize() {
         viewModelScope.launch(Dispatchers.IO) {
             tokenManager.getToken().collect {
                 withContext(Dispatchers.Main) {
@@ -90,14 +90,6 @@ class MainViewModel @Inject constructor(
             })
         }
     }
-
-    /*fun checkTokenValidity(
-        coroutineErrorHandler: CoroutinesErrorHandler
-    ) = viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, error ->
-        repository.checkTokenValidity(token.value ?: "")
-    }) {
-        _tokenValidity.value = repository.checkTokenValidity(token.value ?: "")
-    }*/
 
     fun loadObjectsToDb() {
         if (filial.value != null) {
@@ -172,15 +164,6 @@ class MainViewModel @Inject constructor(
     ) {
         repository.tokenCheck(token.value ?: "")
     }
-
-    fun test() {
-        viewModelScope.launch(Dispatchers.IO) {
-            Log.d("testim", token.value.toString())
-            delay(1000)
-            Log.d("testim", token.value.toString())
-        }
-    }
-
 
     fun saveToken(token: String) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -327,6 +310,18 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             repository.updateStatus(tplnrList)
         }
+    }
+
+    fun setLoginResponseToLoading() {
+        _loginResponse.value = ApiResponse.Loading
+    }
+
+    fun setUploadStateToIdle() {
+        _uploadState.value = UploadState.Idle
+    }
+
+    fun setTokenValidity() {
+        _tokenValidity.value = ApiResponse.Success(data = TokenCheckResponse(error = false, message = ""))
     }
 
 }

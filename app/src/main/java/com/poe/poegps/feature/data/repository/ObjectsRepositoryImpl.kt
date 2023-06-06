@@ -103,7 +103,6 @@ class ObjectsRepositoryImpl @Inject constructor(
 
             emit(UploadState.Complete)
         } catch (e: Exception) {
-            Log.d("testim", e.toString())
             emit(UploadState.Error("Помилка завантаження даних"))
         }
     }

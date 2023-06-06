@@ -68,6 +68,7 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
     }
 
     private fun collectViewModel() {
+        viewModel.initialize()
         collectLifecycleFlow(viewModel.loginResponse) { loginResponse ->
             when (loginResponse) {
                 is ApiResponse.Error -> {
@@ -88,6 +89,8 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                         "Вас авторизовано!",
                         Toast.LENGTH_SHORT
                     ).show()
+                    viewModel.setTokenValidity()
+                    viewModel.setLoginResponseToLoading()
                     viewModel.saveToken(loginResponse.data.jwt)
                 }
             }
@@ -120,9 +123,9 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                         "Дані завантажено",
                         Toast.LENGTH_SHORT
                     ).show()
+                    viewModel.setUploadStateToIdle()
                 }
                 is UploadState.Error -> {
-                    Log.d("testim", state.message)
                     Toast.makeText(
                         requireContext(),
                         "Помилка завантаження даних",
@@ -154,7 +157,6 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
             when (tokenResponse) {
                 is ApiResponse.Success -> {
                     if (tokenResponse.data.error) {
-                        Log.d("testim", "token is invalid")
                         val dialog = LoginDialogFragment()
                         dialog.setListener(this)
                         dialog.show(childFragmentManager, "login")
