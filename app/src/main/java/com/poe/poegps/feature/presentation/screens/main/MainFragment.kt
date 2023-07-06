@@ -200,12 +200,17 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                 }
 
                 R.id.sendObject -> {
-                    Toast.makeText(
+                    /*Toast.makeText(
                         requireContext(),
                         "Функціонал буде реалізовано в наступній версії",
                         Toast.LENGTH_SHORT
-                    ).show()
-                    //viewModel.sendObject(obj.name)
+                    ).show()*/
+                    viewModel.uploadSelectedObjectsFromDb(object: CoroutinesErrorHandler {
+                        override fun onError(message: String) {
+                            Toast.makeText(requireContext(), "Error! $message", Toast.LENGTH_SHORT)
+                                .show()
+                        }
+                    }, obj.tplnr)
                     true
                 }
 

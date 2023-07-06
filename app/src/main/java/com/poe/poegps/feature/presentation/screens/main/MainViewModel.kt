@@ -299,11 +299,20 @@ class MainViewModel @Inject constructor(
     }
 
     fun uploadObjectsFromDb(
-        coroutineErrorHandler: CoroutinesErrorHandler
+        coroutineErrorHandler: CoroutinesErrorHandler,
     ) = baseRequest(
         _uploadResponse, coroutineErrorHandler
     ) {
         repository.uploadSavedPillars(token.value ?: "")
+    }
+
+    fun uploadSelectedObjectsFromDb(
+        coroutineErrorHandler: CoroutinesErrorHandler,
+        tplnr: String
+    ) = baseRequest(
+        _uploadResponse, coroutineErrorHandler
+    ) {
+        repository.uploadSavedPillars(token.value ?: "", tplnr)
     }
 
     fun resetResponse() {

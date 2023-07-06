@@ -1,6 +1,5 @@
 package com.poe.poegps.feature.data.repository
 
-import android.util.Log
 import com.poe.poegps.feature.data.local.dao.ObjectsDao
 import com.poe.poegps.feature.data.mapper.*
 import com.poe.poegps.feature.data.remote.api.ObjectsApi
@@ -33,9 +32,13 @@ class ObjectsRepositoryImpl @Inject constructor(
     }
 
 
-    override fun uploadSavedPillars(token: String): Flow<SavePillarsResponse> = flow {
+    override fun uploadSavedPillars(token: String, tplnr: String): Flow<SavePillarsResponse> = flow {
         // return apiRequestFlow {
-        val data = objectsDao.getSavedPillars()
+        val data = if (tplnr.isEmpty()) {
+            objectsDao.getSavedPillars()
+        } else {
+            objectsDao.getSavedPillarsByTplnr(tplnr)
+        }
         //Заменить на возврат респонса
         val response = objectsApi.uploadSavedPillars(
             token = "Bearer $token",

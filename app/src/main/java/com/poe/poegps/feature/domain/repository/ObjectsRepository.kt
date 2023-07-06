@@ -17,7 +17,7 @@ interface ObjectsRepository {
     fun tokenCheck(token: String): Flow<ApiResponse<TokenCheckResponse>>
 
     //Выгрузка опор из БД
-    fun uploadSavedPillars(token: String): Flow<SavePillarsResponse>
+    fun uploadSavedPillars(token: String, tplnr: String = ""): Flow<SavePillarsResponse>
 
     //загрузка линий из апи
     fun downloadLines(filial: String, token: String): Flow<UploadState>
