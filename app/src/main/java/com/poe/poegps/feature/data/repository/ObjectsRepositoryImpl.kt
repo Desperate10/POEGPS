@@ -227,8 +227,17 @@ class ObjectsRepositoryImpl @Inject constructor(
             }
     }
 
-    override fun searchTP(tplnr: String, abonState: Boolean): Flow<List<Tp>> {
+    override fun searchTP(tplnr: String): Flow<List<Tp>> {
         return objectsDao.getTpFlow(tplnr)
+            .map { tp ->
+                tp.map {
+                    it.toDomainModel()
+                }
+            }
+    }
+
+    override fun searchAbonTP(tplnr: String): Flow<List<Tp>> {
+        return objectsDao.getAbonTpFlow(tplnr)
             .map { tp ->
                 tp.map {
                     it.toDomainModel()

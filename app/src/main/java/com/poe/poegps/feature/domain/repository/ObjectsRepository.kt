@@ -47,7 +47,10 @@ interface ObjectsRepository {
     fun searchAbonLine04(tplnr: String): Flow<List<Line>>
 
     //Получение ТП из БД по клику
-    fun searchTP(tplnr: String, abonState: Boolean): Flow<List<Tp>>
+    fun searchTP(tplnr: String): Flow<List<Tp>>
+
+    //Получение абонТП из БД по клику
+    fun searchAbonTP(tplnr: String): Flow<List<Tp>>
 
     //Получение ПС из БД по клику
     fun searchPS(tplnr: String): Flow<List<Ps>>

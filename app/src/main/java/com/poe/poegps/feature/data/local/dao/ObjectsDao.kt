@@ -217,6 +217,9 @@ interface ObjectsDao {
     @Query("SELECT * FROM tp WHERE tplnr LIKE '%-P'|| :tplnr || '%'")
     fun getTpFlow(tplnr: String): Flow<List<TpDbModel>>
 
+    @Query("SELECT * FROM abon_tp WHERE tplnr LIKE '%-P'|| :tplnr || '%'")
+    fun getAbonTpFlow(tplnr: String): Flow<List<AbonTpDbModel>>
+
     @Query("SELECT * FROM ps WHERE tplnr LIKE '%-P'|| :tplnr || '%'")
     fun getPs(tplnr: String): Flow<List<PsDbModel>>
 

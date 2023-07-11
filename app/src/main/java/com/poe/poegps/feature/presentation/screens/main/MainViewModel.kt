@@ -238,9 +238,9 @@ class MainViewModel @Inject constructor(
         coroutineErrorHandler
     ) {
         if (_spinnerObjectType.value == ObjectType.TP) {
-            repository.searchTP(tplnr, false).map { it.map { it.toObjectDisplayable() } }
+            repository.searchTP(tplnr).map { it.map { it.toObjectDisplayable() } }
         } else {
-            repository.searchTP(tplnr, true).map { it.map { it.toObjectDisplayable() } }
+            repository.searchAbonTP(tplnr).map { it.map { it.toObjectDisplayable() } }
         }
     }
 
