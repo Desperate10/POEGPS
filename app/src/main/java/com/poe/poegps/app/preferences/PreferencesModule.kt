@@ -1,7 +1,6 @@
 package com.poe.poegps.app.preferences
 
 import android.content.Context
-import android.content.SharedPreferences
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -15,7 +14,8 @@ class PreferencesModule {
 
     @Singleton
     @Provides
-    fun providePreferences(@ApplicationContext context: Context) = context.getSharedPreferences("filial_token", Context.MODE_PRIVATE)
+    fun providePreferences(@ApplicationContext context: Context) =
+        context.getSharedPreferences("filial_token", Context.MODE_PRIVATE)
 
 
 }

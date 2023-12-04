@@ -521,37 +521,6 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
         requireActivity().removeMenuProvider(this)
     }
 
-    @SuppressLint("InlinedApi")
-    private fun requestPermission() {
-        PermissionX.init(this)
-            .permissions(
-                Manifest.permission.POST_NOTIFICATIONS
-            )
-            .onExplainRequestReason { scope, deniedList ->
-                scope.showRequestReasonDialog(
-                    deniedList,
-                    getString(R.string.explain_permission_text),
-                    getString(R.string.yes), getString(R.string.cancel)
-                )
-            }
-            .onForwardToSettings { scope, deniedList ->
-                scope.showForwardToSettingsDialog(
-                    deniedList,
-                    getString(R.string.forward_to_settings_text),
-                    getString(R.string.yes), getString(R.string.cancel)
-                )
-            }
-            .request { allGranted, _, deniedList ->
-                if (!allGranted) {
-                    Toast.makeText(
-                        requireContext(),
-                        "${getString(R.string.denied_permissions_text)} $deniedList",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
-    }
-
     override fun onLoginSuccess(login: String, password: String) {
         viewModel.authorization(
             login,
