@@ -7,21 +7,24 @@
 
     <TextView
         android:id="@+id/tplnr"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:layout_weight="0.3"
         android:paddingStart="8dp"
-        android:textSize="16dp"
-        android:gravity="center|start"
-        tools:text="Тех.місце" />
+        android:paddingEnd="8dp"
+        android:textSize="16sp"
+        android:gravity="center_vertical|start"
+        android:maxLines="1"
+        android:minWidth="130dp"
+        android:ellipsize="none"
+        tools:text="PO-F-22-L0000" />
 
     <TextView
         android:id="@+id/name"
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_weight="0.7"
-        android:gravity="center|start"
+        android:layout_weight="1"
         android:paddingStart="8dp"
-        android:textSize="16dp"
+        android:textSize="16sp"
+        android:gravity="center_vertical|start"
         tools:text="Назва об'єкта" />
 </LinearLayout>

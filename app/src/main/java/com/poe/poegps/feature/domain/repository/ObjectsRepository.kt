@@ -22,6 +22,9 @@ interface ObjectsRepository {
     //загрузка линий из апи
     fun downloadLines(filial: String, token: String): Flow<UploadState>
 
+    //Загрузка кл/кв из апи
+    suspend fun downloadKls(filial: String, token: String)
+
     //Получение списка ТП из апи
     suspend fun downloadTPs(filial: String, token: String)
 
@@ -45,6 +48,18 @@ interface ObjectsRepository {
 
     //Получение абонентских линий 04 из БД
     fun searchAbonLine04(tplnr: String): Flow<List<Line>>
+
+    //Получение кабельных линий 04 из БД
+    fun searchKl04(tplnr: String): Flow<List<Line>>
+
+    //Получение абонентских кабельных линий 04 из БД
+    fun searchAbonKl04(tplnr: String): Flow<List<Line>>
+
+    //Получение кабельных линий 6-10 из БД
+    fun searchKl10(tplnr: String): Flow<List<Line>>
+
+    //Получение абонентских кабельных линий 6-10 из БД
+    fun searchAbonKl10(tplnr: String): Flow<List<Line>>
 
     //Получение ТП из БД по клику
     fun searchTP(tplnr: String): Flow<List<Tp>>
@@ -73,6 +88,8 @@ interface ObjectsRepository {
 
     suspend fun savePillar(pillar: Pillar): Long
 
+    suspend fun saveRecloser(recloser: Recloser) : Long
+
     suspend fun copyPillarForOtp(pillar: Pillar)
 
     suspend fun deletePillar(pillar: Pillar)
@@ -99,5 +116,6 @@ interface ObjectsRepository {
 
     fun getWireList(category: String): Flow<List<Wire>>
     suspend fun updateStatus(tplnrList: List<String>)
-
+    suspend fun addRecloserToPillar(id: Int, name: String)
+    //suspend fun downloadReclosers(filial: String, token: String)
 }

@@ -16,5 +16,6 @@ data class LinePillarDbModel(
     val lat: String,
     val lng: String,
     val isAbon: Boolean,
-    val isSent: Boolean = false
+    val isSent: Boolean = false,
+    val recloser : String?= null
 )

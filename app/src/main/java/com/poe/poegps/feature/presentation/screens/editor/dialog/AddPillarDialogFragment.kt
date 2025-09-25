@@ -81,13 +81,22 @@ class AddPillarDialogFragment : DialogFragment() {
         view.findViewById<Button>(R.id.save).setOnClickListener {
             val oprNameTxt = oprName.text.toString()
             val spinnerValue = wireSpinner.selectedItem.toString()
+            val pillarType = when {
+                lineName.contains("КВ-0", ignoreCase = true) -> PillarType.KL
+                lineName.contains("КВ-6", ignoreCase = true) -> PillarType.KL
+                lineName.contains("КВ-10", ignoreCase = true) -> PillarType.KL
+                lineName.contains("КЛ-0", ignoreCase = true) -> PillarType.KL
+                lineName.contains("КЛ-6", ignoreCase = true) -> PillarType.KL
+                lineName.contains("КЛ-10", ignoreCase = true) -> PillarType.KL
+                else -> PillarType.PILLAR
+            }
 
             val pillar = OprDisplayable(
                 tplnr = tplnr,
                 name = oprNameTxt,
                 parentName = lineName,
                 category = category,
-                pillarType = PillarType.PILLAR.name,
+                pillarType = pillarType.name,
                 isAbon = isAbon,
                 wire = spinnerValue
             )

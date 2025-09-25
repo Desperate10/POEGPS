@@ -13,19 +13,19 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import com.poe.poegps.R
 import com.poe.poegps.feature.presentation.model.OprDisplayable
-import com.poe.poegps.feature.presentation.model.PillarType
+import com.poe.poegps.feature.presentation.model.RecloserDisplayable
+import com.poe.poegps.feature.presentation.model.RecloserType
 import com.poe.poegps.feature.presentation.screens.editor.EditorViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 
 @AndroidEntryPoint
-class OnCreateOtpDialogFragment : DialogFragment() {
+class OnAddRecloserDialogFragment : DialogFragment() {
 
     private val viewModel by viewModels<EditorViewModel>(ownerProducer = { requireParentFragment() })
     private var opr: OprDisplayable? = null
 
     interface Listener {
-        fun onOtpCreated(pillarStart: OprDisplayable, pillarSecond: OprDisplayable)
+        fun onRecloserCreated(recloser: RecloserDisplayable)
     }
 
     private var listener: Listener? = null
@@ -54,41 +54,34 @@ class OnCreateOtpDialogFragment : DialogFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.create_opr, container, false)
+        return inflater.inflate(R.layout.create_recloser, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val oprName = view.findViewById<EditText>(R.id.oprName)
-        val wireSpinner = view.findViewById<Spinner>(R.id.wireSpinner)
-        collectLifecycleFlow(viewModel.getWires(opr!!.category)) { wires ->
-            wireSpinner.adapter = ArrayAdapter(
-                requireActivity(),
-                android.R.layout.simple_list_item_1,
-                wires.map { it.name }
-            )
-        }
+        val recloserName = view.findViewById<EditText>(R.id.recloserName)
+        val recloserTypeSpinner = view.findViewById<Spinner>(R.id.typeSpinner)
+        recloserTypeSpinner.adapter = ArrayAdapter(
+            requireActivity(),
+            android.R.layout.simple_list_item_1,
+            RecloserType.values()
+        )
 
         view.findViewById<Button>(R.id.save).setOnClickListener {
-            val oprNameTxt = oprName.text.toString()
-            val spinnerValue = wireSpinner.selectedItem.toString()
-
-            //Добавить сюда лайннейм основной линии если добавляем поиск по названию
-            val lineName = "Відп. від оп. ${opr!!.name} до оп. $oprNameTxt"
-            viewModel.setLineName(lineName)
-
-            val oldPillar = opr!!.copy(parentName = lineName)
-            val pillar = OprDisplayable(
+            val recloserNameTxt = recloserName.text.toString()
+            val spinnerValue = recloserTypeSpinner.selectedItem as RecloserType
+            val recloser = RecloserDisplayable(
                 tplnr = opr!!.tplnr,
-                name = oprNameTxt,
-                parentName = lineName,
-                category = opr!!.category,
-                pillarType = PillarType.PILLAR.name,
-                isAbon = opr!!.isAbon,
-                wire = spinnerValue
+                name = recloserNameTxt,
+                opr = opr!!.name,
+                type = spinnerValue,
+                lat = opr!!.lat,
+                lng = opr!!.lng
             )
-            listener?.onOtpCreated(oldPillar, pillar)
+            viewModel.addRecloserToPillar(opr!!.id, recloserNameTxt)
+
+            listener?.onRecloserCreated(recloser)
 
             dismiss()
         }
@@ -100,13 +93,14 @@ class OnCreateOtpDialogFragment : DialogFragment() {
     companion object {
         private const val PILLAR = "pillar"
 
-        fun newInstance(lineName: String, opr: OprDisplayable): OnCreateOtpDialogFragment {
+        fun newInstance(opr: OprDisplayable): OnAddRecloserDialogFragment {
             val args = Bundle()
             args.putParcelable(PILLAR, opr)
-            val fragment = OnCreateOtpDialogFragment()
+            val fragment = OnAddRecloserDialogFragment()
             fragment.arguments = args
             return fragment
         }
     }
+
 
 }

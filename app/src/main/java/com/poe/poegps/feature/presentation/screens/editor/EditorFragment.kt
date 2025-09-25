@@ -5,7 +5,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.location.*
 import android.os.Bundle
-import android.util.Log
 import android.view.*
 import android.view.View.OnClickListener
 import android.widget.Toast
@@ -21,8 +20,8 @@ import com.poe.poegps.R
 import com.poe.poegps.databinding.FragmentEditorBinding
 import com.poe.poegps.feature.data.remote.utils.MyLocationListener
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
-import com.poe.poegps.feature.presentation.model.ObjectType
 import com.poe.poegps.feature.presentation.model.OprDisplayable
+import com.poe.poegps.feature.presentation.model.RecloserDisplayable
 import com.poe.poegps.feature.presentation.screens.editor.adapter.OprAdapter
 import com.poe.poegps.feature.presentation.screens.editor.dialog.*
 import dagger.hilt.android.AndroidEntryPoint
@@ -40,7 +39,8 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
     AddPillarFromTp.Listener,
     OprAdapter.OnOprClickListener,
     OnCreateOtpDialogFragment.Listener,
-    ActivityCompat.OnRequestPermissionsResultCallback{
+    OnAddRecloserDialogFragment.Listener,
+    ActivityCompat.OnRequestPermissionsResultCallback {
 
     private var binding: FragmentEditorBinding by autoCleaned()
     private var adapter: OprAdapter by autoCleaned()
@@ -94,6 +94,31 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
         collectLifecycleFlow(viewModel.lineName) { lineName ->
             binding.lineName.text = lineName
         }
+        collectLifecycleFlow(viewModel.insertResultFlow) { result ->
+            when (result) {
+                InsertResult.Success -> {
+                    Toast.makeText(
+                        requireContext(),
+                        "Опору збережено!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    // Maybe navigate back, clear form, or show a SnackBar
+                }
+
+                InsertResult.Duplicate -> {
+                    Toast.makeText(requireContext(), "Опора з такою назвою вже існує!", Toast.LENGTH_SHORT)
+                        .show()
+                }
+
+                InsertResult.Failure -> {
+                    Toast.makeText(
+                        requireContext(),
+                        "Помилка створення нової опори. Зверніться до адміністратора",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
     }
 
     private fun setupPillarAdapter() {
@@ -115,30 +140,37 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
                 openCreatePillarDialog()
                 true
             }
+
             R.id.add_savedopr -> {
                 val dialog = AddPillarFromSaved10.newInstance(args.category)
                 dialog.setListener(this)
                 dialog.show(childFragmentManager, "CreateSavedPillar10DialogFragment")
                 true
             }
+
             R.id.add_savedopr_from_small -> {
                 val dialog = AddPillarFromSaved04.newInstance(args.category)
                 dialog.setListener(this)
                 dialog.show(childFragmentManager, "CreateSavedPillar04DialogFragment")
                 true
             }
+
             R.id.add_savedtp_from_small -> {
-                val dialog = AddPillarFromTp.newInstance(args.pltxt, args.tplnr, args.category, false)
+                val dialog =
+                    AddPillarFromTp.newInstance(args.pltxt, args.tplnr, args.category, false)
                 dialog.setListener(this)
                 dialog.show(childFragmentManager, "CreateSavedTp04DialogFragment")
                 true
             }
+
             R.id.add_saved_abon_tp_from_small -> {
-                val dialog = AddPillarFromTp.newInstance(args.pltxt, args.tplnr, args.category, true)
+                val dialog =
+                    AddPillarFromTp.newInstance(args.pltxt, args.tplnr, args.category, true)
                 dialog.setListener(this)
                 dialog.show(childFragmentManager, "CreateSavedTp04DialogFragment")
                 true
             }
+
             else -> false
         }
     }
@@ -200,13 +232,19 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
     }
 
     override fun onTakeCoordinatesClick(opr: OprDisplayable, position: Int) {
-        if (binding.include.GPSLatitude.text != "0.0" && locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true) {
+        if (binding.include.GPSLatitude.text != "0.0" && locationManager?.isProviderEnabled(
+                LocationManager.GPS_PROVIDER
+            ) == true
+        ) {
             //viewModel.saveCoordinates(opr)
             opr.lat = binding.include.GPSLatitude.text.toString()
             opr.lng = binding.include.GPSLongitude.text.toString()
             viewModel.saveCoordinates(opr)
             adapter.notifyItemChanged(position)
-        } else if (binding.include.GPSLatitude.text == "0.0" && locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true) {
+        } else if (binding.include.GPSLatitude.text == "0.0" && locationManager?.isProviderEnabled(
+                LocationManager.GPS_PROVIDER
+            ) == true
+        ) {
             Toast.makeText(
                 requireContext(),
                 "Заждіть доки не знайдуться нові спутники!",
@@ -226,17 +264,27 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
     }
 
     private fun setupPillarLongClickMenuDialog() {
-        OnPillarLongClickDialogFragment.setupListeners(childFragmentManager, viewLifecycleOwner) {
-            pillar, which ->
+        OnPillarLongClickDialogFragment.setupListeners(
+            childFragmentManager,
+            viewLifecycleOwner
+        ) { pillar, which ->
             when (which) {
+                getString(R.string.add_recloser) -> {
+                    val dialog = OnAddRecloserDialogFragment.newInstance(pillar)
+                    dialog.setListener(this)
+                    dialog.show(childFragmentManager, "AddRecloserDialogFragment")
+                }
+
                 getString(R.string.createOtp) -> {
-                    val dialog =  OnCreateOtpDialogFragment.newInstance(pillar)
+                    val dialog = OnCreateOtpDialogFragment.newInstance(binding.lineName.text.toString(), pillar)
                     dialog.setListener(this)
                     dialog.show(childFragmentManager, "CreateOtpaykaDialogFragment")
                 }
+
                 getString(R.string.clear_coord) -> {
                     viewModel.clearCoord(pillar)
                 }
+
                 getString(R.string.deleteOpr) -> {
                     viewModel.deleteOpr(pillar)
                 }
@@ -246,6 +294,10 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
 
     override fun onOtpCreated(pillarStart: OprDisplayable, pillarSecond: OprDisplayable) {
         viewModel.createOtp(pillarStart, pillarSecond)
+    }
+
+    override fun onRecloserCreated(recloser: RecloserDisplayable) {
+        viewModel.createRecloser(recloser)
     }
 
     @SuppressLint("MissingPermission")

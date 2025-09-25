@@ -144,4 +144,7 @@
     <string name="clear_tp_coord">Видалити координати ТП</string>
     <string name="authorization">Авторизація:</string>
     <string name="deleteObject">Видалити об\'єкт</string>
+    <string name="add_recloser">Додати роз\'єднувач/реклоузер</string>
+    <string name="menu_add_recloser">Назва</string>
+    <string name="create_recloser">Додати роз’єднувач/реклоузер</string>
 </resources>

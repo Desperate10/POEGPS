@@ -41,6 +41,42 @@ fun LineObjects10AbonDTO.toDomainModel() = Line(
     isAbon = true
 )
 
+fun KlObjects04DTO.toDomainModel() = Line(
+    id = 0,
+    tplnr = tplnr,
+    name = pltxt,
+    category = "0,4 кВ",
+    pillarType = PillarType.KL.name,
+    isAbon = false
+)
+
+fun KlObjects10DTO.toDomainModel() = Line(
+    id = 0,
+    tplnr = tplnr,
+    name = pltxt,
+    category = "10 кВ",
+    pillarType = PillarType.KL.name,
+    isAbon = false
+)
+
+fun KlObjects04AbonDTO.toDomainModel() = Line(
+    id = 0,
+    tplnr = tplnr,
+    name = pltxt,
+    category = "0,4 кВ",
+    pillarType = PillarType.KL.name,
+    isAbon = true
+)
+
+fun KlObjects10AbonDTO.toDomainModel() = Line(
+    id = 0,
+    tplnr = tplnr,
+    name = pltxt,
+    category = "10 кВ",
+    pillarType = PillarType.KL.name,
+    isAbon = true
+)
+
 fun Line04DbModel.toDomainModel() = Line(
     id = 0,
     tplnr = tplnr,
@@ -74,6 +110,42 @@ fun AbonLine10DbModel.toDomainModel() = Line(
     name = name,
     category = "10 кВ",
     pillarType = PillarType.PILLAR.name,
+    isAbon = true
+)
+
+fun Kl04DbModel.toDomainModel() = Line(
+    id = 0,
+    tplnr = tplnr,
+    name = name,
+    category = "0,4 кВ",
+    pillarType = PillarType.KL.name,
+    isAbon = false
+)
+
+fun Kl10DbModel.toDomainModel() = Line(
+    id = 0,
+    tplnr = tplnr,
+    name = name,
+    category = "10 кВ",
+    pillarType = PillarType.KL.name,
+    isAbon = false
+)
+
+fun AbonKl04DbModel.toDomainModel() = Line(
+    id = 0,
+    tplnr = tplnr,
+    name = name,
+    category = "0,4 кВ",
+    pillarType = PillarType.KL.name,
+    isAbon = true
+)
+
+fun AbonKl10DbModel.toDomainModel() = Line(
+    id = 0,
+    tplnr = tplnr,
+    name = name,
+    category = "10 кВ",
+    pillarType = PillarType.KL.name,
     isAbon = true
 )
 
@@ -149,6 +221,26 @@ fun Line.toAbonLine10DbModel() = AbonLine10DbModel(
     name = name
 )
 
+fun Line.toKl04DbModel() = Kl04DbModel(
+    tplnr = tplnr,
+    name = name
+)
+
+fun Line.toKl10DbModel() = Kl10DbModel(
+    tplnr = tplnr,
+    name = name
+)
+
+fun Line.toAbonKl04DbModel() = AbonKl04DbModel(
+    tplnr = tplnr,
+    name = name
+)
+
+fun Line.toAbonKl10DbModel() = AbonKl10DbModel(
+    tplnr = tplnr,
+    name = name
+)
+
 fun TpDbModel.toDomainModel() = Tp(
     id= id,
     tplnr = tplnr,
@@ -189,7 +281,8 @@ fun PillarObjects04DTO.toDomainModel() = Pillar(
     pillarType = PillarType.PILLAR.name,
     wire = wire,
     lat = lat,
-    lng = lng
+    lng = lng,
+    recloser = ""
 )
 
 fun PillarObjects10DTO.toDomainModel() = Pillar(
@@ -202,7 +295,8 @@ fun PillarObjects10DTO.toDomainModel() = Pillar(
     isAbon = false,
     wire = wire,
     lat = lat,
-    lng = lng
+    lng = lng,
+    recloser = ""
 )
 
 fun Pillar.to04DbModel() = Pillar04DbModel(
@@ -234,7 +328,8 @@ fun Pillar04DbModel.toDomainModel() = Pillar(
     isAbon = false,
     wire = wire,
     lat = lat,
-    lng = lng
+    lng = lng,
+    recloser = ""
 )
 
 fun Pillar10DbModel.toDomainModel() = Pillar(
@@ -247,7 +342,8 @@ fun Pillar10DbModel.toDomainModel() = Pillar(
     isAbon = false,
     wire = wire,
     lat = lat,
-    lng = lng
+    lng = lng,
+    recloser = ""
 )
 
 fun LinePillarDbModel.toDomainModel() = Pillar(
@@ -260,7 +356,8 @@ fun LinePillarDbModel.toDomainModel() = Pillar(
     pillarType = pillarType,
     wire = wire,
     lat = lat,
-    lng = lng
+    lng = lng,
+    recloser = recloser ?: ""
 )
 
 fun LinePillarDbModel.toDTObject() = LinePillarDTO(
@@ -287,6 +384,25 @@ fun Pillar.toLinePillarDbModel() = LinePillarDbModel(
     wire = wire,
     lat = lat,
     lng = lng
+)
+
+fun Recloser.toRecloserDbModel() = RecloserDbModel(
+    id = 0,
+    tplnr = tplnr,
+    name = name,
+    opr = opr,
+    type = type,
+    lng = lng,
+    lat = lat
+)
+
+fun RecloserDbModel.toDTObject() = RecloserDTO(
+    tplnr = tplnr,
+    name = name,
+    opr = opr,
+    type = type,
+    lng = lng,
+    lat = lat
 )
 
 fun WireDTO.toWire() = Wire(

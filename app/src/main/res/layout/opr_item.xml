@@ -14,7 +14,6 @@
         android:layout_weight="1"
         android:clickable="true"
         android:foreground="#3233b5e5"
-        android:maxLines="1"
         android:paddingTop="10dp"
         android:text=""
         android:textAlignment="center"

@@ -132,7 +132,7 @@ class MainViewModel @Inject constructor(
             }) {
                 repository.downloadPillars(filial.value!!, token.value ?: "")
             }
-            //добавить загрузку проводов
+            //загрузка проводов
             viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, error ->
                 object :CoroutinesErrorHandler {
                     override fun onError(message: String) {
@@ -141,6 +141,16 @@ class MainViewModel @Inject constructor(
                 }
             }) {
                 repository.downloadWires(token.value ?: "")
+            }
+            //загрузка КЛ/КВ
+            viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, error ->
+                object :CoroutinesErrorHandler {
+                    override fun onError(message: String) {
+                        error.localizedMessage ?: "Error occured! Please try again."
+                    }
+                }
+            }) {
+                repository.downloadKls(filial.value!!, token.value ?: "")
             }
         } else {
             viewModelScope.launch(Dispatchers.Main) {
@@ -212,8 +222,19 @@ class MainViewModel @Inject constructor(
     fun searchLine10(tplnr: String, coroutineErrorHandler: CoroutinesErrorHandler) = baseRequest(
         _objectsList, coroutineErrorHandler
     ) {
-        repository.searchLine10(tplnr).map { it.map { it.toObjectDisplayable() } }
+        if (_spinnerObjectType.value == ObjectType.LINE10) {
+            repository.searchLine10(tplnr).map { it.map { it.toObjectDisplayable() } }
+        } else {
+            repository.searchAbonLine10(tplnr).map { it.map { it.toObjectDisplayable() } }
+        }
     }
+
+    /*fun searchAbonLine10(tplnr: String, coroutineErrorHandler: CoroutinesErrorHandler) =
+        baseRequest(
+            _objectsList, coroutineErrorHandler
+        ) {
+            repository.searchLine10(tplnr).map { it.map { it.toObjectDisplayable() } }
+        }*/
 
     fun searchLine(tplnr: String, coroutineErrorHandler: CoroutinesErrorHandler) =
         baseRequest(
@@ -226,11 +247,26 @@ class MainViewModel @Inject constructor(
             }
         }
 
-    fun searchAbonLine10(tplnr: String, coroutineErrorHandler: CoroutinesErrorHandler) =
+    fun searchKl(tplnr: String, coroutinesErrorHandler: CoroutinesErrorHandler) =
         baseRequest(
-            _objectsList, coroutineErrorHandler
+            _objectsList, coroutinesErrorHandler
         ) {
-            repository.searchLine10(tplnr).map { it.map { it.toObjectDisplayable() } }
+            if (_spinnerObjectType.value == ObjectType.KLKV04) {
+                repository.searchKl04(tplnr).map {it.map {it.toObjectDisplayable()}}
+            } else {
+                repository.searchAbonKl04(tplnr).map {it.map {it.toObjectDisplayable()}}
+            }
+        }
+
+    fun searchKl10(tplnr: String, coroutinesErrorHandler: CoroutinesErrorHandler) =
+        baseRequest(
+            _objectsList, coroutinesErrorHandler
+        ) {
+            if (_spinnerObjectType.value == ObjectType.KLKV04) {
+                repository.searchKl10(tplnr).map {it.map {it.toObjectDisplayable()}}
+            } else {
+                repository.searchAbonKl10(tplnr).map {it.map {it.toObjectDisplayable()}}
+            }
         }
 
     fun searchTp(tplnr: String, coroutineErrorHandler: CoroutinesErrorHandler) = baseRequest(
@@ -257,12 +293,12 @@ class MainViewModel @Inject constructor(
                 ObjectType.LINEABON35 -> TODO()
                 ObjectType.LINEABON110 -> TODO()
                 ObjectType.LINEABON154 -> TODO()*/
-                ObjectType.TP -> {
-
-                }
-                ObjectType.TPABON -> {
-
-                }
+                ObjectType.TP -> {}
+                ObjectType.TPABON -> {}
+                ObjectType.KLKV04 -> {}
+                ObjectType.KLKV10 -> {}
+                ObjectType.KLKVABON04 -> {}
+                ObjectType.KLKVABON10 -> {}
             }
         }
     }
@@ -336,5 +372,6 @@ class MainViewModel @Inject constructor(
     fun setTokenValidity() {
         _tokenValidity.value = ApiResponse.Success(data = TokenCheckResponse(error = false, message = ""))
     }
+
 
 }

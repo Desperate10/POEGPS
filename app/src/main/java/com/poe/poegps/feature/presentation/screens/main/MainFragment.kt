@@ -229,7 +229,8 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(tplnr: String?): Boolean {
                 when (viewModel.spinnerObjectType.value) {
-                    ObjectType.LINE04 -> {
+                    ObjectType.LINE04,
+                    ObjectType.LINEABON04 -> {
                         tplnr?.let {
                             viewModel.searchLine(it, object : CoroutinesErrorHandler {
                                 override fun onError(message: String) {
@@ -242,7 +243,8 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                             })
                         }
                     }
-                    ObjectType.LINE10 -> {
+                    ObjectType.LINE10,
+                    ObjectType.LINEABON10 -> {
                         tplnr?.let {
                             viewModel.searchLine10(it, object : CoroutinesErrorHandler {
                                 override fun onError(message: String) {
@@ -294,32 +296,6 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                             })
                         }*//*
                     }*/
-                    ObjectType.LINEABON04 -> {
-                        tplnr?.let {
-                            viewModel.searchLine(it, object : CoroutinesErrorHandler {
-                                override fun onError(message: String) {
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "Error! $message",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            })
-                        }
-                    }
-                    ObjectType.LINEABON10 -> {
-                        tplnr?.let {
-                            viewModel.searchAbonLine10(it, object : CoroutinesErrorHandler {
-                                override fun onError(message: String) {
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "Error! $message",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            })
-                        }
-                    }
                     /*ObjectType.LINEABON35 -> {
                         tplnr?.let {
                             *//* viewModel.searchAbonLine35(it, object : CoroutinesErrorHandler {
@@ -359,7 +335,8 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                             })
                         }*//*
                     }*/
-                    ObjectType.TP -> {
+                    ObjectType.TP,
+                    ObjectType.TPABON -> {
                         tplnr?.let {
                             viewModel.searchTp(it, object : CoroutinesErrorHandler {
                                 override fun onError(message: String) {
@@ -372,9 +349,24 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                             })
                         }
                     }
-                    ObjectType.TPABON -> {
+                    ObjectType.KLKV04,
+                    ObjectType.KLKVABON04-> {
                         tplnr?.let {
-                            viewModel.searchTp(it, object : CoroutinesErrorHandler {
+                            viewModel.searchKl(it, object : CoroutinesErrorHandler {
+                                override fun onError(message: String) {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Error! $message",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            })
+                        }
+                    }
+                    ObjectType.KLKV10,
+                    ObjectType.KLKVABON10 -> {
+                        tplnr?.let {
+                            viewModel.searchKl10(it, object : CoroutinesErrorHandler {
                                 override fun onError(message: String) {
                                     Toast.makeText(
                                         requireContext(),
@@ -445,20 +437,22 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
 
     private fun navigateToEditObjectFragment(obj: ObjectDisplayable) {
         when (viewModel.spinnerObjectType.value) {
-            ObjectType.LINE04 -> {
-                navigateToEditorFragment(obj)
-            }
-            ObjectType.LINE10 -> {
-                navigateToEditorFragment(obj)
-            }
-            ObjectType.LINEABON04 -> {
-                navigateToEditorFragment(obj)
-            }
+            ObjectType.LINE04,
+            ObjectType.LINE10,
+            ObjectType.LINEABON04,
             ObjectType.LINEABON10 -> {
                 navigateToEditorFragment(obj)
             }
-            ObjectType.TP -> navigateToTpEditorFragment(obj)
-            ObjectType.TPABON -> navigateToTpEditorFragment(obj)
+            ObjectType.TP,
+            ObjectType.TPABON -> {
+                navigateToTpEditorFragment(obj)
+            }
+            ObjectType.KLKV04,
+            ObjectType.KLKV10,
+            ObjectType.KLKVABON04,
+            ObjectType.KLKVABON10 -> {
+                navigateToEditorFragment(obj)
+            }
         }
     }
 

@@ -1,7 +1,6 @@
 package com.poe.poegps
 
 import org.junit.Test
-
 import org.junit.Assert.*
 
 /**

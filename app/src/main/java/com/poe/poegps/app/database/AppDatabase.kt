@@ -24,9 +24,14 @@ import com.poe.poegps.feature.data.local.entity.*
         Pillar10DbModel::class,
         Wire04DbModel::class,
         Wire10DbModel::class,
-        LinePillarDbModel::class
+        LinePillarDbModel::class,
+        RecloserDbModel::class, //added
+        Kl04DbModel::class,
+        Kl10DbModel::class,
+        AbonKl04DbModel::class,
+        AbonKl10DbModel::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

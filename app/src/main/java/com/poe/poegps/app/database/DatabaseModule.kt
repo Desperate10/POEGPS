@@ -5,6 +5,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.poe.poegps.feature.data.local.dao.ObjectsDao
 import com.poe.poegps.feature.data.remote.utils.FilialManager
 import com.poe.poegps.feature.data.remote.utils.TokenManager
@@ -42,7 +44,9 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "app_database"
-        ).build()
+        )
+            .addMigrations(MIGRATION_1_2)
+            .build()
     }
 
     @Provides
@@ -50,5 +54,55 @@ object DatabaseModule {
         database: AppDatabase
     ): ObjectsDao {
         return database.objectsDao
+    }
+
+    private val MIGRATION_1_2 = object : Migration(1, 2) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("""
+                CREATE TABLE IF NOT EXISTS `recloser` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `tplnr` TEXT NOT NULL,
+                    `name` TEXT NOT NULL,
+                    `opr` TEXT NOT NULL,
+                    `type` TEXT NOT NULL,
+                    `lng` TEXT NOT NULL,
+                    `lat` TEXT NOT NULL,
+                    `isSent` INTEGER NOT NULL DEFAULT 0
+                )
+            """.trimIndent())
+
+            database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS kl04 (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        tplnr TEXT NOT NULL,
+                        name TEXT NOT NULL
+                    )
+                """.trimIndent())
+            database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS kl10 (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        tplnr TEXT NOT NULL,
+                        name TEXT NOT NULL
+                    )
+                """.trimIndent())
+            database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS abon_kl04 (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        tplnr TEXT NOT NULL,
+                        name TEXT NOT NULL
+                    )
+                """.trimIndent())
+            database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS abon_kl10 (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        tplnr TEXT NOT NULL,
+                        name TEXT NOT NULL
+                    )
+                """.trimIndent())
+
+            database.execSQL("""
+                ALTER TABLE line_pillar ADD COLUMN recloser TEXT
+            """.trimIndent())
+        }
     }
 }

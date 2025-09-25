@@ -4,11 +4,11 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content">
 
-    <!--<Button
-        android:id="@+id/addNext"
+    <Button
+        android:id="@+id/add_recloser"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/addNext" />-->
+        android:text="@string/add_recloser" />
 
     <Button
         android:id="@+id/createOtp"

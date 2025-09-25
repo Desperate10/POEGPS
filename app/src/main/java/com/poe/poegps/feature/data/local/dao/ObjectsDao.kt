@@ -1,5 +1,6 @@
 package com.poe.poegps.feature.data.local.dao
 
+import android.util.Log
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -44,6 +45,39 @@ interface ObjectsDao {
 
     @Query("SELECT * FROM abon_line10 WHERE tplnr = :tplnr LIMIT 1")
     suspend fun getAbonLine10(tplnr: String): AbonLine10DbModel?
+
+    suspend fun insertKl04IfNotExist(line: Kl04DbModel) {
+        if (getKl04(line.tplnr) == null) {
+            insertKl04(line)
+        }
+    }
+    @Query("SELECT * FROM kl04 WHERE tplnr = :tplnr LIMIT 1")
+    suspend fun getKl04(tplnr: String): Kl04DbModel?
+
+    suspend fun insertKl10IfNotExist(line: Kl10DbModel) {
+        if (getKl10(line.tplnr) == null) {
+            insertKl10(line)
+        }
+    }
+    @Query("SELECT * FROM kl10 WHERE tplnr = :tplnr LIMIT 1")
+    suspend fun getKl10(tplnr: String): Kl10DbModel?
+
+    suspend fun insertAbonKl04IfNotExist(line: AbonKl04DbModel) {
+        if (getAbonKl04(line.tplnr) == null) {
+            insertAbonKl04(line)
+        }
+    }
+    @Query("SELECT * FROM abon_kl04 WHERE tplnr = :tplnr LIMIT 1")
+    suspend fun getAbonKl04(tplnr: String): AbonKl04DbModel?
+
+    suspend fun insertAbonKl10IfNotExist(line: AbonKl10DbModel) {
+        if (getAbonKl10(line.tplnr) == null) {
+            insertAbonKl10(line)
+        }
+    }
+    @Query("SELECT * FROM abon_kl10 WHERE tplnr = :tplnr LIMIT 1")
+    suspend fun getAbonKl10(tplnr: String): AbonKl10DbModel?
+
 
     suspend fun insertTpIfNotExist(tp: TpDbModel) {
         if (getSingleTp(tp.tplnr) == null) {
@@ -108,6 +142,15 @@ interface ObjectsDao {
     @Query("SELECT * FROM wire10 WHERE name = :name LIMIT 1")
     suspend fun getSingleWire10(name: String): Wire10DbModel?
 
+    /*suspend fun insertRecloserIfNotExist(recloser: RecloserDbModel?) {
+        if (getSingleRecloser(recloser?.name) == null) {
+            insertRecloser(recloser)
+        }
+    }
+
+    @Query("SELECT * FROM recloser WHERE name = :name LIMIT 1")
+    suspend fun getSingleRecloser(name: String?): RecloserDbModel?*/
+
     @Query("SELECT * FROM line_pillar WHERE tplnr = :tplnr LIMIT 1")
     suspend fun tpAlreadySaved(tplnr: String): LinePillarDbModel?
 
@@ -149,6 +192,18 @@ interface ObjectsDao {
     suspend fun insertAbonLine10(line: AbonLine10DbModel)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertKl04(line: Kl04DbModel)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertKl10(line: Kl10DbModel)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAbonKl04(line: AbonKl04DbModel)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAbonKl10(line: AbonKl10DbModel)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTp(tp: TpDbModel)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -156,6 +211,9 @@ interface ObjectsDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPs(ps: PsDbModel)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSavedRecloser(recloser: RecloserDbModel) : Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPillar04(pillar: Pillar04DbModel)
@@ -166,8 +224,18 @@ interface ObjectsDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun copyPillarForOtp(pillar: LinePillarDbModel)
 
+    suspend fun insertSavedPillarIfNotExist(pillar: LinePillarDbModel): Long {
+        return if (getSinglePillar(pillar.tplnr, pillar.name) == null) {
+            insertSavedPillar(pillar)
+        } else {
+            0L
+        }
+    }
+    @Query("SELECT * FROM line_pillar WHERE tplnr = :tplnr AND name = :name LIMIT 1")
+    suspend fun getSinglePillar(tplnr: String, name: String): LinePillarDbModel?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertSavedPillar(pillar: LinePillarDbModel): Long
+    suspend fun insertSavedPillar(pillar: LinePillarDbModel) : Long
 
     @Query("UPDATE line_pillar SET lat = :lat, lng = :lng WHERE tplnr = :tplnr")
     suspend fun updateSavedPillar(lat: String, lng: String, tplnr: String)
@@ -175,11 +243,20 @@ interface ObjectsDao {
     @Delete
     suspend fun deletePillar(pillar: LinePillarDbModel)
 
+    @Query("DELETE FROM recloser WHERE tplnr = :tplnr AND name = :name")
+    suspend fun deleteRecloser(tplnr: String, name: String)
+
     @Query("SELECT * FROM line_pillar WHERE lat <> '0.0' AND isSent = 0")
     suspend fun getSavedPillars(): List<LinePillarDbModel>
 
     @Query("SELECT * FROM line_pillar WHERE lat <> '0.0' AND tplnr LIKE :tplnr")
     suspend fun getSavedPillarsByTplnr(tplnr: String): List<LinePillarDbModel>
+
+    @Query("SELECT * FROM recloser WHERE lat <> '0.0' AND isSent = 0")
+    suspend fun getSavedReclosers(): List<RecloserDbModel>
+
+    @Query("SELECT * FROM recloser WHERE tplnr LIKE '%' || :tplnr || '%'")
+    suspend fun getSavedReclosersByTplnr(tplnr: String): List<RecloserDbModel>
 
     @Query("SELECT * FROM tp WHERE lat <> '0.0' ORDER BY pltxt ASC")
     fun getTps(): Flow<List<TpDbModel>>
@@ -187,17 +264,45 @@ interface ObjectsDao {
     @Query("SELECT * FROM abon_tp WHERE lat <> '0.0' ORDER BY pltxt ASC")
     fun getAbonTps(): Flow<List<TpDbModel>>
 
-    @Query("SELECT * FROM line04 WHERE tplnr LIKE '%-L' || :tplnr || '%' GROUP BY name")
-    fun getLines04(tplnr: String): Flow<List<Line04DbModel>>
+    @Query("SELECT * FROM line04 WHERE tplnr LIKE '%-L' || :query || '%' " +
+            "OR LOWER(name) LIKE LOWER('%' || :query || '%')" +
+            "GROUP BY name")
+    fun getLines04(query: String): Flow<List<Line04DbModel>>
 
-    @Query("SELECT * FROM line10 WHERE tplnr LIKE '%-L' || :tplnr || '%' GROUP BY name")
-    fun getLines10(tplnr: String): Flow<List<Line10DbModel>>
+    @Query("SELECT * FROM line10 WHERE tplnr LIKE '%-L' || :query || '%'" +
+            "OR LOWER(name) LIKE LOWER('%' || :query || '%')" +
+            "GROUP BY name")
+    fun getLines10(query: String): Flow<List<Line10DbModel>>
 
-    @Query("SELECT * FROM abon_line04 WHERE tplnr LIKE '%-L' || :tplnr || '%' GROUP BY name")
-    fun getAbonLines04(tplnr: String): Flow<List<AbonLine04DbModel>>
+    @Query("SELECT * FROM abon_line04 WHERE tplnr LIKE '%-L' || :query || '%' " +
+            "OR LOWER(name) LIKE LOWER('%' || :query || '%')" +
+            "GROUP BY name")
+    fun getAbonLines04(query: String): Flow<List<AbonLine04DbModel>>
 
-    @Query("SELECT * FROM abon_line10 WHERE tplnr LIKE '%-L' || :tplnr || '%' GROUP BY name")
-    fun getAbonLines10(tplnr: String): Flow<List<AbonLine10DbModel>>
+    @Query("SELECT * FROM abon_line10 WHERE tplnr LIKE '%-L' || :query || '%' " +
+            "OR LOWER(name) LIKE LOWER('%' || :query || '%')" +
+            "GROUP BY name")
+    fun getAbonLines10(query: String): Flow<List<AbonLine10DbModel>>
+
+    @Query("SELECT * FROM kl04 WHERE tplnr LIKE '%-L' || :query || '%' " +
+            "OR LOWER(name) LIKE LOWER('%' || :query || '%')" +
+            "GROUP BY name")
+    fun getKls04(query: String): Flow<List<Kl04DbModel>>
+
+    @Query("SELECT * FROM kl10 WHERE tplnr LIKE '%-L' || :query || '%' " +
+            "OR LOWER(name) LIKE LOWER('%' || :query || '%')" +
+            "GROUP BY name")
+    fun getKls10(query: String): Flow<List<Kl10DbModel>>
+
+    @Query("SELECT * FROM abon_kl04 WHERE tplnr LIKE '%-L' || :query || '%' " +
+            "OR LOWER(name) LIKE LOWER('%' || :query || '%')" +
+            "GROUP BY name")
+    fun getAbonKls04(query: String): Flow<List<AbonKl04DbModel>>
+
+    @Query("SELECT * FROM abon_kl10 WHERE tplnr LIKE '%-L' || :query || '%' " +
+            "OR LOWER(name) LIKE LOWER('%' || :query || '%')" +
+            "GROUP BY name")
+    fun getAbonKls10(query: String): Flow<List<AbonKl10DbModel>>
 
     @Query("SELECT * FROM line10 WHERE name LIKE 'ПЛ%'")
     fun getLineList10(): Flow<List<Line10DbModel>>
@@ -214,11 +319,13 @@ interface ObjectsDao {
     @Query("SELECT * FROM pillars10 WHERE tplnr LIKE :tplnr")
     fun getPillars10ByTplnr(tplnr: String): Flow<List<Pillar10DbModel>>
 
-    @Query("SELECT * FROM tp WHERE tplnr LIKE '%-P'|| :tplnr || '%'")
-    fun getTpFlow(tplnr: String): Flow<List<TpDbModel>>
+    @Query("SELECT * FROM tp WHERE tplnr LIKE '%-P'|| :query || '%' " +
+    "OR LOWER(pltxt) LIKE LOWER('%' || :query || '%')")
+    fun getTpFlow(query: String): Flow<List<TpDbModel>>
 
-    @Query("SELECT * FROM abon_tp WHERE tplnr LIKE '%-P'|| :tplnr || '%'")
-    fun getAbonTpFlow(tplnr: String): Flow<List<AbonTpDbModel>>
+    @Query("SELECT * FROM abon_tp WHERE tplnr LIKE '%-P'|| :query || '%' " +
+            "OR LOWER(pltxt) LIKE LOWER('%' || :query || '%')")
+    fun getAbonTpFlow(query: String): Flow<List<AbonTpDbModel>>
 
     @Query("SELECT * FROM ps WHERE tplnr LIKE '%-P'|| :tplnr || '%'")
     fun getPs(tplnr: String): Flow<List<PsDbModel>>
@@ -271,5 +378,10 @@ interface ObjectsDao {
     @Query("UPDATE line_pillar SET isSent = 1 WHERE tplnr NOT IN (:tplnrList)")
     suspend fun updateStatus(tplnrList: List<String>)
 
+    @Query("UPDATE recloser SET isSent = 1 WHERE tplnr NOT IN (:tplnrList)")
+    suspend fun updateRecloserStatus(tplnrList: List<String>)
+
+    @Query("UPDATE line_pillar SET recloser = :name WHERE id = :id")
+    suspend fun updateRecloser(id: Int, name: String)
 
 }

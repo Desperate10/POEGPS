@@ -3,9 +3,11 @@ package com.poe.poegps.feature.presentation.mapper
 import com.poe.poegps.feature.domain.model.Line
 import com.poe.poegps.feature.domain.model.Pillar
 import com.poe.poegps.feature.domain.model.Ps
+import com.poe.poegps.feature.domain.model.Recloser
 import com.poe.poegps.feature.domain.model.Tp
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.OprDisplayable
+import com.poe.poegps.feature.presentation.model.RecloserDisplayable
 
 fun Line.toObjectDisplayable() = ObjectDisplayable(
     id = id,
@@ -56,7 +58,8 @@ fun Pillar.toOprDisplayable() = OprDisplayable(
     lat = lat,
     lng = lng,
     tplnr = tplnr,
-    wire = wire
+    wire = wire,
+    recloserName = recloser
 )
 
 fun OprDisplayable.toDomainModel() = Pillar(
@@ -68,6 +71,17 @@ fun OprDisplayable.toDomainModel() = Pillar(
     isAbon = isAbon,
     pillarType = pillarType,
     wire = wire,
+    lat = lat,
+    lng = lng,
+    recloser = recloserName
+)
+
+fun RecloserDisplayable.toDomainModel() = Recloser(
+    id = id,
+    tplnr = tplnr,
+    name = name,
+    opr = opr,
+    type = type.toString(),
     lat = lat,
     lng = lng
 )

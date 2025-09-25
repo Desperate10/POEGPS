@@ -18,7 +18,11 @@ class OprAdapter : ListAdapter<OprDisplayable, OprViewHolder>(OprDiffUtil){
     override fun onBindViewHolder(holder: OprViewHolder, position: Int) {
         val oprItem = getItem(position)
         with(holder.binding) {
-            opr.text = oprItem.name//replace with resource string
+            opr.text = buildString {
+                append(oprItem.name)
+                append("\n")
+                append(oprItem.recloserName)
+            }
             wire.text = oprItem.wire
             lat.text = oprItem.lat
             lng.text = oprItem.lng

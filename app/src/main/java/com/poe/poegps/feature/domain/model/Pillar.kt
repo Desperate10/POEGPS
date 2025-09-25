@@ -10,5 +10,6 @@ data class Pillar(
     val pillarType: String,
     val lng: String,
     val lat: String,
-    val isAbon: Boolean
+    val isAbon: Boolean,
+    val recloser: String
 )

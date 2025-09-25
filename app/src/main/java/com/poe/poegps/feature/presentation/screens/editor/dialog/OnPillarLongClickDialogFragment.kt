@@ -30,6 +30,7 @@ class OnPillarLongClickDialogFragment: DialogFragment() {
         }
 
         val options = arrayOf(
+            getString(R.string.add_recloser),
             getString(R.string.create_otp),
             getString(R.string.clear_coord),
             getString(R.string.delete_opr),

@@ -1,11 +1,15 @@
 package com.poe.poegps.feature.data.repository
 
+import android.util.Log
 import com.poe.poegps.feature.data.local.dao.ObjectsDao
+import com.poe.poegps.feature.data.local.entity.RecloserDbModel
 import com.poe.poegps.feature.data.mapper.*
 import com.poe.poegps.feature.data.remote.api.ObjectsApi
 import com.poe.poegps.feature.data.remote.model.LoginRequest
+import com.poe.poegps.feature.data.remote.model.RecloserDTO
 import com.poe.poegps.feature.data.remote.model.SavePillarsResponse
 import com.poe.poegps.feature.data.remote.model.TokenCheckResponse
+import com.poe.poegps.feature.data.remote.model.upload.SaveRequestDTO
 import com.poe.poegps.feature.data.remote.model.upload.UploadState
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.data.remote.utils.apiRequestFlow
@@ -31,18 +35,34 @@ class ObjectsRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun uploadSavedPillars(
+        token: String,
+        tplnr: String
+    ): Flow<SavePillarsResponse> = flow {
 
-    override fun uploadSavedPillars(token: String, tplnr: String): Flow<SavePillarsResponse> = flow {
         // return apiRequestFlow {
-        val data = if (tplnr.isEmpty()) {
+        val pillars = if (tplnr.isEmpty()) {
             objectsDao.getSavedPillars()
         } else {
             objectsDao.getSavedPillarsByTplnr(tplnr)
         }
+
+        val reclosers : List<RecloserDbModel> = if (tplnr.isEmpty()) {
+            objectsDao.getSavedReclosers()
+        } else {
+            objectsDao.getSavedReclosersByTplnr(tplnr)
+        }
+
+        val request = SaveRequestDTO(
+            pillarList = pillars.map { it.toDTObject() },
+            recloserList = reclosers.map {it.toDTObject() }
+        )
+
         //Заменить на возврат респонса
-        val response = objectsApi.uploadSavedPillars(
+        val response = objectsApi.uploadSaveRequest(
             token = "Bearer $token",
-            pillars = data.map { it.toDTObject() })
+            request = request)
+
         response.body()?.let { emit(it) }
         //  }
     }
@@ -108,6 +128,48 @@ class ObjectsRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             emit(UploadState.Error("Помилка завантаження даних"))
         }
+    }
+
+    override suspend fun downloadKls(filial: String, token: String) {
+        objectsApi.getKl04Objects(filial, "Bearer $token")
+            .map { kl ->
+                kl?.toDomainModel()
+            }
+            .also { kls ->
+                kls.map {kl->
+                    kl?.let { objectsDao.insertKl04IfNotExist(it.toKl04DbModel()) }
+                }
+            }
+
+        objectsApi.getKl10Objects(filial, "Bearer $token")
+            .map { kl ->
+                kl?.toDomainModel()
+            }
+            .also { kls ->
+                kls.map { kl ->
+                    kl?.let { objectsDao.insertKl10IfNotExist(it.toKl10DbModel()) }
+                }
+            }
+
+        objectsApi.getKl04AbonObjects(filial, "Bearer $token")
+            .map { kl ->
+                kl?.toDomainModel()
+            }
+            .also { kls ->
+                kls.map { kl ->
+                    kl?.let { objectsDao.insertAbonKl04IfNotExist(it.toAbonKl04DbModel()) }
+                }
+            }
+
+        objectsApi.getKl10OAbonObjects(filial, "Bearer $token")
+            .map { kl ->
+                kl?.toDomainModel()
+            }
+            .also { kls ->
+                kls.map { kl ->
+                    kl?.let { objectsDao.insertAbonKl10IfNotExist(it.toAbonKl10DbModel()) }
+                }
+            }
     }
 
     override suspend fun downloadTPs(filial: String, token: String) {
@@ -191,6 +253,18 @@ class ObjectsRepositoryImpl @Inject constructor(
             }
     }
 
+    /*override suspend fun downloadReclosers(filial: String, token: String) {
+        objectsApi.getRecloser(filial = filial, token = "Bearer $token")
+            .map { recloser ->
+                recloser?.toRecloser()
+            }.also {
+                it.map { recloser ->
+                    objectsDao.insertRecloserIfNotExist(recloser?.toRecloserDbModel())
+                    //objectsDao.insertWire04IfNotExist(wire.toWire04DbModel())
+                }
+            }
+    }*/
+
     override fun searchLine04(tplnr: String): Flow<List<Line>> {
         return objectsDao.getLines04(tplnr)
             .map {
@@ -211,6 +285,42 @@ class ObjectsRepositoryImpl @Inject constructor(
 
     override fun searchAbonLine04(tplnr: String): Flow<List<Line>> {
         return objectsDao.getAbonLines04(tplnr)
+            .map {
+                it.map { line ->
+                    line.toDomainModel()
+                }
+            }
+    }
+
+    override fun searchKl04(tplnr: String): Flow<List<Line>> {
+        return objectsDao.getKls04(tplnr)
+            .map {
+                it.map { line ->
+                    line.toDomainModel()
+                }
+            }
+    }
+
+    override fun searchAbonKl04(tplnr: String): Flow<List<Line>> {
+        return objectsDao.getAbonKls04(tplnr)
+            .map {
+                it.map { line ->
+                    line.toDomainModel()
+                }
+            }
+    }
+
+    override fun searchKl10(tplnr: String): Flow<List<Line>> {
+        return objectsDao.getKls10(tplnr)
+            .map {
+                it.map { line ->
+                    line.toDomainModel()
+                }
+            }
+    }
+
+    override fun searchAbonKl10(tplnr: String): Flow<List<Line>> {
+        return objectsDao.getAbonKls10(tplnr)
             .map {
                 it.map { line ->
                     line.toDomainModel()
@@ -345,10 +455,19 @@ class ObjectsRepositoryImpl @Inject constructor(
 
     override suspend fun updateStatus(tplnrList: List<String>) {
         objectsDao.updateStatus(tplnrList)
+        objectsDao.updateRecloserStatus(tplnrList)
+    }
+
+    override suspend fun addRecloserToPillar(id: Int, name: String) {
+        objectsDao.updateRecloser(id, name)
     }
 
     override suspend fun savePillar(pillar: Pillar): Long {
-        return objectsDao.insertSavedPillar(pillar.toLinePillarDbModel())
+        return objectsDao.insertSavedPillarIfNotExist(pillar.toLinePillarDbModel())
+    }
+
+    override suspend fun saveRecloser(recloser: Recloser): Long {
+        return objectsDao.insertSavedRecloser(recloser.toRecloserDbModel())
     }
 
     override suspend fun copyPillarForOtp(pillar: Pillar) {
@@ -357,6 +476,7 @@ class ObjectsRepositoryImpl @Inject constructor(
 
     override suspend fun deletePillar(pillar: Pillar) {
         objectsDao.deletePillar(pillar.toLinePillarDbModel())
+        objectsDao.deleteRecloser(pillar.tplnr, pillar.name)
     }
 
     override suspend fun getParentName(tplnr: String): String {

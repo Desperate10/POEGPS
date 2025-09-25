@@ -1,6 +1,7 @@
 package com.poe.poegps.feature.data.remote.api
 
 import com.poe.poegps.feature.data.remote.model.*
+import com.poe.poegps.feature.data.remote.model.upload.SaveRequestDTO
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -40,12 +41,33 @@ interface ObjectsApi {
     @GET("abonlines04")
     suspend fun getLine04AbonObjects(@Query("filial") filial: String, @Header("Authorization") token: String): List<LineObjects04AbonDTO?>
 
+    @GET("kl10")
+    suspend fun getKl10Objects(@Query("filial") filial: String, @Header("Authorization") token: String): List<KlObjects10DTO?>
+
+    @GET("kl04")
+    suspend fun getKl04Objects(@Query("filial") filial: String, @Header("Authorization") token: String): List<KlObjects04DTO?>
+
+    @GET("abonkl10")
+    suspend fun getKl10OAbonObjects(@Query("filial") filial: String, @Header("Authorization") token: String): List<KlObjects10AbonDTO?>
+
+    @GET("abonkl04")
+    suspend fun getKl04AbonObjects(@Query("filial") filial: String, @Header("Authorization") token: String): List<KlObjects04AbonDTO?>
+
     @GET("wire04")
     suspend fun getWire04(@Header("Authorization") token: String): List<WireDTO>
 
     @GET("wire10")
     suspend fun getWire10(@Header("Authorization") token: String): List<WireDTO>
 
+    /*@GET("recloser")
+    suspend fun getRecloser(@Query("filial") filial: String, @Header("Authorization") token: String): List<RecloserDTO?>*/
+
+    /*@POST("save")
+    suspend fun uploadSavedPillars(@Body pillars: List<LinePillarDTO>, @Header("Authorization") token: String): Response<SavePillarsResponse>*/
+
     @POST("save")
-    suspend fun uploadSavedPillars(@Body pillars: List<LinePillarDTO>, @Header("Authorization") token: String): Response<SavePillarsResponse>
+    suspend fun uploadSaveRequest(
+        @Header("Authorization") token: String,
+        @Body request: SaveRequestDTO
+    ): Response<SavePillarsResponse>
 }
