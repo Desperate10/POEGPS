@@ -50,18 +50,6 @@
 
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/wire"
-        android:layout_width="15dp"
-        android:layout_height="match_parent"
-        android:layout_marginTop="4dp"
-        android:layout_weight="1"
-        android:foreground="#3799cc00"
-        android:paddingTop="10dp"
-        android:text=""
-        android:textAlignment="center"
-        android:textSize="11sp" />
-
     <Button
         android:id="@+id/take_coord"
         android:layout_width="20dp"

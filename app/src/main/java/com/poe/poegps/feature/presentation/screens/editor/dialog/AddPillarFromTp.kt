@@ -84,7 +84,6 @@ class AddPillarFromTp: DialogFragment() {
                 category = ucat,
                 isAbon = spinnerValue.isAbon,
                 pillarType = "",
-                wire = spinnerValue.wire,
                 lat = spinnerValue.lat,
                 lng = spinnerValue.lng
             )

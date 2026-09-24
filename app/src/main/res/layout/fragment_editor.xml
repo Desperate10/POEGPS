@@ -63,16 +63,6 @@
             android:textAlignment="center"
             tools:layout_editor_absoluteX="106dp"
             tools:layout_editor_absoluteY="39dp" />
-
-        <TextView
-            android:id="@+id/textView3"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Переріз"
-            android:textAlignment="center"
-            tools:layout_editor_absoluteX="250dp"
-            tools:layout_editor_absoluteY="39dp" />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView

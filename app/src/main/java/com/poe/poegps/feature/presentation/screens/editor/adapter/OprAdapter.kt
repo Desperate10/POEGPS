@@ -23,7 +23,6 @@ class OprAdapter : ListAdapter<OprDisplayable, OprViewHolder>(OprDiffUtil){
                 append("\n")
                 append(oprItem.recloserName)
             }
-            wire.text = oprItem.wire
             lat.text = oprItem.lat
             lng.text = oprItem.lng
             takeCoord.isEnabled = lat.text == "0.0"

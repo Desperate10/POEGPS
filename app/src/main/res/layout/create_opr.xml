@@ -14,11 +14,6 @@
         android:layout_marginBottom="4dp"
         android:hint="@string/menu_add_opr" />
 
-    <Spinner
-        android:id="@+id/wireSpinner"
-        android:layout_width="match_parent"
-        android:layout_height="42dp" />
-
     <Button
         android:id="@+id/save"
         android:layout_width="match_parent"

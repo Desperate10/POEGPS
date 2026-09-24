@@ -5,18 +5,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
-import android.widget.Spinner
 import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.viewModels
 import com.poe.poegps.R
 import com.poe.poegps.feature.presentation.model.OprDisplayable
 import com.poe.poegps.feature.presentation.model.PillarType
-import com.poe.poegps.feature.presentation.screens.editor.EditorViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 
 @AndroidEntryPoint
 class AddPillarDialogFragment : DialogFragment() {
@@ -25,8 +20,6 @@ class AddPillarDialogFragment : DialogFragment() {
     private lateinit var lineName: String
     private lateinit var category: String
     private var isAbon: Boolean = false
-
-    private val viewModel by viewModels<EditorViewModel>(ownerProducer = { requireParentFragment() })
 
     interface Listener {
         fun onPillarAdded(pillar: OprDisplayable)
@@ -68,19 +61,9 @@ class AddPillarDialogFragment : DialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val oprName = view.findViewById<EditText>(R.id.oprName)
-        val wireSpinner = view.findViewById<Spinner>(R.id.wireSpinner)
-
-        collectLifecycleFlow(viewModel.getWires(category)) { wires ->
-            wireSpinner.adapter = ArrayAdapter(
-                requireActivity(),
-                android.R.layout.simple_list_item_1,
-                wires.map { it.name }
-            )
-        }
 
         view.findViewById<Button>(R.id.save).setOnClickListener {
             val oprNameTxt = oprName.text.toString()
-            val spinnerValue = wireSpinner.selectedItem.toString()
             val pillarType = when {
                 lineName.contains("КВ-0", ignoreCase = true) -> PillarType.KL
                 lineName.contains("КВ-6", ignoreCase = true) -> PillarType.KL
@@ -97,8 +80,7 @@ class AddPillarDialogFragment : DialogFragment() {
                 parentName = lineName,
                 category = category,
                 pillarType = pillarType.name,
-                isAbon = isAbon,
-                wire = spinnerValue
+                isAbon = isAbon
             )
             listener?.onPillarAdded(pillar)
 
@@ -124,7 +106,6 @@ class AddPillarDialogFragment : DialogFragment() {
             args.putString("lineName", lineName)
             args.putString("category", category)
             args.putBoolean("isAbon", isAbon)
-            //args.putStringArray(WIRE, wire)
             val fragment = AddPillarDialogFragment()
             fragment.arguments = args
             return fragment

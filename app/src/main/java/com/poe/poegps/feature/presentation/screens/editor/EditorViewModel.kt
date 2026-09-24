@@ -214,7 +214,6 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    fun getWires(category: String) = repository.getWireList(category)
 
     /*fun getLineList10() {
         viewModelScope.launch(Dispatchers.IO) {

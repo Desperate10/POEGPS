@@ -5,10 +5,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
-import android.widget.Spinner
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import com.poe.poegps.R
@@ -16,7 +14,6 @@ import com.poe.poegps.feature.presentation.model.OprDisplayable
 import com.poe.poegps.feature.presentation.model.PillarType
 import com.poe.poegps.feature.presentation.screens.editor.EditorViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 
 @AndroidEntryPoint
 class OnCreateOtpDialogFragment : DialogFragment() {
@@ -61,18 +58,9 @@ class OnCreateOtpDialogFragment : DialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val oprName = view.findViewById<EditText>(R.id.oprName)
-        val wireSpinner = view.findViewById<Spinner>(R.id.wireSpinner)
-        collectLifecycleFlow(viewModel.getWires(opr!!.category)) { wires ->
-            wireSpinner.adapter = ArrayAdapter(
-                requireActivity(),
-                android.R.layout.simple_list_item_1,
-                wires.map { it.name }
-            )
-        }
 
         view.findViewById<Button>(R.id.save).setOnClickListener {
             val oprNameTxt = oprName.text.toString()
-            val spinnerValue = wireSpinner.selectedItem.toString()
 
             //Добавить сюда лайннейм основной линии если добавляем поиск по названию
             val lineName = "Відп. від оп. ${opr!!.name} до оп. $oprNameTxt"
@@ -85,8 +73,7 @@ class OnCreateOtpDialogFragment : DialogFragment() {
                 parentName = lineName,
                 category = opr!!.category,
                 pillarType = PillarType.PILLAR.name,
-                isAbon = opr!!.isAbon,
-                wire = spinnerValue
+                isAbon = opr!!.isAbon
             )
             listener?.onOtpCreated(oldPillar, pillar)
 

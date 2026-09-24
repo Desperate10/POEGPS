@@ -68,18 +68,9 @@ class ChoosePillarFrom04DialogFragment : DialogFragment() {
             coordSpinner.adapter = ArrayAdapter(requireActivity(), android.R.layout.simple_list_item_1, it)
         }
 
-        val wireSpinner = view.findViewById<Spinner>(R.id.wireSpinner)
-        collectLifecycleFlow(viewModel.getWires("0,4")) { wires ->
-            wireSpinner.adapter = ArrayAdapter(
-                requireActivity(),
-                android.R.layout.simple_list_item_1,
-                wires.map { it.name }
-            )
-        }
 
         view.findViewById<Button>(R.id.save).setOnClickListener {
             val pillarSpinner = coordSpinner.selectedItem as OprDisplayable
-            val spinnerValue = wireSpinner.selectedItem.toString()
 
             val pillar = OprDisplayable(
                 id = 0,
@@ -89,7 +80,6 @@ class ChoosePillarFrom04DialogFragment : DialogFragment() {
                 category = pillarSpinner.category,
                 isAbon = pillarSpinner.isAbon,
                 pillarType = PillarType.PILLAR.name,
-                wire = spinnerValue,
                 lat = pillarSpinner.lat,
                 lng = pillarSpinner.lng
             )
