@@ -44,6 +44,16 @@ android {
     }
 }
 
+// Compile with JDK 17 whatever JDK runs Gradle: Kotlin 1.8 kapt fails on newer ones
+kotlin {
+    jvmToolchain(17)
+}
+// The forked kapt JVM falls back to C:\Windows as temp dir, where Room's SQLite
+// verifier can't extract its native library - hand it the real temp dir
+tasks.withType(org.jetbrains.kotlin.gradle.internal.KaptWithoutKotlincTask).configureEach {
+    kaptProcessJvmArgs.add("-Djava.io.tmpdir=${System.getProperty('java.io.tmpdir')}")
+}
+
 dependencies {
 
     implementation 'androidx.core:core-ktx:1.10.0'
