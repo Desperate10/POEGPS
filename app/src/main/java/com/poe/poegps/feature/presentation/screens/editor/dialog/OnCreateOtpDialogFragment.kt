@@ -87,7 +87,7 @@ class OnCreateOtpDialogFragment : DialogFragment() {
     companion object {
         private const val PILLAR = "pillar"
 
-        fun newInstance(lineName: String, opr: OprDisplayable): OnCreateOtpDialogFragment {
+        fun newInstance(opr: OprDisplayable): OnCreateOtpDialogFragment {
             val args = Bundle()
             args.putParcelable(PILLAR, opr)
             val fragment = OnCreateOtpDialogFragment()

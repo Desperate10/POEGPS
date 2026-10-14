@@ -276,7 +276,7 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
                 }
 
                 getString(R.string.createOtp) -> {
-                    val dialog = OnCreateOtpDialogFragment.newInstance(binding.lineName.text.toString(), pillar)
+                    val dialog = OnCreateOtpDialogFragment.newInstance(pillar)
                     dialog.setListener(this)
                     dialog.show(childFragmentManager, "CreateOtpaykaDialogFragment")
                 }
