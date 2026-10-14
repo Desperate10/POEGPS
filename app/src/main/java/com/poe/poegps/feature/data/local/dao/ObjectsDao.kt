@@ -378,11 +378,12 @@ interface ObjectsDao {
     @Query("DELETE FROM line_pillar WHERE parentName LIKE :pltxt")
     suspend fun deleteSavedPillars(pltxt: String)
 
-    @Query("UPDATE line_pillar SET isSent = 1 WHERE tplnr NOT IN (:tplnrList)")
-    suspend fun updateStatus(tplnrList: List<String>)
+    // ids is chunked by the caller to stay under SQLite's 999 bind-variable limit
+    @Query("UPDATE line_pillar SET isSent = 1 WHERE id IN (:ids) AND tplnr NOT IN (:failedTplnrList)")
+    suspend fun markPillarsSent(ids: List<Int>, failedTplnrList: List<String>)
 
-    @Query("UPDATE recloser SET isSent = 1 WHERE tplnr NOT IN (:tplnrList)")
-    suspend fun updateRecloserStatus(tplnrList: List<String>)
+    @Query("UPDATE recloser SET isSent = 1 WHERE id IN (:ids) AND tplnr NOT IN (:failedTplnrList)")
+    suspend fun markReclosersSent(ids: List<Int>, failedTplnrList: List<String>)
 
     @Query("UPDATE line_pillar SET recloser = :name WHERE id = :id")
     suspend fun updateRecloser(id: Int, name: String)

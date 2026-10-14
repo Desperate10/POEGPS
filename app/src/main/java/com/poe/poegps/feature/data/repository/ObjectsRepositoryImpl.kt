@@ -20,6 +20,9 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
+// leaves room under SQLite's 999 bind-variable limit for the rejected tplnr list
+private const val STATUS_UPDATE_CHUNK = 500
+
 class ObjectsRepositoryImpl @Inject constructor(
     private val objectsDao: ObjectsDao,
     private val objectsApi: ObjectsApi
@@ -63,7 +66,18 @@ class ObjectsRepositoryImpl @Inject constructor(
             token = "Bearer $token",
             request = request)
 
-        response.body()?.let { emit(it) }
+        response.body()?.let { body ->
+            // mark only what was sent in this request; tplnrList holds the rejected objects
+            if (!body.error) {
+                pillars.map { it.id }.chunked(STATUS_UPDATE_CHUNK).forEach {
+                    objectsDao.markPillarsSent(it, body.tplnrList)
+                }
+                reclosers.map { it.id }.chunked(STATUS_UPDATE_CHUNK).forEach {
+                    objectsDao.markReclosersSent(it, body.tplnrList)
+                }
+            }
+            emit(body)
+        }
         //  }
     }
 
@@ -451,11 +465,6 @@ class ObjectsRepositoryImpl @Inject constructor(
                     }
                 }
         }
-    }
-
-    override suspend fun updateStatus(tplnrList: List<String>) {
-        objectsDao.updateStatus(tplnrList)
-        objectsDao.updateRecloserStatus(tplnrList)
     }
 
     override suspend fun addRecloserToPillar(id: Int, name: String) {

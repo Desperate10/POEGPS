@@ -117,7 +117,6 @@ interface ObjectsRepository {
     suspend fun deleteAbonLine10(pltxt: String)
 
     fun getWireList(category: String): Flow<List<Wire>>
-    suspend fun updateStatus(tplnrList: List<String>)
     suspend fun addRecloserToPillar(id: Int, name: String)
     //suspend fun downloadReclosers(filial: String, token: String)
 }

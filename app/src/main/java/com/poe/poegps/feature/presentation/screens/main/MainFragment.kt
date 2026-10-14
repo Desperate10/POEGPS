@@ -103,9 +103,6 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                     Toast.LENGTH_SHORT
                 ).show()
                 viewModel.resetResponse()
-                if (!uploadResponse.error) {
-                    viewModel.updateStatus(uploadResponse.tplnrList)
-                }
             }
         }
         collectLifecycleFlow(viewModel.uploadState) { state ->

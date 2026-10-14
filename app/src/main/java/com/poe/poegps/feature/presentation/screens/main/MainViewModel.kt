@@ -355,12 +355,6 @@ class MainViewModel @Inject constructor(
         _uploadResponse.value = SavePillarsResponse(false, "", emptyList())
     }
 
-    fun updateStatus(tplnrList: List<String>) {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.updateStatus(tplnrList)
-        }
-    }
-
     fun setLoginResponseToLoading() {
         _loginResponse.value = ApiResponse.Loading
     }
