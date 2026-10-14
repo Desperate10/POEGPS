@@ -240,6 +240,9 @@ interface ObjectsDao {
     @Query("UPDATE line_pillar SET lat = :lat, lng = :lng WHERE tplnr = :tplnr")
     suspend fun updateSavedPillar(lat: String, lng: String, tplnr: String)
 
+    @Query("UPDATE line_pillar SET lat = :lat, lng = :lng, isSent = 0 WHERE id = :id")
+    suspend fun updatePillarCoords(id: Int, lat: String, lng: String)
+
     @Delete
     suspend fun deletePillar(pillar: LinePillarDbModel)
 

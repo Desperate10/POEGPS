@@ -88,6 +88,8 @@ interface ObjectsRepository {
 
     suspend fun savePillar(pillar: Pillar): Long
 
+    suspend fun updatePillarCoords(id: Int, lat: String, lng: String)
+
     suspend fun saveRecloser(recloser: Recloser) : Long
 
     suspend fun copyPillarForOtp(pillar: Pillar)

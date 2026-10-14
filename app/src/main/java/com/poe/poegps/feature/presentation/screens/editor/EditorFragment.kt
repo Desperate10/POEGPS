@@ -243,11 +243,11 @@ class EditorFragment : Fragment(), MenuProvider, OnClickListener, MyLocationList
                 LocationManager.GPS_PROVIDER
             ) == true
         ) {
-            //viewModel.saveCoordinates(opr)
-            opr.lat = binding.include.GPSLatitude.text.toString()
-            opr.lng = binding.include.GPSLongitude.text.toString()
-            viewModel.saveCoordinates(opr)
-            adapter.notifyItemChanged(position)
+            viewModel.saveCoordinates(
+                opr,
+                binding.include.GPSLatitude.text.toString(),
+                binding.include.GPSLongitude.text.toString()
+            )
         } else if (binding.include.GPSLatitude.text == "0.0" && locationManager?.isProviderEnabled(
                 LocationManager.GPS_PROVIDER
             ) == true

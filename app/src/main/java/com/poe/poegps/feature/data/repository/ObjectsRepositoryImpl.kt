@@ -466,6 +466,10 @@ class ObjectsRepositoryImpl @Inject constructor(
         return objectsDao.insertSavedPillarIfNotExist(pillar.toLinePillarDbModel())
     }
 
+    override suspend fun updatePillarCoords(id: Int, lat: String, lng: String) {
+        objectsDao.updatePillarCoords(id, lat, lng)
+    }
+
     override suspend fun saveRecloser(recloser: Recloser): Long {
         return objectsDao.insertSavedRecloser(recloser.toRecloserDbModel())
     }

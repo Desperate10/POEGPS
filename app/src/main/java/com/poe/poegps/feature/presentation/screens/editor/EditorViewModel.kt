@@ -188,12 +188,10 @@ class EditorViewModel @Inject constructor(
     }
 
     fun clearCoord(pillar: OprDisplayable?) {
-       // if (pillar?.order != 1) {
-            val pillarNew = pillar?.copy(lat = "0.0", lng = "0.0")
-            viewModelScope.launch(Dispatchers.IO) {
-                pillarNew?.toDomainModel()?.let { repository.savePillar(it) }
-            }
-       // }
+        pillar ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updatePillarCoords(pillar.id, "0.0", "0.0")
+        }
     }
 
     fun deleteOpr(pillar: OprDisplayable?) {
@@ -208,9 +206,9 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    fun saveCoordinates(opr: OprDisplayable) {
+    fun saveCoordinates(opr: OprDisplayable, lat: String, lng: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.savePillar(opr.toDomainModel())
+            repository.updatePillarCoords(opr.id, lat, lng)
         }
     }
 
