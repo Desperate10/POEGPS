@@ -3,6 +3,7 @@ package com.poe.poegps.feature.presentation.screens.tpeditor
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
 import android.os.Bundle
@@ -10,6 +11,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -40,6 +42,11 @@ class TpEditorFragment : Fragment(), View.OnClickListener, MyLocationListener {
     private var binding : FragmentTpEditorBinding by autoCleaned()
 
     private var locationManager: LocationManager? = null
+
+    override fun onStart() {
+        super.onStart()
+        startLocationUpdates()
+    }
 
     override fun onStop() {
         super.onStop()
@@ -189,16 +196,9 @@ class TpEditorFragment : Fragment(), View.OnClickListener, MyLocationListener {
             }
             .request { allGranted, _, deniedList ->
                 if (allGranted) {
-                    locationManager =
-                        requireActivity().getSystemService(Context.LOCATION_SERVICE) as LocationManager
-                    locationManager?.let {
-                        it.requestLocationUpdates(
-                            LocationManager.GPS_PROVIDER, EditorFragment.EVERY_SECOND,
-                            EditorFragment.EVERY_0M, this
-                        )
-                        if (!it.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                            LocationToggleDialogFragment.show(parentFragmentManager)
-                        }
+                    startLocationUpdates()
+                    if (locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) != true) {
+                        LocationToggleDialogFragment.show(parentFragmentManager)
                     }
                 } else {
                     Toast.makeText(
@@ -210,7 +210,35 @@ class TpEditorFragment : Fragment(), View.OnClickListener, MyLocationListener {
             }
     }
 
+    @SuppressLint("MissingPermission")
+    private fun startLocationUpdates() {
+        if (locationManager == null && hasLocationPermission()) {
+            locationManager =
+                requireActivity().getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            locationManager?.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER, EditorFragment.EVERY_SECOND,
+                EditorFragment.EVERY_0M, this
+            )
+        }
+        checkEnabled()
+    }
+
+    private fun hasLocationPermission(): Boolean =
+        ContextCompat.checkSelfPermission(
+            requireContext(),
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+    override fun onProviderEnabled(provider: String) {
+        checkEnabled()
+    }
+
+    override fun onProviderDisabled(provider: String) {
+        checkEnabled()
+    }
+
     private fun checkEnabled() {
+        if (view == null) return
         if (locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true) {
             binding.include.GPSStatus.text = "ON"
         } else {
