@@ -10,12 +10,12 @@ plugins {
 
 android {
     namespace 'com.poe.poegps'
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.poe.poegps"
         minSdk 24
-        targetSdk 35
+        targetSdk 36
         versionCode 9
         versionName "1.0.8"
 
