@@ -100,6 +100,7 @@ class EditorFragment : Fragment(),
                     when (it) {
                         is CaptureResult.Captured ->
                             "${it.pole}: координати знято" + (it.accuracy?.let { a -> String.format(Locale.US, " · ±%.1f м", a) } ?: "")
+                        is CaptureResult.Placed -> "${it.pole}: позицію поставлено вручну"
                         CaptureResult.NoFix -> "Немає позиції GPS — зачекайте на супутники"
                         is CaptureResult.Locked -> "Знімання вимкнено: ${it.trust.level.label.lowercase()} GPS"
                         is CaptureResult.NeedsAccuracy ->
@@ -145,7 +146,9 @@ class EditorFragment : Fragment(),
                     confirmButton = {
                         TextButton(onClick = {
                             confirm = null
-                            viewModel.capture(c.pole, belowGate = c.belowGate, confirmed = true)
+                            val manual = c.manual
+                            if (manual != null) viewModel.placeManually(c.pole, manual.first, manual.second, confirmed = true)
+                            else viewModel.capture(c.pole, belowGate = c.belowGate, confirmed = true)
                         }) { Text("Зняти все одно", style = PoeTheme.type.button, color = PoeTheme.colors.actionText) }
                     },
                     dismissButton = {
@@ -220,6 +223,8 @@ class EditorFragment : Fragment(),
     override fun clearCoordinates(pole: OprDisplayable) = viewModel.clearCoord(pole)
 
     override fun delete(pole: OprDisplayable) = viewModel.deleteOpr(pole)
+
+    override fun placeManually(pole: OprDisplayable, lat: Double, lng: Double) = viewModel.placeManually(pole, lat, lng)
 
     private fun fixGps() {
         if (!viewModel.gps.value.permission) checkPermissions()

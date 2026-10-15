@@ -1,6 +1,7 @@
 package com.poe.poegps.feature.presentation.screens.editor
 
 import android.location.Location
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -73,6 +74,7 @@ import com.poe.poegps.core.location.TrustState
 import com.poe.poegps.feature.data.local.CaptureMeta
 import com.poe.poegps.feature.presentation.map.LineMap
 import com.poe.poegps.feature.presentation.map.MapConfig
+import com.poe.poegps.feature.presentation.map.MapFocus
 import com.poe.poegps.feature.presentation.map.MapGps
 import com.poe.poegps.feature.presentation.map.MapPole
 import com.poe.poegps.feature.presentation.model.OprDisplayable
@@ -97,6 +99,7 @@ interface PoleActions {
     fun addRecloser(pole: OprDisplayable)
     fun clearCoordinates(pole: OprDisplayable)
     fun delete(pole: OprDisplayable)
+    fun placeManually(pole: OprDisplayable, lat: Double, lng: Double)
 }
 
 /** B3 · Лінія: map with the line, the next pole to capture and the GPS readout. */
@@ -126,6 +129,11 @@ fun EditorScreen(
     var actionsFor by rememberSaveable { mutableStateOf<Int?>(null) }
     var showAdd by rememberSaveable { mutableStateOf(false) }
     var showAll by rememberSaveable { mutableStateOf(false) }
+    // B6: the pole being placed by hand, the point under the pin, and camera moves for the map
+    var adjustFor by rememberSaveable { mutableStateOf<Int?>(null) }
+    var center by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var focus by remember { mutableStateOf<MapFocus?>(null) }
+    var stepIndex by rememberSaveable { mutableIntStateOf(0) }
 
     val captured = poles.filter { it.hasCoordinates }
     val target = poles.firstOrNull { it.id == selectedId } ?: poles.firstOrNull { !it.hasCoordinates }
@@ -134,6 +142,25 @@ fun EditorScreen(
     val previous = (if (targetIndex >= 0) poles.take(targetIndex) else poles).lastOrNull { it.hasCoordinates }
     val here = gps.current
     val span = if (previous != null && here != null) distance(previous, here) else null
+    val adjusting = poles.firstOrNull { it.id == adjustFor }
+    val previousOf = { pole: OprDisplayable -> poles.take(poles.indexOf(pole).coerceAtLeast(0)).lastOrNull { it.hasCoordinates } }
+
+    fun focusOn(point: Pair<Double, Double>, zoom: Double?, animate: Boolean) {
+        focus = MapFocus(point.first, point.second, zoom, (focus?.seq ?: 0) + 1, animate)
+    }
+
+    // start where the pole is, else at a trustworthy GPS fix, else at the previous pole
+    fun startAdjust(pole: OprDisplayable) {
+        actionsFor = null
+        adjustFor = pole.id
+        val start = when {
+            pole.hasCoordinates -> pole.lat.toDouble() to pole.lng.toDouble()
+            here != null && !trust.level.locksCapture -> here.latitude to here.longitude
+            else -> previousOf(pole)?.let { it.lat.toDouble() to it.lng.toDouble() }
+        }
+        // instant: the sheet switching to B6 changes the map padding, which would cut an animation short
+        start?.let { focusOn(it, 19.0, animate = false) }
+    }
 
     Box(Modifier.fillMaxSize().background(c.mapGround)) {
         LineMap(
@@ -146,9 +173,35 @@ fun EditorScreen(
             recenter = recenter,
             topInset = 120.dp,
             bottomInset = with(density) { sheetHeight.toDp() } - 24.dp,
-            onPoleClick = { actionsFor = it },
+            onPoleClick = { if (adjusting == null) actionsFor = it },
             modifier = Modifier.fillMaxSize(),
+            focus = focus,
+            onCenterChange = { lat, lng -> center = lat to lng },
         )
+
+        if (adjusting != null) {
+            BackHandler { adjustFor = null }
+            AdjustOverlay(
+                pole = adjusting,
+                center = center,
+                gps = gps,
+                trust = trust,
+                previous = previousOf(adjusting),
+                step = ADJUST_STEPS[stepIndex],
+                topInset = 120.dp,
+                bottomInset = with(density) { sheetHeight.toDp() } - 24.dp,
+                onSheetHeight = { sheetHeight = it },
+                onStep = { stepIndex = (stepIndex + 1) % ADJUST_STEPS.size },
+                onNudge = { north, east -> center?.let { focusOn(offsetBy(it, north, east), null, animate = false) } },
+                onToGps = { here?.let { focusOn(it.latitude to it.longitude, null, animate = false) } },
+                onSave = {
+                    center?.let { (lat, lng) -> actions.placeManually(adjusting, lat, lng) }
+                    adjustFor = null
+                },
+                onClose = { adjustFor = null },
+            )
+            return@Box
+        }
 
         // header over the map
         Row(
@@ -196,6 +249,7 @@ fun EditorScreen(
                     upcoming = poles.drop(targetIndex + 1).filter { !it.hasCoordinates }.take(2),
                     total = poles.size,
                     onCapture = { belowGate -> actions.capture(target, belowGate) },
+                    onManual = { startAdjust(target) },
                     onSelect = onSelect,
                     onAll = { showAll = true },
                     onGpsProblem = onGpsProblem,
@@ -208,6 +262,7 @@ fun EditorScreen(
         PoleActionsSheet(
             pole, gps, captureMeta[pole.id], actions,
             onRetake = { onSelect(pole.id) },
+            onAdjust = { startAdjust(pole) },
             onDismiss = { actionsFor = null },
         )
     }
@@ -278,6 +333,7 @@ private fun ColumnScope.NextPole(
     upcoming: List<OprDisplayable>,
     total: Int,
     onCapture: (belowGate: Boolean) -> Unit,
+    onManual: () -> Unit,
     onSelect: (Int?) -> Unit,
     onAll: () -> Unit,
     onGpsProblem: () -> Unit,
@@ -311,7 +367,7 @@ private fun ColumnScope.NextPole(
     }
 
     when {
-        locked -> TrustLock(trust)
+        locked -> TrustLock(trust, onManual)
         waiting -> AccuracyGauge(accuracy)
         else -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PoeStatTile(
@@ -403,7 +459,7 @@ private fun AccuracyGauge(accuracy: Float?) {
 
 /** Jamming or spoofing: capture is refused and the crew is told why. */
 @Composable
-private fun TrustLock(trust: TrustState) {
+private fun TrustLock(trust: TrustState, onManual: () -> Unit) {
     val c = PoeTheme.colors
     Column(
         Modifier
@@ -423,9 +479,10 @@ private fun TrustLock(trust: TrustState) {
         trust.reasons.take(3).forEach { Text("• $it", style = PoeTheme.type.captionRegular, color = c.ink) }
         Text(
             "Координати зараз не знімаються, щоб не записати хибну позицію. Перевірка повторюється сама — " +
-                "відійдіть від джерела перешкод або зачекайте.",
+                "відійдіть від джерела перешкод або зачекайте. Або поставте опору на мапі вручну.",
             style = PoeTheme.type.captionRegular, color = c.muted,
         )
+        PoeOutlinedButton("Поставити вручну на мапі", onManual, Modifier.fillMaxWidth().padding(top = 4.dp), icon = PoeIcons.Move)
     }
 }
 
@@ -498,6 +555,7 @@ private fun PoleActionsSheet(
     meta: CaptureMeta?,
     actions: PoleActions,
     onRetake: () -> Unit,
+    onAdjust: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val c = PoeTheme.colors
@@ -532,7 +590,11 @@ private fun PoleActionsSheet(
                     "Знято ${SimpleDateFormat("dd.MM HH:mm", Locale.getDefault()).format(Date(m.timeMs))}" +
                         (m.accuracyM?.let { " · ±${it.format1()} м" } ?: "")
                 },
-                meta?.takeIf { pole.hasCoordinates && it.belowAccuracyGate }?.let { "до досягнення точності" },
+                meta?.takeIf { pole.hasCoordinates && it.source == CaptureMeta.SOURCE_MANUAL }?.let { m ->
+                    "поставлено вручну" + (m.gpsOffsetM?.let { " · ${it.roundToInt()} м від GPS" } ?: "")
+                },
+                meta?.takeIf { pole.hasCoordinates && it.source == CaptureMeta.SOURCE_GPS && it.belowAccuracyGate }
+                    ?.let { "до досягнення точності" },
                 meta?.takeIf { pole.hasCoordinates }?.confirmedWarnings?.firstOrNull()?.let { "підтверджено: $it" },
                 meta?.takeIf { pole.hasCoordinates && it.trust != TrustLevel.RELIABLE.name }
                     ?.let { m -> TrustLevel.entries.firstOrNull { it.name == m.trust }?.label?.let { "GPS: $it" } },
@@ -567,6 +629,13 @@ private fun PoleActionsSheet(
                     onClick = { onDismiss(); onRetake() },
                     iconBackground = if (c.isDark) c.gpsContainer else c.gps,
                     iconTint = if (c.isDark) c.gps else c.onGpsStrong,
+                )
+                PoeActionRow(
+                    PoeIcons.Move,
+                    if (pole.hasCoordinates) "Уточнити на мапі" else "Поставити на мапі",
+                    "Пересунути позначку вручну",
+                    onClick = onAdjust,
+                    iconBackground = c.surface, iconTint = c.action, iconBorder = c.action,
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

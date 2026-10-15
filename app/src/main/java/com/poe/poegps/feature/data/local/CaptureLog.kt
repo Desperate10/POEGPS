@@ -28,7 +28,16 @@ data class CaptureMeta(
     val belowAccuracyGate: Boolean = false,
     /** Plausibility warnings the crew confirmed past ("span too long", "far from GIS"). */
     val confirmedWarnings: List<String> = emptyList(),
-)
+    /** "gps", or "manual" when placed on the map (B6). */
+    val source: String = SOURCE_GPS,
+    /** For a manual placement: how far it is from the GPS position at the time, if there was one. */
+    val gpsOffsetM: Float? = null,
+) {
+    companion object {
+        const val SOURCE_GPS = "gps"
+        const val SOURCE_MANUAL = "manual"
+    }
+}
 
 /**
  * Capture metadata kept on the phone only: the GIS database gets no new columns, and the upload

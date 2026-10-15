@@ -20,6 +20,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.poe.poegps.core.designsystem.PoeColors
 import org.maplibre.android.MapLibre
+import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
@@ -71,6 +72,9 @@ data class MapPole(val id: Int, val label: String, val lat: Double, val lng: Dou
 
 data class MapGps(val lat: Double, val lng: Double, val accuracy: Float?)
 
+/** Move the camera to a point; a new [seq] repeats the move. Null [zoom] keeps the current zoom. */
+data class MapFocus(val lat: Double, val lng: Double, val zoom: Double?, val seq: Int, val animate: Boolean = true)
+
 /**
  * The line editor's map: branch lines from GIS (this line emphasised), GIS pole positions,
  * captured poles joined in editor order, the GPS position with its accuracy circle and a dashed
@@ -90,6 +94,9 @@ fun LineMap(
     topInset: Dp,
     onPoleClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    focus: MapFocus? = null,
+    /** Reports the point under the centre of the visible area as the camera moves (B6). */
+    onCenterChange: ((Double, Double) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -102,6 +109,7 @@ fun LineMap(
     var style by remember { mutableStateOf<Style?>(null) }
     var framed by remember { mutableStateOf(false) }
     val onPoleClickState by rememberUpdatedState(onPoleClick)
+    val onCenterChangeState by rememberUpdatedState(onCenterChange)
 
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
@@ -136,6 +144,12 @@ fun LineMap(
                     addLayers(s, tplnr, colors)
                     style = s
                 }
+                m.addOnCameraMoveListener {
+                    m.cameraPosition.target?.let { t -> onCenterChangeState?.invoke(t.latitude, t.longitude) }
+                }
+                m.addOnCameraIdleListener {
+                    m.cameraPosition.target?.let { t -> onCenterChangeState?.invoke(t.latitude, t.longitude) }
+                }
                 m.addOnMapClickListener { latLng ->
                     val p = m.projection.toScreenLocation(latLng)
                     val r = 24 * density.density
@@ -150,9 +164,11 @@ fun LineMap(
         },
     )
 
-    // keep what the map frames clear of the header and the bottom sheet
-    LaunchedEffect(map, bottomInset, topInset) {
-        map?.setPadding(0, with(density) { topInset.roundToPx() }, 0, with(density) { bottomInset.roundToPx() })
+    // keep what the map frames clear of the header and the bottom sheet; the camera target is
+    // then the centre of the visible area, which is where B6 draws its pin
+    val padding = with(density) { doubleArrayOf(0.0, topInset.toPx().toDouble(), 0.0, bottomInset.toPx().toDouble()) }
+    LaunchedEffect(map, padding[1], padding[3]) {
+        map?.moveCamera(CameraUpdateFactory.paddingTo(padding))
     }
 
     LaunchedEffect(style, gisLines) {
@@ -215,6 +231,19 @@ fun LineMap(
             }
         }
         framed = true
+    }
+
+    LaunchedEffect(map, focus) {
+        val m = map ?: return@LaunchedEffect
+        val f = focus ?: return@LaunchedEffect
+        framed = true
+        val position = CameraPosition.Builder()
+            .target(LatLng(f.lat, f.lng))
+            .zoom(f.zoom ?: m.cameraPosition.zoom)
+            .padding(padding)
+            .build()
+        val update = CameraUpdateFactory.newCameraPosition(position)
+        if (f.animate) m.animateCamera(update, 400) else m.moveCamera(update)
     }
 
     LaunchedEffect(recenter) {

@@ -80,6 +80,7 @@ fun EditorScenario(name: String, onExit: () -> Unit) {
                 override fun addRecloser(pole: OprDisplayable) {}
                 override fun clearCoordinates(pole: OprDisplayable) {}
                 override fun delete(pole: OprDisplayable) {}
+                override fun placeManually(pole: OprDisplayable, lat: Double, lng: Double) {}
             },
         )
     }

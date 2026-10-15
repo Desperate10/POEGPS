@@ -48,11 +48,18 @@ sealed class InsertResult {
 
 sealed class CaptureResult {
     data class Captured(val pole: String, val accuracy: Float?, val belowGate: Boolean) : CaptureResult()
+    data class Placed(val pole: String) : CaptureResult()
     object NoFix : CaptureResult()
     data class Locked(val trust: TrustState) : CaptureResult()
     data class NeedsAccuracy(val accuracy: Float?) : CaptureResult()
     /** The position passed the gate but looks wrong for this pole; the crew confirms or cancels. */
-    data class NeedsConfirm(val pole: OprDisplayable, val belowGate: Boolean, val warnings: List<String>) : CaptureResult()
+    data class NeedsConfirm(
+        val pole: OprDisplayable,
+        val belowGate: Boolean,
+        val warnings: List<String>,
+        /** Set when confirming a manual placement rather than a GPS capture. */
+        val manual: Pair<Double, Double>? = null,
+    ) : CaptureResult()
 }
 
 object CapturePolicy {
@@ -320,11 +327,7 @@ class EditorViewModel @Inject constructor(
                 _captureResult.send(blocked ?: CaptureResult.NoFix)
                 return@launch
             }
-            repository.updatePillarCoords(
-                opr.id,
-                String.format(Locale.US, "%.5f", location.latitude),
-                String.format(Locale.US, "%.5f", location.longitude),
-            )
+            storePosition(opr, location.latitude, location.longitude)
             captureLog.record(
                 opr.id,
                 CaptureMeta(
@@ -341,6 +344,47 @@ class EditorViewModel @Inject constructor(
             if (_selectedPoleId.value == opr.id) _selectedPoleId.value = null
             _captureResult.send(CaptureResult.Captured(opr.name, accuracy, belowGate))
         }
+    }
+
+    /**
+     * B6: the crew puts the pole on the map by hand, e.g. when GPS is jammed or spoofed. The same
+     * span and GIS checks apply; the capture log records it as manual, with its offset from GPS.
+     */
+    fun placeManually(opr: OprDisplayable, lat: Double, lng: Double, confirmed: Boolean = false) {
+        val fix = gps.value
+        val trustNow = trust.value
+        viewModelScope.launch(Dispatchers.IO) {
+            val warnings = plausibilityWarnings(opr, lat, lng)
+            if (!confirmed && warnings.isNotEmpty()) {
+                _captureResult.send(CaptureResult.NeedsConfirm(opr, belowGate = false, warnings, manual = lat to lng))
+                return@launch
+            }
+            storePosition(opr, lat, lng)
+            // GPS under jamming/spoofing says nothing about where the pole is
+            val here = fix.current?.takeIf { !trustNow.level.locksCapture }
+            captureLog.record(
+                opr.id,
+                CaptureMeta(
+                    timeMs = System.currentTimeMillis(),
+                    trust = trustNow.level.name,
+                    reasons = trustNow.reasons,
+                    confirmedWarnings = warnings,
+                    source = CaptureMeta.SOURCE_MANUAL,
+                    gpsOffsetM = here?.let { Geo.distanceM(it.latitude, it.longitude, lat, lng).toFloat() },
+                ),
+            )
+            if (_selectedPoleId.value == opr.id) _selectedPoleId.value = null
+            _captureResult.send(CaptureResult.Placed(opr.name))
+        }
+    }
+
+    // the same "%.5f" text the upload has always sent
+    private suspend fun storePosition(opr: OprDisplayable, lat: Double, lng: Double) {
+        repository.updatePillarCoords(
+            opr.id,
+            String.format(Locale.US, "%.5f", lat),
+            String.format(Locale.US, "%.5f", lng),
+        )
     }
 
     /** Span from the previous captured pole and offset from where GIS has this pole. */

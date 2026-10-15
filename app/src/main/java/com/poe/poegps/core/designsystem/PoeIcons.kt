@@ -32,6 +32,11 @@ object PoeIcons {
     val Trash = icon("trash", 2.2f, "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3")
     val Clock = icon("clock", 2.4f, circle(12f, 12f, 9f) + "M12 7v5l3 2")
     val Alert = icon("alert", 2.6f, circle(12f, 12f, 9f) + "M12 7v6M12 16.5v0.5")
+    // B6 arrow pad
+    val NudgeUp = icon("nudge_up", 2.8f, "M6 15l6-6 6 6")
+    val NudgeDown = icon("nudge_down", 2.8f, "M6 9l6 6 6-6")
+    val NudgeLeft = icon("nudge_left", 2.8f, "M15 6l-6 6 6 6")
+    val NudgeRight = icon("nudge_right", 2.8f, "M9 6l6 6-6 6")
     val Edit = icon("edit", 2.4f, "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z")
 }
 
