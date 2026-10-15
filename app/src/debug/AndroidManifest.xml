@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- Debug builds only: a page of design-system components, start with
+             adb shell am start -n com.poe.poegps/.debug.ThemeGalleryActivity -->
+        <activity
+            android:name=".debug.ThemeGalleryActivity"
+            android:exported="true"
+            android:theme="@style/Theme.POEGPS" />
+    </application>
+</manifest>
