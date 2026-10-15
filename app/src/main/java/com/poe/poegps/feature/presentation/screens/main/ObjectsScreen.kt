@@ -115,8 +115,11 @@ fun ObjectsScreen(
                     Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Об'єкти", style = PoeTheme.type.screenTitle, color = c.ink, modifier = Modifier.weight(1f))
-                    ProfileChip(filial, onClick = { pickFilial = true })
+                    // the title never wraps; on narrow phones the chip gives up width and ellipsizes
+                    Text("Об'єкти", style = PoeTheme.type.screenTitle, color = c.ink, maxLines = 1, softWrap = false)
+                    Box(Modifier.weight(1f).padding(start = 12.dp), contentAlignment = Alignment.CenterEnd) {
+                        ProfileChip(filial, onClick = { pickFilial = true })
+                    }
                 }
                 PoeSegmentedTabs(
                     options = listOf("Лінії ПЛ", "ТП/РП", "КЛ/КВ"),

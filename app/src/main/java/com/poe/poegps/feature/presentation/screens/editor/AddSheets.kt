@@ -309,7 +309,7 @@ internal fun ExistingPicker(
                         when {
                             filtered == null -> Hint("Завантаження…")
                             filtered.isEmpty() -> Hint(if (source.isTp) "ТП з координатами не знайдено" else "У цієї лінії немає опор з координатами")
-                            else -> PickList(filtered, here, selected, taken, onSelect = { selected = it })
+                            else -> PickList(filtered, here, selected, taken, onSelect = { selected = it }, showLine = source.isTp)
                         }
                     }
                 }
@@ -348,6 +348,8 @@ private fun PickList(
     selected: PickItem?,
     taken: Set<String>,
     onSelect: (PickItem) -> Unit,
+    // inside one line's list the header already names the line
+    showLine: Boolean = true,
 ) {
     val c = PoeTheme.colors
     LazyColumn(
@@ -370,21 +372,28 @@ private fun PickList(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(
-                    distance?.let(::formatDistance) ?: "—",
-                    style = PoeTheme.type.statValue.copy(fontSize = 17.sp),
-                    color = if (isSelected) c.actionText else if (already) c.muted else c.ink,
-                    modifier = Modifier.width(64.dp),
-                    maxLines = 1,
-                )
+                if (distance != null) {
+                    Text(
+                        formatDistance(distance),
+                        style = PoeTheme.type.statValue.copy(fontSize = 17.sp),
+                        color = if (isSelected) c.actionText else if (already) c.muted else c.ink,
+                        modifier = Modifier.width(64.dp),
+                        maxLines = 1,
+                    )
+                }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        if (item.line.isBlank()) item.name else "${poleTitle(item.name)} · ${item.line.shortLineName()}",
+                        when {
+                            item.line.isBlank() -> item.name
+                            showLine -> "${poleTitle(item.name)} · ${item.line.shortLineName()}"
+                            else -> poleTitle(item.name)
+                        },
                         style = PoeTheme.type.rowTitle, color = if (already) c.muted else c.ink,
                         maxLines = 2, overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        if (already) "вже є на цій лінії" else "${item.lat} · ${item.lng}",
+                        // GIS keeps up to 14 decimals; 5 (about a metre) is what the screen needs
+                        if (already) "вже є на цій лінії" else "${item.lat.coord5()} · ${item.lng.coord5()}",
                         style = if (already) PoeTheme.type.captionRegular else PoeTheme.type.monoSmall, color = c.muted, maxLines = 1,
                     )
                 }
@@ -647,3 +656,5 @@ private val LINE_KIND = Regex("^(ПЛ|КЛ|КВ)-[\\d,.]+\\s*кВ\\s*", RegexOpt
 
 /** "ПЛ-0,4 кВ Л-17 · Кохнівка" → "Л-17 · Кохнівка": the picker already says which voltage. */
 private fun String.shortLineName(): String = replace(LINE_KIND, "").ifBlank { this }
+
+private fun String.coord5(): String = toDoubleOrNull()?.let { String.format(java.util.Locale.US, "%.5f", it) } ?: this

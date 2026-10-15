@@ -20,6 +20,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.poe.poegps.core.designsystem.PoeColors
 import org.maplibre.android.MapLibre
+import org.maplibre.geojson.MultiLineString
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -214,12 +217,19 @@ fun LineMap(
         )
     }
 
+    // this line's shape in the branch GeoJSON: frames a line that has no poles on the phone yet
+    var lineShape by remember(tplnr) { mutableStateOf<List<LatLng>>(emptyList()) }
+    LaunchedEffect(gisLines, tplnr) {
+        val json = gisLines ?: return@LaunchedEffect
+        lineShape = withContext(Dispatchers.Default) { lineVertices(json, tplnr) }
+    }
+
     // frame the work once, as soon as there is something to frame
-    LaunchedEffect(map, poles, gisPoles, gps != null) {
+    LaunchedEffect(map, poles, gisPoles, lineShape, gps != null) {
         val m = map ?: return@LaunchedEffect
         if (framed) return@LaunchedEffect
         val points = poles.map { LatLng(it.lat, it.lng) } + gisPoles.map { LatLng(it.first, it.second) } +
-            listOfNotNull(gps?.let { LatLng(it.lat, it.lng) })
+            lineShape + listOfNotNull(gps?.let { LatLng(it.lat, it.lng) })
         when {
             points.size >= 2 -> m.moveCamera(
                 CameraUpdateFactory.newLatLngBounds(LatLngBounds.Builder().includes(points).build(), (48 * density.density).toInt())
@@ -253,6 +263,20 @@ fun LineMap(
     }
 }
 
+/** Every vertex of the features with this [tplnr] (LineString or MultiLineString); empty if none or unreadable. */
+private fun lineVertices(geoJson: String, tplnr: String): List<LatLng> = runCatching {
+    FeatureCollection.fromJson(geoJson).features().orEmpty()
+        .filter { it.hasProperty("tplnr") && it.getStringProperty("tplnr") == tplnr }
+        .flatMap { f ->
+            when (val g = f.geometry()) {
+                is LineString -> g.coordinates()
+                is MultiLineString -> g.coordinates().flatten()
+                else -> emptyList()
+            }
+        }
+        .map { LatLng(it.latitude(), it.longitude()) }
+}.getOrDefault(emptyList())
+
 private fun addLayers(style: Style, tplnr: String, c: PoeColors) {
     val ink = c.ink.toArgb()
     val action = c.action.toArgb()
@@ -271,7 +295,7 @@ private fun addLayers(style: Style, tplnr: String, c: PoeColors) {
     // this line as GIS has it today: the faint track the crew is re-surveying
     style.addLayer(
         LineLayer("gis-line-current", SRC_GIS_LINES)
-            .withProperties(lineColor(route), lineWidth(5f), lineOpacity(0.22f), lineCap(Property.LINE_CAP_ROUND), lineJoin(Property.LINE_JOIN_ROUND))
+            .withProperties(lineColor(route), lineWidth(5f), lineOpacity(0.35f), lineCap(Property.LINE_CAP_ROUND), lineJoin(Property.LINE_JOIN_ROUND))
             .withFilter(eq(get("tplnr"), literal(tplnr)))
     )
     style.addLayer(

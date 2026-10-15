@@ -154,7 +154,7 @@ class EditorViewModel @Inject constructor(
             line == null -> flowOf(emptyList())
             source == PickSource.POLE_10 -> repository.getPillar10List(line.tplnr)
             else -> repository.getPillar04List(line.tplnr)
-        }.map { list -> list.map { it.toPickItem(line?.name.orEmpty()) }.filter { it.hasCoordinates } }
+        }.map { list -> list.map { it.toPickItem(line?.name.orEmpty()) }.filter { it.hasCoordinates }.sortedWith(POLE_ORDER) }
     }.flowOn(Dispatchers.IO)
 
     /** B9 "Поруч зі мною": candidates within [NEARBY_RADIUS_M] of ([lat], [lng]), nearest first. */
@@ -486,3 +486,9 @@ class EditorViewModel @Inject constructor(
 
 private fun com.poe.poegps.feature.domain.model.Pillar.toPickItem(line: String) =
     PickItem("$tplnr#$id", name, line, lat, lng, category, isAbon)
+
+/** "2", "13а", "13/1", "16": by the leading number, then the rest; names without one go last. */
+private val POLE_ORDER = compareBy<PickItem>(
+    { Regex("\\d+").find(it.name)?.value?.toLongOrNull() ?: Long.MAX_VALUE },
+    { it.name },
+)
