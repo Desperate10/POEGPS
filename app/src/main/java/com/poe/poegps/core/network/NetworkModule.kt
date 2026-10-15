@@ -1,5 +1,6 @@
 package com.poe.poegps.core.network
 
+import com.poe.poegps.BuildConfig
 import com.poe.poegps.feature.data.remote.utils.AuthInterceptor
 import com.poe.poegps.feature.data.remote.utils.TokenManager
 import dagger.Module
@@ -19,14 +20,18 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideHttpClient(authInterceptor: AuthInterceptor) : OkHttpClient {
-        val loggingInterceptor = HttpLoggingInterceptor().apply {
-            this.level = HttpLoggingInterceptor.Level.BODY
-        }
-        return OkHttpClient().newBuilder()
+        val builder = OkHttpClient().newBuilder()
             .retryOnConnectionFailure(true)
             // .addInterceptor(authInterceptor)
-            .addInterceptor(loggingInterceptor)
-            .build()
+        // Bodies and headers carry the password, the JWT and the Authorization token, so release
+        // builds log nothing and debug builds only the request line and status.
+        if (BuildConfig.DEBUG) {
+            builder.addInterceptor(HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.BASIC
+                redactHeader("Authorization")
+            })
+        }
+        return builder.build()
     }
 
     @Singleton
