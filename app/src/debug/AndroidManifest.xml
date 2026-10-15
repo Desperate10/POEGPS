@@ -7,6 +7,7 @@
         <activity
             android:name=".debug.ThemeGalleryActivity"
             android:exported="true"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.POEGPS" />
     </application>
 </manifest>
