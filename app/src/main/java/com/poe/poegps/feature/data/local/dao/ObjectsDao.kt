@@ -6,6 +6,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.poe.poegps.feature.data.local.entity.*
 import com.poe.poegps.feature.domain.model.LineProgress
 import com.poe.poegps.feature.domain.model.RecloserCount
@@ -161,7 +162,7 @@ interface ObjectsDao {
         if (tpAlreadySaved(tp.tplnr) == null) {
             // a new row: tp.id is the TP table's id, and inserting it here (REPLACE) would
             // overwrite whichever captured pole happens to have the same line_pillar id
-            insertSavedPillar(tp.copy(id = 0))
+            insertSavedPillar(tp.copy(id = 0, sortOrder = nextSortOrder()))
         } else {
             updateSavedPillar(tp.lat, tp.lng, tp.tplnr)
         }
@@ -227,14 +228,52 @@ interface ObjectsDao {
     suspend fun insertPillar10(pillar: Pillar10DbModel)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun copyPillarForOtp(pillar: LinePillarDbModel)
+    suspend fun insertPillarIgnoring(pillar: LinePillarDbModel)
 
-    suspend fun insertSavedPillarIfNotExist(pillar: LinePillarDbModel): Long {
-        return if (getSinglePillar(pillar.tplnr, pillar.parentName, pillar.name) == null) {
-            insertSavedPillar(pillar)
-        } else {
-            0L
-        }
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertPillarsIgnoring(pillars: List<LinePillarDbModel>)
+
+    suspend fun copyPillarForOtp(pillar: LinePillarDbModel) {
+        insertPillarIgnoring(pillar.copy(sortOrder = nextSortOrder()))
+    }
+
+    /** Appends to the line, or goes right after [afterId] when given. 0 = the line already has this name. */
+    @Transaction
+    suspend fun insertSavedPillarIfNotExist(pillar: LinePillarDbModel, afterId: Int? = null): Long {
+        if (getSinglePillar(pillar.tplnr, pillar.parentName, pillar.name) != null) return 0L
+        val order = afterId?.let { orderAfter(it) } ?: nextSortOrder()
+        return insertSavedPillar(pillar.copy(sortOrder = order))
+    }
+
+    // halfway to the next pole of the same line, or after everything when it is the last one
+    private suspend fun orderAfter(id: Int): Double {
+        val after = getPillarById(id) ?: return nextSortOrder()
+        val next = getNextInLine(after.tplnr, after.parentName, after.sortOrder, after.id) ?: return nextSortOrder()
+        return (after.sortOrder + next.sortOrder) / 2
+    }
+
+    @Query("SELECT COALESCE(MAX(sortOrder), 0) + 1 FROM line_pillar")
+    suspend fun nextSortOrder(): Double
+
+    @Query("SELECT * FROM line_pillar WHERE id = :id")
+    suspend fun getPillarById(id: Int): LinePillarDbModel?
+
+    @Query(
+        "SELECT * FROM line_pillar WHERE tplnr = :tplnr AND parentName = :parentName " +
+            "AND (sortOrder > :order OR (sortOrder = :order AND id > :id)) ORDER BY sortOrder, id LIMIT 1"
+    )
+    suspend fun getNextInLine(tplnr: String, parentName: String, order: Double, id: Int): LinePillarDbModel?
+
+    @Query("SELECT COUNT(*) FROM line_pillar WHERE tplnr = :tplnr AND parentName = :parentName")
+    suspend fun countLinePoles(tplnr: String, parentName: String): Int
+
+    /** Loads a GIS line's poles in the given order, only into a line that has none on the phone. */
+    @Transaction
+    suspend fun importLine(tplnr: String, parentName: String, poles: List<LinePillarDbModel>): Int {
+        if (poles.isEmpty() || countLinePoles(tplnr, parentName) > 0) return 0
+        val base = nextSortOrder()
+        insertPillarsIgnoring(poles.mapIndexed { i, p -> p.copy(id = 0, sortOrder = base + i) })
+        return poles.size
     }
 
     // per line: a tap shares its main line's tplnr and may have a pole with the same name
@@ -247,7 +286,8 @@ interface ObjectsDao {
     @Query("UPDATE line_pillar SET lat = :lat, lng = :lng WHERE tplnr = :tplnr")
     suspend fun updateSavedPillar(lat: String, lng: String, tplnr: String)
 
-    @Query("UPDATE line_pillar SET lat = :lat, lng = :lng, isSent = 0 WHERE id = :id")
+    // a re-surveyed pole is no longer "as in GIS"
+    @Query("UPDATE line_pillar SET lat = :lat, lng = :lng, isSent = 0, fromGis = 0 WHERE id = :id")
     suspend fun updatePillarCoords(id: Int, lat: String, lng: String)
 
     @Delete
@@ -263,16 +303,17 @@ interface ObjectsDao {
             "SELECT 1 FROM line_pillar u WHERE u.lat <> '0.0' AND u.isSent = 0 " +
             "AND u.tplnr = p.tplnr AND u.parentName = p.parentName " +
             "AND u.category = p.category AND u.isAbon = p.isAbon) " +
-            "ORDER BY p.id"
+            "ORDER BY p.sortOrder, p.id"
     )
     suspend fun getSavedPillars(): List<LinePillarDbModel>
 
-    @Query("SELECT * FROM line_pillar WHERE lat <> '0.0' AND tplnr LIKE :tplnr ORDER BY id")
+    @Query("SELECT * FROM line_pillar WHERE lat <> '0.0' AND tplnr LIKE :tplnr ORDER BY sortOrder, id")
     suspend fun getSavedPillarsByTplnr(tplnr: String): List<LinePillarDbModel>
 
     @Query(
         "SELECT tplnr, parentName, isAbon, COUNT(*) AS total, " +
-            "SUM(CASE WHEN lat <> '0.0' THEN 1 ELSE 0 END) AS captured, " +
+            // poles loaded from GIS count as not surveyed yet
+            "SUM(CASE WHEN lat <> '0.0' AND fromGis = 0 THEN 1 ELSE 0 END) AS captured, " +
             "SUM(CASE WHEN lat <> '0.0' AND isSent = 0 THEN 1 ELSE 0 END) AS unsent " +
             "FROM line_pillar GROUP BY tplnr, parentName, isAbon"
     )
@@ -358,7 +399,7 @@ interface ObjectsDao {
     @Query("SELECT * FROM line04 WHERE name LIKE 'ПЛ%'")
     fun getLineList04(): Flow<List<Line04DbModel>>
 
-    @Query("SELECT * FROM line_pillar WHERE parentName LIKE :pltxt ORDER BY id")
+    @Query("SELECT * FROM line_pillar WHERE parentName LIKE :pltxt ORDER BY sortOrder, id")
     fun getPillarsOfLine(pltxt: String): Flow<List<LinePillarDbModel>>
 
     @Query("SELECT * FROM pillars04 WHERE tplnr LIKE :tplnr")

@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
 import com.poe.poegps.feature.presentation.capture.CaptureFeedback
 import com.poe.poegps.feature.presentation.capture.ReadyChecklist
+import com.poe.poegps.feature.presentation.map.MapGisPole
 import com.poe.poegps.feature.presentation.capture.requestLocation
 import com.poe.poegps.core.designsystem.PoeTheme
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
@@ -89,7 +90,7 @@ class EditorFragment : Fragment(), PoleActions, AddActions {
                 trust = trust,
                 captureMeta = captureMeta,
                 gisLines = gisLines,
-                gisPoles = gisPoles.map { it.lat.toDouble() to it.lng.toDouble() },
+                gisPoles = gisPoles.map { MapGisPole(it.name, it.lat.toDouble(), it.lng.toDouble()) },
                 onBack = { findNavController().popBackStack() },
                 onSelect = viewModel::selectPole,
                 onGpsProblem = { showReady = true },
@@ -132,9 +133,9 @@ class EditorFragment : Fragment(), PoleActions, AddActions {
     override fun placeManually(pole: OprDisplayable, lat: Double, lng: Double) = viewModel.placeManually(pole, lat, lng)
 
     // B8–B11
-    override fun addPole(name: String) = viewModel.addPole(name)
+    override fun addPole(name: String, afterId: Int?) = viewModel.addPole(name, afterId)
 
-    override fun addExisting(source: PickSource, item: PickItem) = viewModel.addExisting(source, item)
+    override fun addExisting(source: PickSource, item: PickItem, afterId: Int?) = viewModel.addExisting(source, item, afterId)
 
     override fun lines(source: PickSource): Flow<List<ObjectDisplayable>> = viewModel.getLines(source)
 

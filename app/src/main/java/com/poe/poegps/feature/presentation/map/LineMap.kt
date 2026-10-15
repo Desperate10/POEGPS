@@ -71,7 +71,18 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /** A pole with coordinates, as drawn on the map. */
-data class MapPole(val id: Int, val label: String, val lat: Double, val lng: Double, val selected: Boolean)
+data class MapPole(
+    val id: Int,
+    val label: String,
+    val lat: Double,
+    val lng: Double,
+    val selected: Boolean,
+    /** As GIS has it, not re-surveyed yet: drawn as a ring until it is. */
+    val fromGis: Boolean = false,
+)
+
+/** A pole where GIS has it now; [label] is its name, or empty when the line already shows it. */
+data class MapGisPole(val label: String, val lat: Double, val lng: Double)
 
 data class MapGps(val lat: Double, val lng: Double, val accuracy: Float?)
 
@@ -88,7 +99,7 @@ fun LineMap(
     tplnr: String,
     colors: PoeColors,
     gisLines: String?,
-    gisPoles: List<Pair<Double, Double>>,
+    gisPoles: List<MapGisPole>,
     poles: List<MapPole>,
     gps: MapGps?,
     /** Bumped to fly back to the GPS position. */
@@ -181,7 +192,11 @@ fun LineMap(
     LaunchedEffect(style, gisPoles) {
         val s = style ?: return@LaunchedEffect
         s.getSourceAs<GeoJsonSource>(SRC_GIS_POLES)?.setGeoJson(
-            FeatureCollection.fromFeatures(gisPoles.map { (lat, lng) -> Feature.fromGeometry(Point.fromLngLat(lng, lat)) })
+            FeatureCollection.fromFeatures(
+                gisPoles.map { p ->
+                    Feature.fromGeometry(Point.fromLngLat(p.lng, p.lat)).apply { addStringProperty("label", p.label) }
+                }
+            )
         )
     }
     LaunchedEffect(style, poles) {
@@ -192,6 +207,7 @@ fun LineMap(
                     addNumberProperty("id", p.id)
                     addStringProperty("label", p.label)
                     addBooleanProperty("selected", p.selected)
+                    addBooleanProperty("gis", p.fromGis)
                 }
             })
         )
@@ -228,7 +244,7 @@ fun LineMap(
     LaunchedEffect(map, poles, gisPoles, lineShape, gps != null) {
         val m = map ?: return@LaunchedEffect
         if (framed) return@LaunchedEffect
-        val points = poles.map { LatLng(it.lat, it.lng) } + gisPoles.map { LatLng(it.first, it.second) } +
+        val points = poles.map { LatLng(it.lat, it.lng) } + gisPoles.map { LatLng(it.lat, it.lng) } +
             lineShape + listOfNotNull(gps?.let { LatLng(it.lat, it.lng) })
         when {
             points.size >= 2 -> m.moveCamera(
@@ -302,6 +318,19 @@ private fun addLayers(style: Style, tplnr: String, c: PoeColors) {
         CircleLayer("gis-poles", SRC_GIS_POLES)
             .withProperties(circleRadius(4f), circleColor(surface), circleStrokeColor(c.outline.toArgb()), circleStrokeWidth(1.5f))
     )
+    // names of GIS poles the line doesn't show itself (its taps, other lines' poles)
+    style.addLayer(
+        SymbolLayer("gis-pole-labels", SRC_GIS_POLES).withProperties(
+            textField(get("label")),
+            textFont(arrayOf("Noto Sans Regular")),
+            textSize(11f),
+            textColor(c.muted.toArgb()),
+            textHaloColor(surface),
+            textHaloWidth(1.5f),
+            textAnchor(Property.TEXT_ANCHOR_LEFT),
+            textOffset(arrayOf(0.8f, -0.5f)),
+        )
+    )
     style.addLayer(FillLayer("gps-accuracy", SRC_GPS_ACCURACY).withProperties(fillColor(gps), fillOpacity(0.16f)))
     style.addLayer(
         LineLayer("gps-link", SRC_GPS_LINK)
@@ -314,9 +343,28 @@ private fun addLayers(style: Style, tplnr: String, c: PoeColors) {
     style.addLayer(
         CircleLayer(LAYER_POLES, SRC_POLES).withProperties(
             circleRadius(switchCase(eq(get("selected"), literal(true)), literal(9f), literal(6f))),
-            circleColor(switchCase(eq(get("selected"), literal(true)), literal(action.hex()), literal(route.hex()))),
-            circleStrokeColor(surface),
-            circleStrokeWidth(switchCase(eq(get("selected"), literal(true)), literal(3f), literal(1.5f))),
+            // selected: action; as in GIS: a ring in the line colour; re-surveyed or new: solid
+            circleColor(
+                switchCase(
+                    eq(get("selected"), literal(true)), literal(action.hex()),
+                    eq(get("gis"), literal(true)), literal(surface.hex()),
+                    literal(route.hex()),
+                )
+            ),
+            circleStrokeColor(
+                switchCase(
+                    eq(get("selected"), literal(true)), literal(surface.hex()),
+                    eq(get("gis"), literal(true)), literal(route.hex()),
+                    literal(surface.hex()),
+                )
+            ),
+            circleStrokeWidth(
+                switchCase(
+                    eq(get("selected"), literal(true)), literal(3f),
+                    eq(get("gis"), literal(true)), literal(2.5f),
+                    literal(1.5f),
+                )
+            ),
         )
     )
     style.addLayer(

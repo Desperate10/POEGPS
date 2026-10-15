@@ -100,8 +100,9 @@ data class PickItem(
 
 /** What B8–B11 need from the screen's owner. */
 interface AddActions {
-    fun addPole(name: String)
-    fun addExisting(source: PickSource, item: PickItem)
+    /** [afterId]: put it right after that pole instead of at the end of the line. */
+    fun addPole(name: String, afterId: Int? = null)
+    fun addExisting(source: PickSource, item: PickItem, afterId: Int? = null)
     fun lines(source: PickSource): Flow<List<ObjectDisplayable>>
     fun candidates(source: PickSource, line: ObjectDisplayable?): Flow<List<PickItem>>
     suspend fun nearby(source: PickSource, lat: Double, lng: Double): List<PickItem>
@@ -133,10 +134,12 @@ internal fun NewPoleSheet(
     onCreate: (String) -> Unit,
     onPick: (PickSource) -> Unit,
     onDismiss: () -> Unit,
+    // opened from a pole's actions: the new pole goes right after it, and numbering follows it
+    after: OprDisplayable? = null,
 ) {
     val c = PoeTheme.colors
     // number on from the last pole, not from a TP added as the line's end point (pillarType "")
-    val last = poles.lastOrNull { it.pillarType.isNotEmpty() }
+    val last = after ?: poles.lastOrNull { it.pillarType.isNotEmpty() }
     val taken = remember(poles) { poles.map { it.name.trim() }.toSet() }
     val suggestions = remember(last?.name, taken) { nextPoleNames(last?.name, taken) }
     var name by rememberSaveable { mutableStateOf(suggestions.firstOrNull().orEmpty()) }
@@ -223,6 +226,8 @@ internal fun ExistingPicker(
     taken: Set<String>,
     here: Location?,
     actions: AddActions,
+    // the pole the new one goes after; null = the end of the line
+    afterId: Int?,
     onAdded: () -> Unit,
     onClose: () -> Unit,
 ) {
@@ -331,7 +336,7 @@ internal fun ExistingPicker(
                         pick.line.isBlank() -> "Додати ${pick.name}"
                         else -> "Додати опору ${pick.name.poleNumber()} з ${pick.line.shortLineName()}"
                     },
-                    onClick = { pick?.let { actions.addExisting(source, it); onAdded() } },
+                    onClick = { pick?.let { actions.addExisting(source, it, afterId); onAdded() } },
                     icon = if (pick != null) PoeIcons.Plus else null,
                     enabled = pick != null,
                     disabledBackground = c.tabTrack,
@@ -656,5 +661,3 @@ private val LINE_KIND = Regex("^(ПЛ|КЛ|КВ)-[\\d,.]+\\s*кВ\\s*", RegexOpt
 
 /** "ПЛ-0,4 кВ Л-17 · Кохнівка" → "Л-17 · Кохнівка": the picker already says which voltage. */
 private fun String.shortLineName(): String = replace(LINE_KIND, "").ifBlank { this }
-
-private fun String.coord5(): String = toDoubleOrNull()?.let { String.format(java.util.Locale.US, "%.5f", it) } ?: this

@@ -104,8 +104,8 @@ private object SampleAddActions : AddActions {
         PickItem("d", "21", "Л-03", "49.58931", "34.55710", "0,4 кВ", false),
     )
 
-    override fun addPole(name: String) {}
-    override fun addExisting(source: PickSource, item: PickItem) {}
+    override fun addPole(name: String, afterId: Int?) {}
+    override fun addExisting(source: PickSource, item: PickItem, afterId: Int?) {}
     override fun lines(source: PickSource): Flow<List<ObjectDisplayable>> = flowOf(lines)
     override fun candidates(source: PickSource, line: ObjectDisplayable?): Flow<List<PickItem>> = flowOf(near)
     override suspend fun nearby(source: PickSource, lat: Double, lng: Double): List<PickItem> = near

@@ -45,6 +45,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 import kotlin.math.cos
+import com.poe.poegps.feature.domain.GisPoint
+import com.poe.poegps.feature.domain.LineOrdering
+import com.poe.poegps.feature.presentation.map.lineShapes
+import com.poe.poegps.feature.presentation.screens.main.plural
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 sealed class InsertResult {
@@ -122,6 +128,47 @@ class EditorViewModel @Inject constructor(
                 _oprDisplayable.value = list.map { opr -> opr.toOprDisplayable() }
             }
         }
+        importFromGis()
+    }
+
+    /**
+     * An existing line opened with nothing on this phone: load its GIS poles in line order (from its
+     * GIS geometry, else by pole number) as "as in GIS" and already sent. Any later change sends the
+     * whole line, so the server rebuilds its geometry complete.
+     */
+    private fun importFromGis() = viewModelScope.launch(Dispatchers.IO) {
+        val highVoltage = when (args.objectType) {
+            ObjectType.LINE04, ObjectType.LINEABON04 -> false
+            ObjectType.LINE10, ObjectType.LINEABON10 -> true
+            else -> return@launch
+        }
+        val line = args.pltxt
+        if (repository.getSavedPillars(line).first().isNotEmpty()) return@launch
+        val gis = (if (highVoltage) repository.getPillar10List(args.tplnr) else repository.getPillar04List(args.tplnr))
+            .first()
+            .filter { p -> p.lat.toDoubleOrNull()?.let { it != 0.0 } == true && p.lng.toDoubleOrNull() != null }
+        if (gis.isEmpty()) return@launch
+        // the cached branch lines arrive within moments; without them the order falls back to pole numbers
+        val json = withTimeoutOrNull(GEOMETRY_WAIT_MS) { _gisLines.filterNotNull().first() }
+        val points = gis.map { GisPoint(it.name, it.lat.toDouble(), it.lng.toDouble()) }
+        val ordered = LineOrdering.order(line, points, json?.let { lineShapes(it, args.tplnr) }.orEmpty())
+        val pillarType = if (CABLE_LINE.containsMatchIn(line)) PillarType.KL else PillarType.PILLAR
+        val poles = ordered.poles.map { point ->
+            // the GIS row itself: its coordinates go back to the server exactly as GIS has them
+            val src = gis[points.indexOfFirst { it === point }]
+            Pillar(
+                id = 0, tplnr = args.tplnr, name = src.name, parentName = line, category = args.category,
+                wire = src.wire, pillarType = pillarType.name, lat = src.lat, lng = src.lng,
+                isAbon = args.isAbon, recloser = "", isSent = true, fromGis = true,
+            )
+        }
+        val loaded = repository.importLine(args.tplnr, line, poles)
+        if (loaded > 0) {
+            _notices.send(
+                "З ГІС завантажено $loaded ${plural(loaded, "опору", "опори", "опор")}" +
+                    if (ordered.fromShape) "" else " · порядок за номерами, перевірте"
+            )
+        }
     }
 
     fun setLineName(lineName: String) {
@@ -129,8 +176,8 @@ class EditorViewModel @Inject constructor(
         _selectedPoleId.value = null
     }
 
-    /** B8: a pole GIS doesn't have yet, appended to the line. */
-    fun addPole(name: String) {
+    /** B8: a pole GIS doesn't have yet, appended to the line or put right after the pole [afterId]. */
+    fun addPole(name: String, afterId: Int? = null) {
         val line = _lineName.value
         val pillarType = if (CABLE_LINE.containsMatchIn(line)) PillarType.KL else PillarType.PILLAR
         addPillarToDisplay(
@@ -141,7 +188,8 @@ class EditorViewModel @Inject constructor(
                 category = args.category,
                 pillarType = pillarType.name,
                 isAbon = args.isAbon,
-            )
+            ),
+            afterId,
         )
     }
 
@@ -180,7 +228,7 @@ class EditorViewModel @Inject constructor(
         if (source == PickSource.POLE_10) getLineList10() else getLineList04()
 
     /** B9: copies an existing GIS point (pole of another line, or a TP) into this line. */
-    fun addExisting(source: PickSource, item: PickItem) {
+    fun addExisting(source: PickSource, item: PickItem, afterId: Int? = null) {
         val isTp = source == PickSource.TP || source == PickSource.ABON_TP
         addPillarToDisplay(
             OprDisplayable(
@@ -193,7 +241,8 @@ class EditorViewModel @Inject constructor(
                 pillarType = if (isTp) "" else PillarType.PILLAR.name,
                 lat = item.lat,
                 lng = item.lng,
-            )
+            ),
+            afterId,
         )
     }
 
@@ -258,10 +307,10 @@ class EditorViewModel @Inject constructor(
             list.map { tp -> tp.toOprDisplayable() }
         }
 
-    fun addPillarToDisplay(obj: OprDisplayable) {
+    fun addPillarToDisplay(obj: OprDisplayable, afterId: Int? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val rowId = repository.savePillar(obj.toDomainModel())
+                val rowId = repository.savePillar(obj.toDomainModel(), afterId)
                 if (rowId > 0L) {
                     _insertResultChannel.send(InsertResult.Success)
                 } else {
@@ -290,7 +339,8 @@ class EditorViewModel @Inject constructor(
 
     fun createOtp(pillarStart: OprDisplayable, pillarNext: OprDisplayable) {
         viewModelScope.launch {
-            repository.copyPillarForOtp(pillarStart.copy(id = 0).toDomainModel())
+            // the tap's own copy of its first pole: unsent, so the new tap uploads whole
+            repository.copyPillarForOtp(pillarStart.copy(id = 0, isSent = false, fromGis = false).toDomainModel())
             repository.savePillar(pillarNext.toDomainModel())
             when(args.objectType) {
                 ObjectType.LINE04 -> repository.saveLine04(
@@ -379,6 +429,7 @@ class EditorViewModel @Inject constructor(
         /** КЛ/КВ lines get cable "poles" (PillarType.KL), as the old add dialog decided. */
         private val CABLE_LINE = Regex("К[ВЛ]-(0|6|10)", RegexOption.IGNORE_CASE)
         const val NEARBY_RADIUS_M = 1_000.0
+        private const val GEOMETRY_WAIT_MS = 5_000L
         private const val NEARBY_LIMIT = 30
 
         fun tapName(fromPole: String, firstPole: String) = "Відп. від оп. $fromPole до оп. $firstPole"

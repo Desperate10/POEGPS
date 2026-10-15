@@ -372,7 +372,8 @@ fun LinePillarDbModel.toDomainModel() = Pillar(
     lat = lat,
     lng = lng,
     recloser = recloser ?: "",
-    isSent = isSent
+    isSent = isSent,
+    fromGis = fromGis,
 )
 
 fun LinePillarDbModel.toDTObject() = LinePillarDTO(
@@ -398,7 +399,9 @@ fun Pillar.toLinePillarDbModel() = LinePillarDbModel(
     isAbon = isAbon,
     wire = wire,
     lat = lat,
-    lng = lng
+    lng = lng,
+    isSent = isSent,
+    fromGis = fromGis,
 )
 
 fun Recloser.toRecloserDbModel() = RecloserDbModel(

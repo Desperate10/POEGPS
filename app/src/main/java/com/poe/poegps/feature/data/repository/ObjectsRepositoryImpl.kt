@@ -489,8 +489,12 @@ class ObjectsRepositoryImpl @Inject constructor(
         return groups to reclosers
     }
 
-    override suspend fun savePillar(pillar: Pillar): Long {
-        return objectsDao.insertSavedPillarIfNotExist(pillar.toLinePillarDbModel())
+    override suspend fun savePillar(pillar: Pillar, afterId: Int?): Long {
+        return objectsDao.insertSavedPillarIfNotExist(pillar.toLinePillarDbModel(), afterId)
+    }
+
+    override suspend fun importLine(tplnr: String, parentName: String, poles: List<Pillar>): Int {
+        return objectsDao.importLine(tplnr, parentName, poles.map { it.toLinePillarDbModel() })
     }
 
     override suspend fun updatePillarCoords(id: Int, lat: String, lng: String) {

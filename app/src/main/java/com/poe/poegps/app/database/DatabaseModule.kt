@@ -45,7 +45,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "app_database"
         )
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
     }
 
@@ -54,6 +54,15 @@ object DatabaseModule {
         database: AppDatabase
     ): ObjectsDao {
         return database.objectsDao
+    }
+
+    // pole order that allows inserting between two poles, and "as in GIS" poles; old rows keep their id order
+    private val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE line_pillar ADD COLUMN sortOrder REAL NOT NULL DEFAULT 0")
+            database.execSQL("ALTER TABLE line_pillar ADD COLUMN fromGis INTEGER NOT NULL DEFAULT 0")
+            database.execSQL("UPDATE line_pillar SET sortOrder = id")
+        }
     }
 
     private val MIGRATION_1_2 = object : Migration(1, 2) {

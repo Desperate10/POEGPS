@@ -89,7 +89,11 @@ interface ObjectsRepository {
 
     fun getSavedPillars(pltxt: String): Flow<List<Pillar>>
 
-    suspend fun savePillar(pillar: Pillar): Long
+    /** Appends [pillar] to its line, or inserts it right after the pole [afterId]. 0 = name already on the line. */
+    suspend fun savePillar(pillar: Pillar, afterId: Int? = null): Long
+
+    /** Loads GIS poles (already ordered) into a line that has none on the phone; returns how many. */
+    suspend fun importLine(tplnr: String, parentName: String, poles: List<Pillar>): Int
 
     suspend fun updatePillarCoords(id: Int, lat: String, lng: String)
 

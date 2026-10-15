@@ -77,6 +77,7 @@ import com.poe.poegps.feature.presentation.map.LineMap
 import com.poe.poegps.feature.presentation.map.MapConfig
 import com.poe.poegps.feature.presentation.map.MapFocus
 import com.poe.poegps.feature.presentation.map.MapGps
+import com.poe.poegps.feature.presentation.map.MapGisPole
 import com.poe.poegps.feature.presentation.map.MapPole
 import com.poe.poegps.feature.presentation.model.OprDisplayable
 import com.poe.poegps.feature.presentation.screens.main.plural
@@ -106,7 +107,7 @@ fun EditorScreen(
     trust: TrustState,
     captureMeta: Map<Int, CaptureMeta>,
     gisLines: String?,
-    gisPoles: List<Pair<Double, Double>>,
+    gisPoles: List<MapGisPole>,
     onBack: () -> Unit,
     onSelect: (Int?) -> Unit,
     onGpsProblem: () -> Unit,
@@ -119,6 +120,8 @@ fun EditorScreen(
     var recenter by remember { mutableIntStateOf(0) }
     var actionsFor by rememberSaveable { mutableStateOf<Int?>(null) }
     var showAdd by rememberSaveable { mutableStateOf(false) }
+    // B8/B9 opened from a pole's actions: the new pole goes right after this one (else at the end)
+    var addAfter by rememberSaveable { mutableStateOf<Int?>(null) }
     // B9 picker, B10 recloser and B11 tap sheets (pole ids)
     var pickSource by rememberSaveable { mutableStateOf<PickSource?>(null) }
     var recloserFor by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -131,6 +134,9 @@ fun EditorScreen(
     var stepIndex by rememberSaveable { mutableIntStateOf(0) }
 
     val captured = poles.filter { it.hasCoordinates }
+    // poles loaded from GIS have coordinates but aren't surveyed until the crew re-takes or moves them
+    val surveyed = captured.count { !it.fromGis }
+    val lineNames = remember(poles) { poles.map { it.name.trim() }.toSet() }
     val target = poles.firstOrNull { it.id == selectedId } ?: poles.firstOrNull { !it.hasCoordinates }
     val targetIndex = poles.indexOf(target)
     // the span is measured from the captured pole just before the target
@@ -162,8 +168,10 @@ fun EditorScreen(
             tplnr = tplnr,
             colors = c,
             gisLines = gisLines,
-            gisPoles = gisPoles,
-            poles = captured.map { MapPole(it.id, it.shortLabel, it.lat.toDouble(), it.lng.toDouble(), it.id == target?.id) },
+            gisPoles = remember(gisPoles, lineNames) { gisPoles.map { if (it.label.trim() in lineNames) it.copy(label = "") else it } },
+            poles = captured.map {
+                MapPole(it.id, it.shortLabel, it.lat.toDouble(), it.lng.toDouble(), it.id == target?.id, fromGis = it.fromGis)
+            },
             gps = here?.let { MapGps(it.latitude, it.longitude, it.takeIf { l -> l.hasAccuracy() }?.accuracy) },
             recenter = recenter,
             topInset = 120.dp,
@@ -207,10 +215,11 @@ fun EditorScreen(
             PoeOverlayIconButton(PoeIcons.Back, "Назад до об'єктів", onBack)
             PoeOverlayTitle(
                 title = lineName,
-                subtitle = "${captured.size} з ${poles.size} опор" + if (category.isNotBlank()) " · $category" else "",
+                subtitle = (if (poles.any { it.fromGis }) "уточнено $surveyed з ${poles.size}" else "$surveyed з ${poles.size} опор") +
+                    if (category.isNotBlank()) " · $category" else "",
                 modifier = Modifier.weight(1f),
             )
-            PoeOverlayIconButton(PoeIcons.Plus, "Додати опору", { showAdd = true }, filled = true)
+            PoeOverlayIconButton(PoeIcons.Plus, "Додати опору", { addAfter = null; showAdd = true }, filled = true)
         }
         GpsStatus(gps, trust, onGpsProblem, Modifier.align(Alignment.TopEnd).padding(top = 68.dp, end = 14.dp))
 
@@ -234,8 +243,8 @@ fun EditorScreen(
             Modifier.align(Alignment.BottomCenter).onSizeChanged { sheetHeight = it.height },
         ) {
             when {
-                poles.isEmpty() -> EmptyLine(onAdd = { showAdd = true })
-                target == null -> LineDone(poles.size, onAdd = { showAdd = true }, onAll = { showAll = true })
+                poles.isEmpty() -> EmptyLine(onAdd = { addAfter = null; showAdd = true })
+                target == null -> LineDone(poles, onAdd = { addAfter = null; showAdd = true }, onAll = { showAll = true })
                 else -> NextPole(
                     pole = target,
                     gps = gps,
@@ -260,7 +269,8 @@ fun EditorScreen(
                 taken = poles.map { it.name.trim() }.toSet(),
                 here = here,
                 actions = adds,
-                onAdded = { pickSource = null },
+                afterId = addAfter,
+                onAdded = { pickSource = null; addAfter = null },
                 onClose = { pickSource = null; showAdd = true },
             )
         }
@@ -271,6 +281,7 @@ fun EditorScreen(
             pole, gps, captureMeta[pole.id], actions,
             onTap = { tapFor = pole.id },
             onRecloser = { recloserFor = pole.id },
+            onInsertAfter = { addAfter = pole.id; showAdd = true },
             onRetake = { onSelect(pole.id) },
             onAdjust = { startAdjust(pole) },
             onDismiss = { actionsFor = null },
@@ -280,9 +291,10 @@ fun EditorScreen(
         NewPoleSheet(
             lineName = lineName,
             poles = poles,
-            onCreate = { showAdd = false; adds.addPole(it) },
+            after = poles.firstOrNull { it.id == addAfter },
+            onCreate = { showAdd = false; adds.addPole(it, addAfter); addAfter = null },
             onPick = { showAdd = false; pickSource = it },
-            onDismiss = { showAdd = false },
+            onDismiss = { showAdd = false; addAfter = null },
         )
     }
     poles.firstOrNull { it.id == recloserFor }?.let { pole ->
@@ -546,11 +558,28 @@ private fun ColumnScope.EmptyLine(onAdd: () -> Unit) {
 }
 
 @Composable
-private fun ColumnScope.LineDone(total: Int, onAdd: () -> Unit, onAll: () -> Unit) {
+private fun ColumnScope.LineDone(poles: List<OprDisplayable>, onAdd: () -> Unit, onAll: () -> Unit) {
     val c = PoeTheme.colors
-    PoeOverline("Лінію знято", color = c.gpsText)
-    Text("Усі $total ${plural(total, "опора має", "опори мають", "опор мають")} координати", style = PoeTheme.type.title, color = c.ink)
-    Text("Вивантажте лінію на головному екрані або додайте ще опору.", style = PoeTheme.type.body, color = c.muted)
+    val total = poles.size
+    val fromGis = poles.count { it.fromGis }
+    val unsent = poles.count { it.hasCoordinates && !it.isSent }
+    if (fromGis > 0) {
+        // an existing line loaded from GIS: nothing to capture in order, the crew fixes what's wrong
+        PoeOverline("Лінія з ГІС")
+        Text(
+            "Уточнено ${total - fromGis} з $total ${plural(total, "опори", "опор", "опор")}",
+            style = PoeTheme.type.title, color = c.ink,
+        )
+        Text(
+            if (unsent > 0) "Зміни не надіслано — вивантажте лінію на головному екрані."
+            else "Торкніться опори на мапі, щоб перезняти або пересунути її. Пропущену опору додайте після сусідньої.",
+            style = PoeTheme.type.body, color = c.muted,
+        )
+    } else {
+        PoeOverline("Лінію знято", color = c.gpsText)
+        Text("Усі $total ${plural(total, "опора має", "опори мають", "опор мають")} координати", style = PoeTheme.type.title, color = c.ink)
+        Text("Вивантажте лінію на головному екрані або додайте ще опору.", style = PoeTheme.type.body, color = c.muted)
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         PoeOutlinedButton("Додати опору", onAdd, Modifier.weight(1f), icon = PoeIcons.Plus)
         PoeOutlinedButton("Усі опори", onAll, Modifier.weight(1f))
@@ -585,6 +614,7 @@ private fun PoleActionsSheet(
     actions: PoleActions,
     onTap: () -> Unit,
     onRecloser: () -> Unit,
+    onInsertAfter: () -> Unit,
     onRetake: () -> Unit,
     onAdjust: () -> Unit,
     onDismiss: () -> Unit,
@@ -606,12 +636,13 @@ private fun PoleActionsSheet(
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(pole.title, style = PoeTheme.type.sheetTitle, color = c.ink)
                     Text(
-                        if (pole.hasCoordinates) "${pole.lat}, ${pole.lng}" else "без координат",
+                        if (pole.hasCoordinates) "${pole.lat.coord5()}, ${pole.lng.coord5()}" else "без координат",
                         style = PoeTheme.type.mono, color = c.inkSecondary,
                     )
                 }
                 when {
                     !pole.hasCoordinates -> PoeStatusBadge("не знято", BadgeTone.Neutral, Modifier.padding(top = 6.dp))
+                    pole.fromGis -> PoeStatusBadge("з ГІС", BadgeTone.Neutral, Modifier.padding(top = 6.dp))
                     pole.isSent -> PoeStatusBadge("надіслано", BadgeTone.Done, Modifier.padding(top = 6.dp), icon = PoeIcons.Check)
                     else -> PoeStatusBadge("не надіслано", BadgeTone.Pending, Modifier.padding(top = 6.dp))
                 }
@@ -668,9 +699,14 @@ private fun PoleActionsSheet(
                     onClick = onAdjust,
                     iconBackground = c.surface, iconTint = c.action, iconBorder = c.action,
                 )
+                PoeActionRow(
+                    PoeIcons.Plus, "Додати опору після цієї", "Пропущена опора між цією і наступною",
+                    onClick = { onDismiss(); onInsertAfter() },
+                )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (pole.hasCoordinates) {
+                // a GIS pole without coordinates would drop out of the line the server rebuilds
+                if (pole.hasCoordinates && !pole.fromGis) {
                     PoeOutlinedButton("Очистити координати", { onDismiss(); actions.clearCoordinates(pole) }, Modifier.weight(1f))
                 }
                 PoeOutlinedButton("Видалити", { confirmDelete = true }, Modifier.weight(1f), icon = PoeIcons.Trash, danger = true)
@@ -682,7 +718,13 @@ private fun PoleActionsSheet(
             onDismissRequest = { confirmDelete = false },
             containerColor = c.surface,
             title = { Text("Видалити ${pole.title}?", style = PoeTheme.type.statValue, color = c.ink) },
-            text = { Text("Опору буде прибрано з лінії на цьому телефоні.", style = PoeTheme.type.body, color = c.muted) },
+            text = {
+                Text(
+                    if (pole.fromGis || pole.isSent) "Опору буде прибрано з лінії. Після вивантаження лінію в ГІС буде перебудовано без неї."
+                    else "Опору буде прибрано з лінії на цьому телефоні.",
+                    style = PoeTheme.type.body, color = c.muted,
+                )
+            },
             confirmButton = {
                 TextButton(onClick = { confirmDelete = false; onDismiss(); actions.delete(pole) }) {
                     Text("Видалити", style = PoeTheme.type.button, color = c.danger)
@@ -712,7 +754,7 @@ private fun AllPolesSheet(
         dragHandle = { SheetHandle(c) },
     ) {
         Text(
-            "Опори лінії · ${poles.count { it.hasCoordinates }} з ${poles.size}",
+            "Опори лінії · ${poles.count { it.hasCoordinates && !it.fromGis }} з ${poles.size}",
             style = PoeTheme.type.title, color = c.ink,
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
         )
@@ -737,16 +779,26 @@ private fun AllPolesSheet(
                     Box(
                         Modifier.size(30.dp).clip(CircleShape).background(
                             when {
+                                pole.fromGis -> c.surface
                                 pole.hasCoordinates && pole.isSent -> c.gps
                                 pole.hasCoordinates -> c.action
                                 else -> c.surface
                             }
-                        ).border(1.5.dp, if (pole.hasCoordinates) Color.Transparent else c.outline, CircleShape),
+                        ).border(
+                            if (pole.fromGis) 2.5.dp else 1.5.dp,
+                            when {
+                                pole.fromGis -> c.ink
+                                pole.hasCoordinates -> Color.Transparent
+                                else -> c.outline
+                            },
+                            CircleShape,
+                        ),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             "${i + 1}", style = PoeTheme.type.badge,
                             color = when {
+                                pole.fromGis -> c.ink
                                 pole.hasCoordinates && pole.isSent -> if (c.isDark) c.mapGround else c.onGpsStrong
                                 pole.hasCoordinates -> c.onAction
                                 else -> c.muted
@@ -758,8 +810,9 @@ private fun AllPolesSheet(
                         Text(
                             when {
                                 !pole.hasCoordinates -> "без координат"
-                                pole.isSent -> "${pole.lat}, ${pole.lng} · надіслано"
-                                else -> "${pole.lat}, ${pole.lng} · не надіслано"
+                                pole.fromGis -> "${pole.lat.coord5()}, ${pole.lng.coord5()} · з ГІС"
+                                pole.isSent -> "${pole.lat.coord5()}, ${pole.lng.coord5()} · надіслано"
+                                else -> "${pole.lat.coord5()}, ${pole.lng.coord5()} · не надіслано"
                             },
                             style = PoeTheme.type.captionRegular, color = c.muted, maxLines = 1,
                         )
@@ -808,4 +861,7 @@ private fun distance(from: OprDisplayable, to: Location): Float {
 }
 
 internal fun Float.format1() = String.format(Locale.US, "%.1f", this)
+
+/** GIS keeps up to 14 decimals; 5 (about a metre) is what a screen needs. Stored values stay as they are. */
+internal fun String.coord5(): String = toDoubleOrNull()?.let { String.format(Locale.US, "%.5f", it) } ?: this
 internal fun Double.format5() = String.format(Locale.US, "%.5f", this)

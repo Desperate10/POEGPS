@@ -16,7 +16,9 @@ data class OprDisplayable(
     var lng: String= "0.0",
     val wire: String="",
     val recloserName: String = "",
-    val isSent: Boolean = false
+    val isSent: Boolean = false,
+    /** As GIS has it, not re-surveyed on this phone yet. */
+    val fromGis: Boolean = false,
 ) : Parcelable {
     override fun toString(): String {
         return name
