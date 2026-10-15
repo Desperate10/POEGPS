@@ -230,14 +230,16 @@ interface ObjectsDao {
     suspend fun copyPillarForOtp(pillar: LinePillarDbModel)
 
     suspend fun insertSavedPillarIfNotExist(pillar: LinePillarDbModel): Long {
-        return if (getSinglePillar(pillar.tplnr, pillar.name) == null) {
+        return if (getSinglePillar(pillar.tplnr, pillar.parentName, pillar.name) == null) {
             insertSavedPillar(pillar)
         } else {
             0L
         }
     }
-    @Query("SELECT * FROM line_pillar WHERE tplnr = :tplnr AND name = :name LIMIT 1")
-    suspend fun getSinglePillar(tplnr: String, name: String): LinePillarDbModel?
+
+    // per line: a tap shares its main line's tplnr and may have a pole with the same name
+    @Query("SELECT * FROM line_pillar WHERE tplnr = :tplnr AND parentName = :parentName AND name = :name LIMIT 1")
+    suspend fun getSinglePillar(tplnr: String, parentName: String, name: String): LinePillarDbModel?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSavedPillar(pillar: LinePillarDbModel) : Long
@@ -364,6 +366,19 @@ interface ObjectsDao {
 
     @Query("SELECT * FROM pillars10 WHERE tplnr LIKE :tplnr")
     fun getPillars10ByTplnr(tplnr: String): Flow<List<Pillar10DbModel>>
+
+    // B9: GIS poles inside a lat/lng box, each with its line's name (taps share the line's tplnr, so the first one)
+    @Query("SELECT p.id, p.tplnr, p.name, p.wire, p.lat, p.lng, " +
+            "(SELECT l.name FROM line04 l WHERE l.tplnr = p.tplnr ORDER BY l.id LIMIT 1) AS lineName " +
+            "FROM pillars04 p WHERE CAST(p.lat AS REAL) BETWEEN :minLat AND :maxLat " +
+            "AND CAST(p.lng AS REAL) BETWEEN :minLng AND :maxLng LIMIT 500")
+    suspend fun getPillars04In(minLat: Double, maxLat: Double, minLng: Double, maxLng: Double): List<PillarOnLine>
+
+    @Query("SELECT p.id, p.tplnr, p.name, p.wire, p.lat, p.lng, " +
+            "(SELECT l.name FROM line10 l WHERE l.tplnr = p.tplnr ORDER BY l.id LIMIT 1) AS lineName " +
+            "FROM pillars10 p WHERE CAST(p.lat AS REAL) BETWEEN :minLat AND :maxLat " +
+            "AND CAST(p.lng AS REAL) BETWEEN :minLng AND :maxLng LIMIT 500")
+    suspend fun getPillars10In(minLat: Double, maxLat: Double, minLng: Double, maxLng: Double): List<PillarOnLine>
 
     @Query("SELECT * FROM tp WHERE tplnr LIKE '%-P'|| :query || '%' " +
     "OR LOWER(pltxt) LIKE LOWER('%' || :query || '%')")

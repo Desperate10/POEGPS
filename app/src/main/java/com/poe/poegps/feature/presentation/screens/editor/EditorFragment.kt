@@ -34,25 +34,16 @@ import com.poe.poegps.feature.presentation.capture.requestLocation
 import com.poe.poegps.core.designsystem.PoeTheme
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.OprDisplayable
-import com.poe.poegps.feature.presentation.model.RecloserDisplayable
-import com.poe.poegps.feature.presentation.screens.editor.dialog.*
+import com.poe.poegps.feature.presentation.model.RecloserType
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import java.util.Locale
 
 @AndroidEntryPoint
-class EditorFragment : Fragment(),
-    AddPillarDialogFragment.Listener,
-    AddPillarFromSaved10.Listener,
-    ChoosePillarFrom04DialogFragment.Listener,
-    ChoosePillarFrom10DialogFragment.Listener,
-    AddPillarFromSaved04.Listener,
-    AddPillarFromTp.Listener,
-    OnCreateOtpDialogFragment.Listener,
-    OnAddRecloserDialogFragment.Listener,
-    PoleActions {
+class EditorFragment : Fragment(), PoleActions, AddActions {
 
     private val viewModel by viewModels<EditorViewModel>()
     private val args: EditorFragmentArgs by lazy {
@@ -96,20 +87,20 @@ class EditorFragment : Fragment(),
                 gisLines = gisLines,
                 gisPoles = gisPoles.map { it.lat.toDouble() to it.lng.toDouble() },
                 onBack = { findNavController().popBackStack() },
-                onAdd = ::openAddDialog,
                 onSelect = viewModel::selectPole,
                 onGpsProblem = { fixGps(viewModel.gps.value.permission, viewModel::restartGps) },
                 actions = this@EditorFragment,
+                adds = this@EditorFragment,
             )
             CaptureFeedback(
                 results = viewModel.captureResult,
-                messages = viewModel.insertResultFlow.map {
+                messages = merge(viewModel.notices, viewModel.insertResultFlow.map {
                     when (it) {
                         InsertResult.Success -> "Опору збережено"
                         InsertResult.Duplicate -> "Опора з такою назвою вже існує"
                         InsertResult.Failure -> "Помилка створення нової опори. Зверніться до адміністратора"
                     }
-                },
+                }),
                 onConfirmed = { c ->
                     val manual = c.manual
                     if (manual != null) viewModel.placeManually(c.pole, manual.first, manual.second, confirmed = true)
@@ -119,62 +110,31 @@ class EditorFragment : Fragment(),
         }
     }
 
-    private fun openAddDialog(option: AddOption) {
-        when (option) {
-            AddOption.NEW -> AddPillarDialogFragment.newInstance(
-                args.tplnr, viewModel.lineName.value, args.category, args.isAbon
-            ).also { it.setListener(this) }.show(childFragmentManager, "CreatePillarDialogFragment")
-
-            AddOption.EXISTING_10 -> AddPillarFromSaved10.newInstance(args.category)
-                .also { it.setListener(this) }.show(childFragmentManager, "CreateSavedPillar10DialogFragment")
-
-            AddOption.EXISTING_04 -> AddPillarFromSaved04.newInstance(args.category)
-                .also { it.setListener(this) }.show(childFragmentManager, "CreateSavedPillar04DialogFragment")
-
-            AddOption.TP, AddOption.ABON_TP -> AddPillarFromTp.newInstance(
-                args.pltxt, args.tplnr, args.category, option == AddOption.ABON_TP
-            ).also { it.setListener(this) }.show(childFragmentManager, "CreateSavedTp04DialogFragment")
-        }
-    }
-
-    override fun onSavedPillar04Adding(obj: ObjectDisplayable) {
-        ChoosePillarFrom04DialogFragment.newInstance(obj.tplnr, args.tplnr, args.pltxt)
-            .also { it.setListener(this) }.show(childFragmentManager, "ChoosePillarFrom04DialogFragment")
-    }
-
-    override fun onSavedPillar10Adding(obj: ObjectDisplayable) {
-        ChoosePillarFrom10DialogFragment.newInstance(obj.tplnr, args.tplnr, args.pltxt)
-            .also { it.setListener(this) }.show(childFragmentManager, "ChoosePillarFrom04DialogFragment")
-    }
-
-    override fun onPillarAdded(pillar: OprDisplayable) {
-        viewModel.addPillarToDisplay(pillar)
-    }
-
-    override fun onOtpCreated(pillarStart: OprDisplayable, pillarSecond: OprDisplayable) {
-        viewModel.createOtp(pillarStart, pillarSecond)
-    }
-
-    override fun onRecloserCreated(recloser: RecloserDisplayable) {
-        viewModel.createRecloser(recloser)
-    }
-
     // B4 actions
     override fun capture(pole: OprDisplayable, belowGate: Boolean) = viewModel.capture(pole, belowGate)
-
-    override fun createTap(pole: OprDisplayable) {
-        OnCreateOtpDialogFragment.newInstance(pole)
-            .also { it.setListener(this) }.show(childFragmentManager, "CreateOtpaykaDialogFragment")
-    }
-
-    override fun addRecloser(pole: OprDisplayable) {
-        OnAddRecloserDialogFragment.newInstance(pole)
-            .also { it.setListener(this) }.show(childFragmentManager, "AddRecloserDialogFragment")
-    }
 
     override fun clearCoordinates(pole: OprDisplayable) = viewModel.clearCoord(pole)
 
     override fun delete(pole: OprDisplayable) = viewModel.deleteOpr(pole)
 
     override fun placeManually(pole: OprDisplayable, lat: Double, lng: Double) = viewModel.placeManually(pole, lat, lng)
+
+    // B8–B11
+    override fun addPole(name: String) = viewModel.addPole(name)
+
+    override fun addExisting(source: PickSource, item: PickItem) = viewModel.addExisting(source, item)
+
+    override fun lines(source: PickSource): Flow<List<ObjectDisplayable>> = viewModel.getLines(source)
+
+    override fun candidates(source: PickSource, line: ObjectDisplayable?): Flow<List<PickItem>> =
+        viewModel.candidates(source, line)
+
+    override suspend fun nearby(source: PickSource, lat: Double, lng: Double): List<PickItem> =
+        viewModel.nearby(source, lat, lng)
+
+    override fun createTap(from: OprDisplayable, firstPole: String, open: Boolean) =
+        viewModel.createTap(from, firstPole, open)
+
+    override fun saveRecloser(pole: OprDisplayable, type: RecloserType, name: String) =
+        viewModel.saveRecloser(pole, type, name)
 }

@@ -85,19 +85,9 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
-enum class AddOption(val title: String, val subtitle: String) {
-    NEW("Нова опора", "Опори ще немає в ГІС"),
-    EXISTING_10("Існуюча опора 6-10 кВ", "Опора іншої лінії, вже є в ГІС"),
-    EXISTING_04("Існуюча опора 0,4 кВ", "Опора іншої лінії, вже є в ГІС"),
-    TP("ТП/РП", "Лінія починається або закінчується на ТП"),
-    ABON_TP("Абонентська ТП", "ТП абонента"),
-}
-
-/** Everything the pole actions (B4) can do; the fragment opens the existing dialogs for most of them. */
+/** Everything the pole actions (B4) can do; taps and reclosers go through [AddActions]. */
 interface PoleActions {
     fun capture(pole: OprDisplayable, belowGate: Boolean)
-    fun createTap(pole: OprDisplayable)
-    fun addRecloser(pole: OprDisplayable)
     fun clearCoordinates(pole: OprDisplayable)
     fun delete(pole: OprDisplayable)
     fun placeManually(pole: OprDisplayable, lat: Double, lng: Double)
@@ -118,10 +108,10 @@ fun EditorScreen(
     gisLines: String?,
     gisPoles: List<Pair<Double, Double>>,
     onBack: () -> Unit,
-    onAdd: (AddOption) -> Unit,
     onSelect: (Int?) -> Unit,
     onGpsProblem: () -> Unit,
     actions: PoleActions,
+    adds: AddActions,
 ) {
     val c = PoeTheme.colors
     val density = LocalDensity.current
@@ -129,6 +119,10 @@ fun EditorScreen(
     var recenter by remember { mutableIntStateOf(0) }
     var actionsFor by rememberSaveable { mutableStateOf<Int?>(null) }
     var showAdd by rememberSaveable { mutableStateOf(false) }
+    // B9 picker, B10 recloser and B11 tap sheets (pole ids)
+    var pickSource by rememberSaveable { mutableStateOf<PickSource?>(null) }
+    var recloserFor by rememberSaveable { mutableStateOf<Int?>(null) }
+    var tapFor by rememberSaveable { mutableStateOf<Int?>(null) }
     var showAll by rememberSaveable { mutableStateOf(false) }
     // B6: the pole being placed by hand, the point under the pin, and camera moves for the map
     var adjustFor by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -257,18 +251,53 @@ fun EditorScreen(
                 )
             }
         }
+
+        pickSource?.let { source ->
+            ExistingPicker(
+                source = source,
+                lineName = lineName,
+                lastPole = poles.lastOrNull()?.name,
+                taken = poles.map { it.name.trim() }.toSet(),
+                here = here,
+                actions = adds,
+                onAdded = { pickSource = null },
+                onClose = { pickSource = null; showAdd = true },
+            )
+        }
     }
 
     poles.firstOrNull { it.id == actionsFor }?.let { pole ->
         PoleActionsSheet(
             pole, gps, captureMeta[pole.id], actions,
+            onTap = { tapFor = pole.id },
+            onRecloser = { recloserFor = pole.id },
             onRetake = { onSelect(pole.id) },
             onAdjust = { startAdjust(pole) },
             onDismiss = { actionsFor = null },
         )
     }
     if (showAdd) {
-        AddSheet(onPick = { showAdd = false; onAdd(it) }, onDismiss = { showAdd = false })
+        NewPoleSheet(
+            lineName = lineName,
+            poles = poles,
+            onCreate = { showAdd = false; adds.addPole(it) },
+            onPick = { showAdd = false; pickSource = it },
+            onDismiss = { showAdd = false },
+        )
+    }
+    poles.firstOrNull { it.id == recloserFor }?.let { pole ->
+        RecloserSheet(
+            pole, lineName,
+            onSave = { type, name -> recloserFor = null; adds.saveRecloser(pole, type, name) },
+            onDismiss = { recloserFor = null },
+        )
+    }
+    poles.firstOrNull { it.id == tapFor }?.let { pole ->
+        TapSheet(
+            pole, lineName,
+            onCreate = { first, open -> tapFor = null; adds.createTap(pole, first, open) },
+            onDismiss = { tapFor = null },
+        )
     }
     if (showAll) {
         AllPolesSheet(
@@ -351,7 +380,7 @@ private fun ColumnScope.NextPole(
                 if (pole.hasCoordinates) "Перезняти опору" else "Наступна опора",
                 color = if (gateOpen && !locked) c.actionText else c.muted,
             )
-            Text(pole.name, style = PoeTheme.type.hero, color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(pole.title, style = PoeTheme.type.hero, color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (waiting) {
             Text(
@@ -554,6 +583,8 @@ private fun PoleActionsSheet(
     gps: GpsFix,
     meta: CaptureMeta?,
     actions: PoleActions,
+    onTap: () -> Unit,
+    onRecloser: () -> Unit,
     onRetake: () -> Unit,
     onAdjust: () -> Unit,
     onDismiss: () -> Unit,
@@ -573,7 +604,7 @@ private fun PoleActionsSheet(
         ) {
             Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(pole.name, style = PoeTheme.type.sheetTitle, color = c.ink)
+                    Text(pole.title, style = PoeTheme.type.sheetTitle, color = c.ink)
                     Text(
                         if (pole.hasCoordinates) "${pole.lat}, ${pole.lng}" else "без координат",
                         style = PoeTheme.type.mono, color = c.inkSecondary,
@@ -608,13 +639,13 @@ private fun PoleActionsSheet(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 PoeActionRow(
                     PoeIcons.Tap, "Створити відпайку", "Нова гілка від цієї опори",
-                    onClick = { onDismiss(); actions.createTap(pole) },
+                    onClick = { onDismiss(); onTap() },
                     iconBackground = c.action, iconTint = c.onAction,
                 )
                 PoeActionRow(
                     PoeIcons.Recloser, "Реклоузер / роз'єднувач",
                     pole.recloserName.ifBlank { "Комутаційний апарат на опорі" },
-                    onClick = { onDismiss(); actions.addRecloser(pole) },
+                    onClick = { onDismiss(); onRecloser() },
                 )
                 val accuracy = gps.accuracy
                 PoeActionRow(
@@ -650,7 +681,7 @@ private fun PoleActionsSheet(
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             containerColor = c.surface,
-            title = { Text("Видалити ${pole.name}?", style = PoeTheme.type.statValue, color = c.ink) },
+            title = { Text("Видалити ${pole.title}?", style = PoeTheme.type.statValue, color = c.ink) },
             text = { Text("Опору буде прибрано з лінії на цьому телефоні.", style = PoeTheme.type.body, color = c.muted) },
             confirmButton = {
                 TextButton(onClick = { confirmDelete = false; onDismiss(); actions.delete(pole) }) {
@@ -661,36 +692,6 @@ private fun PoleActionsSheet(
                 TextButton(onClick = { confirmDelete = false }) { Text("Скасувати", style = PoeTheme.type.button, color = c.ink) }
             },
         )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AddSheet(onPick: (AddOption) -> Unit, onDismiss: () -> Unit) {
-    val c = PoeTheme.colors
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = c.surface,
-        shape = PoeShapes.sheet,
-        dragHandle = { SheetHandle(c) },
-    ) {
-        Column(
-            Modifier.padding(start = 20.dp, end = 20.dp, bottom = 24.dp).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text("Додати до лінії", style = PoeTheme.type.title, color = c.ink, modifier = Modifier.padding(bottom = 8.dp))
-            AddOption.entries.forEach { option ->
-                PoeActionRow(
-                    icon = if (option == AddOption.NEW) PoeIcons.Plus else PoeIcons.Capture,
-                    title = option.title,
-                    subtitle = option.subtitle,
-                    onClick = { onPick(option) },
-                    iconBackground = if (option == AddOption.NEW) c.action else c.iconTile,
-                    iconTint = if (option == AddOption.NEW) c.onAction else c.onIconTile,
-                )
-            }
-        }
     }
 }
 
@@ -753,7 +754,7 @@ private fun AllPolesSheet(
                         )
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(pole.name, style = PoeTheme.type.rowTitle, color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(pole.title, style = PoeTheme.type.rowTitle, color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
                             when {
                                 !pole.hasCoordinates -> "без координат"
@@ -774,7 +775,7 @@ private fun AllPolesSheet(
 }
 
 @Composable
-private fun SheetHandle(c: PoeColors) {
+internal fun SheetHandle(c: PoeColors) {
     Box(
         Modifier
             .padding(top = 10.dp, bottom = 14.dp)
@@ -791,8 +792,14 @@ val OprDisplayable.hasCoordinates: Boolean
 private val OprDisplayable.shortLabel: String
     get() = Regex("\\d+\\S*").find(name)?.value ?: name
 
+/** Poles are named by bare numbers ("17"); screens say "Опора 17". Other names (ТП-245) stay as they are. */
+fun poleTitle(name: String): String = if (name.firstOrNull()?.isDigit() == true) "Опора $name" else name
+
+val OprDisplayable.title: String
+    get() = poleTitle(name)
+
 private val OprDisplayable.chipLabel: String
-    get() = name.replace("Опора", "Оп.")
+    get() = if (name.firstOrNull()?.isDigit() == true) "Оп. $name" else name.replace("Опора", "Оп.")
 
 private fun distance(from: OprDisplayable, to: Location): Float {
     val out = FloatArray(1)

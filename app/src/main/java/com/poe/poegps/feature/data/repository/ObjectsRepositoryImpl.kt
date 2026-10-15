@@ -440,6 +440,14 @@ class ObjectsRepositoryImpl @Inject constructor(
             }
     }
 
+    override suspend fun getPillarsIn(
+        highVoltage: Boolean, minLat: Double, maxLat: Double, minLng: Double, maxLng: Double
+    ): List<Pillar> {
+        val rows = if (highVoltage) objectsDao.getPillars10In(minLat, maxLat, minLng, maxLng)
+        else objectsDao.getPillars04In(minLat, maxLat, minLng, maxLng)
+        return rows.map { it.toDomainModel(highVoltage) }
+    }
+
     override fun getSavedPillars(pltxt: String): Flow<List<Pillar>> {
         return objectsDao.getPillarsOfLine(pltxt)
             .map { pillar ->

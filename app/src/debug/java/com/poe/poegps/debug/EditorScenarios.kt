@@ -17,7 +17,14 @@ import com.poe.poegps.core.location.TrustLevel
 import com.poe.poegps.core.location.TrustState
 import com.poe.poegps.feature.presentation.model.OprDisplayable
 import com.poe.poegps.feature.presentation.screens.editor.EditorScreen
+import com.poe.poegps.feature.presentation.model.ObjectDisplayable
+import com.poe.poegps.feature.presentation.model.RecloserType
+import com.poe.poegps.feature.presentation.screens.editor.AddActions
+import com.poe.poegps.feature.presentation.screens.editor.PickItem
+import com.poe.poegps.feature.presentation.screens.editor.PickSource
 import com.poe.poegps.feature.presentation.screens.editor.PoleActions
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 /**
  * The line editor in GPS states the emulator can't produce (it always reports ±5 m and never
@@ -30,7 +37,7 @@ fun EditorScenario(name: String, onExit: () -> Unit) {
     val poles = List(24) { i ->
         val captured = i < 18
         OprDisplayable(
-            id = i + 1, tplnr = "02-PS15-L12", name = "Опора ${i + 1}", parentName = "Л-12",
+            id = i + 1, tplnr = "02-PS15-L12", name = "${i + 1}", parentName = "Л-12",
             category = "0,4 кВ", isAbon = false, pillarType = "Опора",
             lat = if (captured) "%.5f".format(java.util.Locale.US, 49.587 + (i + 1) * 0.0004) else "0.0",
             lng = if (captured) "%.5f".format(java.util.Locale.US, 34.554 + (i + 1) * 0.0005) else "0.0",
@@ -71,17 +78,37 @@ fun EditorScenario(name: String, onExit: () -> Unit) {
             gisLines = null,
             gisPoles = emptyList(),
             onBack = onExit,
-            onAdd = {},
             onSelect = { selected = it },
             onGpsProblem = {},
             actions = object : PoleActions {
                 override fun capture(pole: OprDisplayable, belowGate: Boolean) {}
-                override fun createTap(pole: OprDisplayable) {}
-                override fun addRecloser(pole: OprDisplayable) {}
                 override fun clearCoordinates(pole: OprDisplayable) {}
                 override fun delete(pole: OprDisplayable) {}
                 override fun placeManually(pole: OprDisplayable, lat: Double, lng: Double) {}
             },
+            adds = SampleAddActions,
         )
     }
+}
+
+/** Made-up GIS points for the B9 picker in the gallery. */
+private object SampleAddActions : AddActions {
+    private val lines = listOf(
+        ObjectDisplayable(1, "02-PS15-L07", "ПЛ-0,4 кВ Л-07", "0,4 кВ", "", false),
+        ObjectDisplayable(2, "02-PS15-L03", "ПЛ-0,4 кВ Л-03", "0,4 кВ", "", false),
+    )
+    private val near = listOf(
+        PickItem("a", "7", "Л-07", "49.58767", "34.55449", "0,4 кВ", false),
+        PickItem("b", "8", "Л-07", "49.58702", "34.55488", "0,4 кВ", false),
+        PickItem("c", "2", "Відп. від оп. 6 до оп. 1", "49.58810", "34.55301", "0,4 кВ", false),
+        PickItem("d", "21", "Л-03", "49.58931", "34.55710", "0,4 кВ", false),
+    )
+
+    override fun addPole(name: String) {}
+    override fun addExisting(source: PickSource, item: PickItem) {}
+    override fun lines(source: PickSource): Flow<List<ObjectDisplayable>> = flowOf(lines)
+    override fun candidates(source: PickSource, line: ObjectDisplayable?): Flow<List<PickItem>> = flowOf(near)
+    override suspend fun nearby(source: PickSource, lat: Double, lng: Double): List<PickItem> = near
+    override fun createTap(from: OprDisplayable, firstPole: String, open: Boolean) {}
+    override fun saveRecloser(pole: OprDisplayable, type: RecloserType, name: String) {}
 }

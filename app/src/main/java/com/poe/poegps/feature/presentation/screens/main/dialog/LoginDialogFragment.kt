@@ -11,7 +11,6 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
 import com.poe.poegps.R
 import com.poe.poegps.feature.presentation.CoroutinesErrorHandler
-import com.poe.poegps.feature.presentation.screens.editor.dialog.ChoosePillarFrom04DialogFragment
 import com.poe.poegps.feature.presentation.screens.main.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 

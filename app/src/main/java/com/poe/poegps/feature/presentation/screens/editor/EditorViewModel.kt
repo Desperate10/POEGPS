@@ -22,11 +22,14 @@ import com.poe.poegps.feature.presentation.mapper.toOprDisplayable
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.ObjectType
 import com.poe.poegps.feature.presentation.model.OprDisplayable
+import com.poe.poegps.feature.presentation.model.PillarType
 import com.poe.poegps.feature.presentation.model.RecloserDisplayable
+import com.poe.poegps.feature.presentation.model.RecloserType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -37,8 +40,11 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
+import kotlin.math.cos
 import javax.inject.Inject
 
 sealed class InsertResult {
@@ -71,6 +77,10 @@ class EditorViewModel @Inject constructor(
     private val _insertResultChannel = Channel<InsertResult>()
     val insertResultFlow = _insertResultChannel.receiveAsFlow() // Expose as a Flow for collection
 
+
+    /** One-off messages for the snackbar: tap created, recloser saved. */
+    private val _notices = Channel<String>(Channel.BUFFERED)
+    val notices = _notices.receiveAsFlow()
 
     private val _captureResult = Channel<CaptureResult>()
     val captureResult = _captureResult.receiveAsFlow()
@@ -116,6 +126,111 @@ class EditorViewModel @Inject constructor(
 
     fun setLineName(lineName: String) {
         _lineName.value = lineName
+        _selectedPoleId.value = null
+    }
+
+    /** B8: a pole GIS doesn't have yet, appended to the line. */
+    fun addPole(name: String) {
+        val line = _lineName.value
+        val pillarType = if (CABLE_LINE.containsMatchIn(line)) PillarType.KL else PillarType.PILLAR
+        addPillarToDisplay(
+            OprDisplayable(
+                tplnr = args.tplnr,
+                name = name.trim(),
+                parentName = line,
+                category = args.category,
+                pillarType = pillarType.name,
+                isAbon = args.isAbon,
+            )
+        )
+    }
+
+    /** B9: GIS poles of other lines (or TPs) with coordinates, for the "by name" list. */
+    fun candidates(source: PickSource, line: ObjectDisplayable?): Flow<List<PickItem>> = when (source) {
+        PickSource.TP, PickSource.ABON_TP -> repository.getTpList(source == PickSource.ABON_TP).map { tps ->
+            tps.map { PickItem(it.tplnr + it.id, it.name, "", it.lat, it.lng, "", it.isAbon) }
+        }
+        PickSource.POLE_10, PickSource.POLE_04 -> when {
+            line == null -> flowOf(emptyList())
+            source == PickSource.POLE_10 -> repository.getPillar10List(line.tplnr)
+            else -> repository.getPillar04List(line.tplnr)
+        }.map { list -> list.map { it.toPickItem(line?.name.orEmpty()) }.filter { it.hasCoordinates } }
+    }.flowOn(Dispatchers.IO)
+
+    /** B9 "Поруч зі мною": candidates within [NEARBY_RADIUS_M] of ([lat], [lng]), nearest first. */
+    suspend fun nearby(source: PickSource, lat: Double, lng: Double): List<PickItem> = withContext(Dispatchers.IO) {
+        val all = when (source) {
+            PickSource.POLE_10, PickSource.POLE_04 -> {
+                val dLat = NEARBY_RADIUS_M / 111_320.0
+                val dLng = NEARBY_RADIUS_M / (111_320.0 * cos(Math.toRadians(lat)))
+                repository.getPillarsIn(source == PickSource.POLE_10, lat - dLat, lat + dLat, lng - dLng, lng + dLng)
+                    .map { it.toPickItem(it.parentName) }
+            }
+            else -> candidates(source, null).first()
+        }
+        all.filter { it.hasCoordinates }
+            .map { it to Geo.distanceM(lat, lng, it.lat.toDouble(), it.lng.toDouble()) }
+            .filter { it.second <= NEARBY_RADIUS_M }
+            .sortedBy { it.second }
+            .take(NEARBY_LIMIT)
+            .map { it.first }
+    }
+
+    fun getLines(source: PickSource): Flow<List<ObjectDisplayable>> =
+        if (source == PickSource.POLE_10) getLineList10() else getLineList04()
+
+    /** B9: copies an existing GIS point (pole of another line, or a TP) into this line. */
+    fun addExisting(source: PickSource, item: PickItem) {
+        val isTp = source == PickSource.TP || source == PickSource.ABON_TP
+        addPillarToDisplay(
+            OprDisplayable(
+                id = 0,
+                tplnr = args.tplnr,
+                name = item.name,
+                parentName = _lineName.value,
+                category = if (isTp) args.category else item.category,
+                isAbon = item.isAbon,
+                pillarType = if (isTp) "" else PillarType.PILLAR.name,
+                lat = item.lat,
+                lng = item.lng,
+            )
+        )
+    }
+
+    /** B10: a recloser or disconnector at [pole], placed at the pole's coordinates. */
+    fun saveRecloser(pole: OprDisplayable, type: RecloserType, name: String) {
+        val trimmed = name.trim()
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.addRecloserToPillar(pole.id, trimmed)
+            repository.saveRecloser(
+                RecloserDisplayable(
+                    tplnr = pole.tplnr, name = trimmed, opr = pole.name, type = type, lat = pole.lat, lng = pole.lng,
+                ).toDomainModel()
+            )
+            _notices.send("$type «$trimmed» збережено · ${poleTitle(pole.name)}")
+        }
+    }
+
+    /**
+     * B11: a tap from [from] whose first pole is [firstPole]. The name keeps the generated format the
+     * server receives as the line name. [open] switches the editor to the tap, as the old dialog always did.
+     */
+    fun createTap(from: OprDisplayable, firstPole: String, open: Boolean) {
+        val first = firstPole.trim()
+        val name = tapName(from.name, first)
+        createOtp(
+            from.copy(parentName = name),
+            OprDisplayable(
+                tplnr = from.tplnr,
+                name = first,
+                parentName = name,
+                category = from.category,
+                pillarType = PillarType.PILLAR.name,
+                isAbon = from.isAbon,
+            )
+        )
+        if (open) setLineName(name)
+        viewModelScope.launch { _notices.send("Відпайку створено: $name") }
     }
 
     fun getPillar04List(tplnr: String) =
@@ -147,10 +262,10 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val rowId = repository.savePillar(obj.toDomainModel())
-                if (rowId != -1L) {
+                if (rowId > 0L) {
                     _insertResultChannel.send(InsertResult.Success)
                 } else {
-                    // Room returns -1L when INSERT ... WHERE NOT EXISTS prevents insertion
+                    // the DAO returns 0 when the line already has a pole with this name (Room: -1 on IGNORE)
                     _insertResultChannel.send(InsertResult.Duplicate)
                 }
             } catch (e: Exception) {
@@ -260,6 +375,15 @@ class EditorViewModel @Inject constructor(
 
     fun restartGps() = session.restartGps()
 
+    companion object {
+        /** КЛ/КВ lines get cable "poles" (PillarType.KL), as the old add dialog decided. */
+        private val CABLE_LINE = Regex("К[ВЛ]-(0|6|10)", RegexOption.IGNORE_CASE)
+        const val NEARBY_RADIUS_M = 1_000.0
+        private const val NEARBY_LIMIT = 30
+
+        fun tapName(fromPole: String, firstPole: String) = "Відп. від оп. $fromPole до оп. $firstPole"
+    }
+
     fun selectPole(id: Int?) {
         _selectedPoleId.value = id
     }
@@ -287,7 +411,7 @@ class EditorViewModel @Inject constructor(
             session.recordGps(CaptureLog.poleKey(opr.id), reading, warnings)
             // the button moves on to the next pole without coordinates
             if (_selectedPoleId.value == opr.id) _selectedPoleId.value = null
-            _captureResult.send(CaptureResult.Captured(opr.name, reading.accuracy, belowGate))
+            _captureResult.send(CaptureResult.Captured(poleTitle(opr.name), reading.accuracy, belowGate))
         }
     }
 
@@ -305,7 +429,7 @@ class EditorViewModel @Inject constructor(
             storePosition(opr, lat, lng)
             session.recordManual(CaptureLog.poleKey(opr.id), lat, lng, warnings)
             if (_selectedPoleId.value == opr.id) _selectedPoleId.value = null
-            _captureResult.send(CaptureResult.Placed(opr.name))
+            _captureResult.send(CaptureResult.Placed(poleTitle(opr.name)))
         }
     }
 
@@ -329,7 +453,7 @@ class EditorViewModel @Inject constructor(
         if (previous != null) {
             val span = Geo.distanceM(previous.lat.toDouble(), previous.lng.toDouble(), lat, lng)
             if (span > maxSpan) {
-                warnings += "Прогон від «${previous.name}» — ${span.toInt()} м, більше, ніж буває на такій лінії"
+                warnings += "Прогон від «${poleTitle(previous.name)}» — ${span.toInt()} м, більше, ніж буває на такій лінії"
             }
         }
         gisPoles.value.firstOrNull { it.name == opr.name }?.let { gis ->
@@ -359,3 +483,6 @@ class EditorViewModel @Inject constructor(
 
 
 }
+
+private fun com.poe.poegps.feature.domain.model.Pillar.toPickItem(line: String) =
+    PickItem("$tplnr#$id", name, line, lat, lng, category, isAbon)

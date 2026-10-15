@@ -92,7 +92,7 @@ fun BoxScope.AdjustOverlay(
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             PoeOverlayIconButton(PoeIcons.Close, "Скасувати і повернутись", onClose)
-            PoeOverlayTitle("Уточнити позицію", pole.name, Modifier.weight(1f))
+            PoeOverlayTitle("Уточнити позицію", pole.title, Modifier.weight(1f))
         }
         Row(
             Modifier
@@ -149,7 +149,7 @@ fun BoxScope.AdjustOverlay(
 
     PoeSheet(Modifier.align(Alignment.BottomCenter).onSizeChanged { onSheetHeight(it.height) }) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(pole.name, style = PoeTheme.type.sheetTitle, color = c.ink)
+            Text(pole.title, style = PoeTheme.type.sheetTitle, color = c.ink)
             Text(
                 center?.let { (lat, lng) -> String.format(Locale.US, "%.5f, %.5f", lat, lng) } ?: "—",
                 style = PoeTheme.type.monoStrong, color = c.ink,
@@ -175,7 +175,7 @@ fun BoxScope.AdjustOverlay(
         }
         if (previous != null && center != null) {
             val span = Geo.distanceM(previous.lat.toDouble(), previous.lng.toDouble(), center.first, center.second)
-            Text("Прогон від «${previous.name}»: ${span.roundToInt()} м", style = PoeTheme.type.caption, color = c.muted)
+            Text("Прогон від «${previous.title}»: ${span.roundToInt()} м", style = PoeTheme.type.caption, color = c.muted)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (gpsUsable != null) {

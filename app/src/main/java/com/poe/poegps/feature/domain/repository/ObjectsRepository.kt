@@ -84,6 +84,9 @@ interface ObjectsRepository {
 
     fun getPillar10List(tplnr: String): Flow<List<Pillar>>
 
+    /** GIS poles of 6-10 kV ([highVoltage]) or 0,4 kV lines in a box; parentName is the line's name. */
+    suspend fun getPillarsIn(highVoltage: Boolean, minLat: Double, maxLat: Double, minLng: Double, maxLng: Double): List<Pillar>
+
     fun getSavedPillars(pltxt: String): Flow<List<Pillar>>
 
     suspend fun savePillar(pillar: Pillar): Long

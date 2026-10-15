@@ -346,6 +346,20 @@ fun Pillar10DbModel.toDomainModel() = Pillar(
     recloser = ""
 )
 
+fun PillarOnLine.toDomainModel(highVoltage: Boolean) = Pillar(
+    id = id,
+    tplnr = tplnr,
+    name = name,
+    parentName = lineName.orEmpty(),
+    category = if (highVoltage) "10 кВ" else "0,4 кВ",
+    pillarType = PillarType.PILLAR.name,
+    isAbon = false,
+    wire = wire,
+    lat = lat,
+    lng = lng,
+    recloser = ""
+)
+
 fun LinePillarDbModel.toDomainModel() = Pillar(
     id = id,
     tplnr = tplnr,
