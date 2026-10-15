@@ -20,7 +20,6 @@ import com.poe.poegps.R
 import com.poe.poegps.databinding.FragmentTpEditorBinding
 import com.poe.poegps.feature.data.remote.utils.MyLocationListener
 import com.poe.poegps.feature.presentation.model.OprDisplayable
-import com.poe.poegps.feature.presentation.screens.editor.EditorFragment
 import com.poe.poegps.feature.presentation.screens.editor.dialog.LocationToggleDialogFragment
 import com.poe.poegps.feature.presentation.screens.tpeditor.dialog.OnTpLongClickDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
@@ -216,8 +215,8 @@ class TpEditorFragment : Fragment(), View.OnClickListener, MyLocationListener {
             locationManager =
                 requireActivity().getSystemService(Context.LOCATION_SERVICE) as LocationManager
             locationManager?.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER, EditorFragment.EVERY_SECOND,
-                EditorFragment.EVERY_0M, this
+                LocationManager.GPS_PROVIDER, 2000L,
+                0f, this
             )
         }
         checkEnabled()

@@ -2,6 +2,7 @@ package com.poe.poegps.feature.data.remote.api
 
 import com.poe.poegps.feature.data.remote.model.*
 import com.poe.poegps.feature.data.remote.model.upload.SaveRequestDTO
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -64,6 +65,13 @@ interface ObjectsApi {
 
     /*@POST("save")
     suspend fun uploadSavedPillars(@Body pillars: List<LinePillarDTO>, @Header("Authorization") token: String): Response<SavePillarsResponse>*/
+
+    // GeoJSON FeatureCollection of the branch's lines (properties: tplnr, name, layer)
+    @GET("geo/lines")
+    suspend fun getGeoLines(
+        @Query("filial") filial: String,
+        @Header("Authorization") token: String
+    ): Response<ResponseBody>
 
     @POST("save")
     suspend fun uploadSaveRequest(

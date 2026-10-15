@@ -15,7 +15,8 @@ data class OprDisplayable(
     var lat: String= "0.0",
     var lng: String= "0.0",
     val wire: String="",
-    val recloserName: String = ""
+    val recloserName: String = "",
+    val isSent: Boolean = false
 ) : Parcelable {
     override fun toString(): String {
         return name

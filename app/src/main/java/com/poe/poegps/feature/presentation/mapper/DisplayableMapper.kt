@@ -59,7 +59,8 @@ fun Pillar.toOprDisplayable() = OprDisplayable(
     lng = lng,
     tplnr = tplnr,
     wire = wire,
-    recloserName = recloser
+    recloserName = recloser,
+    isSent = isSent
 )
 
 fun OprDisplayable.toDomainModel() = Pillar(

@@ -3,6 +3,10 @@ package com.poe.poegps.feature.presentation.screens.editor
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.poe.poegps.core.location.GpsFix
+import com.poe.poegps.core.location.GpsTracker
+import com.poe.poegps.feature.data.repository.GeoRepository
+import com.poe.poegps.feature.domain.model.Pillar
 import com.poe.poegps.feature.domain.model.Recloser
 import com.poe.poegps.feature.domain.repository.ObjectsRepository
 import com.poe.poegps.feature.presentation.mapper.toDomainModel
@@ -18,11 +22,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import java.util.Locale
 import javax.inject.Inject
 
 sealed class InsertResult {
@@ -31,10 +41,17 @@ sealed class InsertResult {
     object Failure : InsertResult() // For any other unexpected error
 }
 
+sealed class CaptureResult {
+    data class Captured(val pole: String, val accuracy: Float?) : CaptureResult()
+    object NoFix : CaptureResult()
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class EditorViewModel @Inject constructor(
     private val repository: ObjectsRepository,
+    private val geoRepository: GeoRepository,
+    private val gpsTracker: GpsTracker,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -54,7 +71,36 @@ class EditorViewModel @Inject constructor(
     val insertResultFlow = _insertResultChannel.receiveAsFlow() // Expose as a Flow for collection
 
 
+    private val _captureResult = Channel<CaptureResult>()
+    val captureResult = _captureResult.receiveAsFlow()
+
+    // bumped after the location permission is granted, to start listening again
+    private val gpsRestart = MutableStateFlow(0)
+    val gps: StateFlow<GpsFix> = gpsRestart
+        .flatMapLatest { gpsTracker.fixes() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(2_000), GpsFix())
+
+    /** The pole the big button captures; null = the first one without coordinates. */
+    private val _selectedPoleId = MutableStateFlow<Int?>(null)
+    val selectedPoleId: StateFlow<Int?> = _selectedPoleId
+
+    /** The branch's lines for the map (GeoJSON), from the server or its cached copy. */
+    private val _gisLines = MutableStateFlow<String?>(null)
+    val gisLines: StateFlow<String?> = _gisLines
+
+    /** Where GIS currently has this line's poles; shown hollow on the map. */
+    val gisPoles: StateFlow<List<Pillar>> = when (args.objectType) {
+        ObjectType.LINE04, ObjectType.LINEABON04 -> repository.getPillar04List(args.tplnr)
+        ObjectType.LINE10, ObjectType.LINEABON10 -> repository.getPillar10List(args.tplnr)
+        else -> flowOf(emptyList())
+    }.map { list -> list.filter { it.lat.toDoubleOrNull()?.let { lat -> lat != 0.0 } == true } }
+        .flowOn(Dispatchers.IO)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     init {
+        viewModelScope.launch {
+            geoRepository.branchLines().collect { _gisLines.value = it }
+        }
         viewModelScope.launch {
             _lineName.flatMapLatest {
                 repository.getSavedPillars(it)
@@ -203,6 +249,33 @@ class EditorViewModel @Inject constructor(
     fun getParentName(tplnr: String) {
         viewModelScope.launch {
             _parentObjectName.value = repository.getParentName(tplnr)
+        }
+    }
+
+    fun restartGps() {
+        gpsRestart.value++
+    }
+
+    fun selectPole(id: Int?) {
+        _selectedPoleId.value = id
+    }
+
+    /** Stores the current GPS fix as [opr]'s position, in the same "%.5f" text the upload has always sent. */
+    fun capture(opr: OprDisplayable) {
+        val location = gps.value.current
+        viewModelScope.launch(Dispatchers.IO) {
+            if (location == null) {
+                _captureResult.send(CaptureResult.NoFix)
+                return@launch
+            }
+            repository.updatePillarCoords(
+                opr.id,
+                String.format(Locale.US, "%.5f", location.latitude),
+                String.format(Locale.US, "%.5f", location.longitude),
+            )
+            // the button moves on to the next pole without coordinates
+            if (_selectedPoleId.value == opr.id) _selectedPoleId.value = null
+            _captureResult.send(CaptureResult.Captured(opr.name, location.takeIf { it.hasAccuracy() }?.accuracy))
         }
     }
 

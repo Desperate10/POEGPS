@@ -354,7 +354,7 @@ interface ObjectsDao {
     @Query("SELECT * FROM line04 WHERE name LIKE 'ПЛ%'")
     fun getLineList04(): Flow<List<Line04DbModel>>
 
-    @Query("SELECT * FROM line_pillar WHERE parentName LIKE :pltxt")
+    @Query("SELECT * FROM line_pillar WHERE parentName LIKE :pltxt ORDER BY id")
     fun getPillarsOfLine(pltxt: String): Flow<List<LinePillarDbModel>>
 
     @Query("SELECT * FROM pillars04 WHERE tplnr LIKE :tplnr")
