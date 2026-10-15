@@ -1,515 +1,161 @@
 package com.poe.poegps.feature.presentation.screens.main
 
-import android.Manifest
-import android.annotation.SuppressLint
 import android.os.Bundle
-import android.util.Log
-import android.view.*
-import android.view.inputmethod.EditorInfo
-import android.widget.*
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.PopupMenu
-import androidx.appcompat.widget.SearchView
-import androidx.core.view.MenuProvider
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.permissionx.guolindev.PermissionX
 import com.poe.poegps.R
-import com.poe.poegps.databinding.FragmentMainBinding
+import com.poe.poegps.core.designsystem.PoeTheme
 import com.poe.poegps.feature.data.remote.model.upload.UploadState
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.presentation.CoroutinesErrorHandler
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.ObjectType
-import com.poe.poegps.feature.presentation.screens.main.adapter.ObjectsAdapter
 import com.poe.poegps.feature.presentation.screens.main.dialog.LoginDialogFragment
-import com.poe.poegps.feature.presentation.screens.main.dialog.SearchObjectDialog
-import com.poe.poegps.feature.presentation.screens.main.spinner.ObjectsSpinnerAdapter
 import dagger.hilt.android.AndroidEntryPoint
-import gromov.ramdomusertestcase.core.extension.autoCleaned
 import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 
 @AndroidEntryPoint
-class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvider,
-    SearchObjectDialog.OnInputListener,
-    AdapterView.OnItemSelectedListener,
-    LoginDialogFragment.Listener {
+class MainFragment : Fragment(), LoginDialogFragment.Listener {
 
-    private var binding: FragmentMainBinding by autoCleaned()
-    private var adapter: ObjectsAdapter by autoCleaned()
     private val viewModel by viewModels<MainViewModel>()
-
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View {
-        binding = FragmentMainBinding.inflate(inflater, container, false)
-        return binding.root
+    ): View = ComposeView(requireContext()).apply {
+        setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        setContent { PoeTheme { MainRoute() } }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        setupObjectSpinner()
-        setupObjectsAdapter()
-        collectViewModel()
-        requireActivity().addMenuProvider(this)
-    }
-
-    private fun setupObjectsAdapter() {
-        val linearLayoutManager = LinearLayoutManager(activity, RecyclerView.VERTICAL, false)
-        adapter = ObjectsAdapter()
-        binding.objectsRv.adapter = adapter
-        linearLayoutManager.isSmoothScrollbarEnabled = true
-        binding.objectsRv.layoutManager = linearLayoutManager
-        adapter.onObjectClickListener = this
-    }
-
-    private fun collectViewModel() {
         viewModel.initialize()
+        collectLogin()
+    }
+
+    @Composable
+    private fun MainRoute() {
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        val sync by viewModel.sync.collectAsStateWithLifecycle()
+        val filials = stringArrayResource(R.array.filials).map(Filial::parse)
+        val snackbar = remember { SnackbarHostState() }
+
+        LaunchedEffect(Unit) {
+            viewModel.message.collect { snackbar.showSnackbar(it) }
+        }
+        LaunchedEffect(state.download) {
+            when (val d = state.download) {
+                UploadState.Complete -> {
+                    viewModel.setUploadStateToIdle()
+                    snackbar.showSnackbar("Дані філії оновлено")
+                }
+                is UploadState.Error -> {
+                    viewModel.setUploadStateToIdle()
+                    snackbar.showSnackbar("Помилка завантаження даних: ${d.message}")
+                }
+                else -> {}
+            }
+        }
+
+        Box(Modifier.fillMaxSize()) {
+            ObjectsScreen(
+                state = state,
+                filials = filials,
+                uploading = sync == SyncUiState.Uploading,
+                onTypeChange = viewModel::selectedObjectType,
+                onQueryChange = viewModel::setQuery,
+                onOpen = ::navigateToEditObjectFragment,
+                onUploadOne = { viewModel.upload(it.tplnr) },
+                onDeleteTap = { viewModel.deleteObject(it.name) },
+                onDownload = viewModel::loadObjectsToDb,
+                onUploadAll = { viewModel.upload() },
+                onFilialSelected = viewModel::selectedFilial,
+            )
+            SnackbarHost(
+                snackbar,
+                Modifier.align(Alignment.BottomCenter).padding(start = 16.dp, end = 16.dp, bottom = 96.dp),
+            ) { data ->
+                Snackbar(
+                    data,
+                    containerColor = PoeTheme.colors.inverse,
+                    contentColor = PoeTheme.colors.onInverse,
+                )
+            }
+            sync?.let { s ->
+                BackHandler { viewModel.closeSync() }
+                SyncScreen(s, onDone = viewModel::closeSync, onRetry = viewModel::retryUpload)
+            }
+        }
+    }
+
+    // B1 (login) is redesigned later; until then the old dialog stays
+    private fun collectLogin() {
         collectLifecycleFlow(viewModel.loginResponse) { loginResponse ->
             when (loginResponse) {
                 is ApiResponse.Error -> {
-                    Toast.makeText(
-                        requireContext(),
-                        loginResponse.message,
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    val dialog = LoginDialogFragment()
-                    dialog.setListener(this)
-                    dialog.show(childFragmentManager, "login")
+                    Toast.makeText(requireContext(), loginResponse.message, Toast.LENGTH_SHORT).show()
+                    showLogin()
                 }
                 ApiResponse.Loading -> {}
-
                 is ApiResponse.Success -> {
-                    Toast.makeText(
-                        requireContext(),
-                        "Вас авторизовано!",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(requireContext(), "Вас авторизовано!", Toast.LENGTH_SHORT).show()
                     viewModel.setTokenValidity()
                     viewModel.setLoginResponseToLoading()
                     viewModel.saveToken(loginResponse.data.jwt)
                 }
             }
         }
-        collectLifecycleFlow(viewModel.uploadResponse) {uploadResponse ->
-            if (uploadResponse.message.isNotEmpty()) {
-                Toast.makeText(
-                    requireContext(),
-                    uploadResponse.message,
-                    Toast.LENGTH_SHORT
-                ).show()
-                viewModel.resetResponse()
-            }
-        }
-        collectLifecycleFlow(viewModel.uploadState) { state ->
-            when(state) {
-                UploadState.Loading -> {
-                    Toast.makeText(
-                        requireContext(),
-                        "Завантаження даних...",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-                UploadState.Complete -> {
-                    Toast.makeText(
-                        requireContext(),
-                        "Дані завантажено",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    viewModel.setUploadStateToIdle()
-                }
-                is UploadState.Error -> {
-                    Toast.makeText(
-                        requireContext(),
-                        "Помилка завантаження даних",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-                UploadState.Idle -> {}
-                is UploadState.Progress -> {
-                    Toast.makeText(
-                        requireContext(),
-                        "Завантажено ${state.percentage}%",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        }
-        collectLifecycleFlow(viewModel.objectsList) { objectsList ->
-            adapter.submitList(objectsList)
-        }
-        collectLifecycleFlow(viewModel.filial) { filial ->
-            if (filial == "00") {
-                chooseYourFilialDialog()
-            }
-        }
-        collectLifecycleFlow(viewModel.message) { message ->
-            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-        }
         collectLifecycleFlow(viewModel.tokenValidity) { tokenResponse ->
             when (tokenResponse) {
-                is ApiResponse.Success -> {
-                    if (tokenResponse.data.error) {
-                        val dialog = LoginDialogFragment()
-                        dialog.setListener(this)
-                        dialog.show(childFragmentManager, "login")
-                    }
-                }
-                is ApiResponse.Error -> {
-                    Toast.makeText(requireContext(), "Error! ${tokenResponse.message}", Toast.LENGTH_SHORT)
-                        .show()
-                }
+                is ApiResponse.Success -> if (tokenResponse.data.error) showLogin()
+                is ApiResponse.Error ->
+                    Toast.makeText(requireContext(), "Error! ${tokenResponse.message}", Toast.LENGTH_SHORT).show()
                 else -> {}
             }
-
         }
     }
 
-    private fun setupObjectSpinner() {
-        binding.objectSpinner.adapter = ObjectsSpinnerAdapter(requireContext())
-        binding.objectSpinner.onItemSelectedListener = this
-    }
-
-    override fun onClick(obj: ObjectDisplayable) {
-        navigateToEditObjectFragment(obj)
-    }
-
-    override fun onLongClick(obj: ObjectDisplayable) {
-        val popupMenu = PopupMenu(requireContext(), binding.objectsRv)
-        popupMenu.inflate(R.menu.menu_context_main)
-        popupMenu.setOnMenuItemClickListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.deleteOtp -> {
-                    if (!obj.name.contains("ПЛ")) {
-                        viewModel.deleteObject(obj.name)
-                    } else {
-                        Toast.makeText(
-                            requireContext(),
-                            "Неможливо видалити магістральну лінію",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                    true
-                }
-
-                R.id.sendObject -> {
-                    /*Toast.makeText(
-                        requireContext(),
-                        "Функціонал буде реалізовано в наступній версії",
-                        Toast.LENGTH_SHORT
-                    ).show()*/
-                    viewModel.uploadSelectedObjectsFromDb(object: CoroutinesErrorHandler {
-                        override fun onError(message: String) {
-                            Toast.makeText(requireContext(), "Error! $message", Toast.LENGTH_SHORT)
-                                .show()
-                        }
-                    }, obj.tplnr)
-                    true
-                }
-
-                else -> false
-            }
-        }
-        popupMenu.show()
-    }
-
-    override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-        menuInflater.inflate(R.menu.menu_main, menu)
-
-        val searchItem = menu.findItem(R.id.search)
-        val searchView = searchItem?.actionView as SearchView
-        searchView.imeOptions = EditorInfo.IME_ACTION_DONE
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(tplnr: String?): Boolean {
-                when (viewModel.spinnerObjectType.value) {
-                    ObjectType.LINE04,
-                    ObjectType.LINEABON04 -> {
-                        tplnr?.let {
-                            viewModel.searchLine(it, object : CoroutinesErrorHandler {
-                                override fun onError(message: String) {
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "Error! $message",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            })
-                        }
-                    }
-                    ObjectType.LINE10,
-                    ObjectType.LINEABON10 -> {
-                        tplnr?.let {
-                            viewModel.searchLine10(it, object : CoroutinesErrorHandler {
-                                override fun onError(message: String) {
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "Error! $message",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            })
-                        }
-                    }
-                    /*ObjectType.LINE35 -> {
-                        *//*tplnr?.let {
-                            viewModel.searchLine35(it, object : CoroutinesErrorHandler {
-                                override fun onError(message: String) {
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "Error! $message",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            })
-                        }*//*
-                    }
-                    ObjectType.LINE110 -> {
-                        *//*tplnr?.let {
-                            viewModel.searchLine110(it, object : CoroutinesErrorHandler {
-                                override fun onError(message: String) {
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "Error! $message",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            })
-                        }*//*
-                    }
-                    ObjectType.LINE154 -> {
-                        *//*tplnr?.let {
-                            viewModel.searchLine154(it, object : CoroutinesErrorHandler {
-                                override fun onError(message: String) {
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "Error! $message",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            })
-                        }*//*
-                    }*/
-                    /*ObjectType.LINEABON35 -> {
-                        tplnr?.let {
-                            *//* viewModel.searchAbonLine35(it, object : CoroutinesErrorHandler {
-                                 override fun onError(message: String) {
-                                     Toast.makeText(
-                                         requireContext(),
-                                         "Error! $message",
-                                         Toast.LENGTH_SHORT
-                                     ).show()
-                                 }
-                             })*//*
-                        }
-                    }
-                    ObjectType.LINEABON110 -> {
-                        *//*tplnr?.let {
-                            viewModel.searchAbonLine110(it, object : CoroutinesErrorHandler {
-                                override fun onError(message: String) {
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "Error! $message",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            })
-                        }*//*
-                    }
-                    ObjectType.LINEABON154 -> {
-                        *//*tplnr?.let {
-                            viewModel.searchAbonLine154(it, object : CoroutinesErrorHandler {
-                                override fun onError(message: String) {
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "Error! $message",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            })
-                        }*//*
-                    }*/
-                    ObjectType.TP,
-                    ObjectType.TPABON -> {
-                        tplnr?.let {
-                            viewModel.searchTp(it, object : CoroutinesErrorHandler {
-                                override fun onError(message: String) {
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "Error! $message",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            })
-                        }
-                    }
-                    ObjectType.KLKV04,
-                    ObjectType.KLKVABON04-> {
-                        tplnr?.let {
-                            viewModel.searchKl(it, object : CoroutinesErrorHandler {
-                                override fun onError(message: String) {
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "Error! $message",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            })
-                        }
-                    }
-                    ObjectType.KLKV10,
-                    ObjectType.KLKVABON10 -> {
-                        tplnr?.let {
-                            viewModel.searchKl10(it, object : CoroutinesErrorHandler {
-                                override fun onError(message: String) {
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "Error! $message",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            })
-                        }
-                    }
-                }
-                /*viewModel.searchObject(tplnr, object : CoroutinesErrorHandler {
-                    override fun onError(message: String) {
-                        Toast.makeText(requireContext(), "Error! $message", Toast.LENGTH_SHORT)
-                            .show()
-                    }
-                })*/
-                return false
-            }
-
-            override fun onQueryTextChange(p0: String?): Boolean {
-                //adapter.getFilter().filter(newText);
-                return false
-            }
-        })
-    }
-
-    override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
-        return when (menuItem.itemId) {
-            R.id.search -> {
-                val searchDialog =
-                    SearchObjectDialog().newInstance(objects = ArrayList(), "Виберіть об'єкт:")
-                searchDialog.show(childFragmentManager, "searchDialog")
-                true
-            }
-
-            R.id.download -> {
-                viewModel.loadObjectsToDb()
-                true
-            }
-            R.id.upload -> {
-                viewModel.uploadObjectsFromDb(object: CoroutinesErrorHandler {
-                    override fun onError(message: String) {
-                        Toast.makeText(requireContext(), "Error! $message", Toast.LENGTH_SHORT)
-                            .show()
-                    }
-                })
-                true
-            }
-
-            else -> false
-        }
-    }
-
-    //пока не используется
-    override fun sendInput(input: String?) {
-        Toast.makeText(requireContext(), input, Toast.LENGTH_SHORT).show()
-    }
-
-    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-        when (parent?.id) {
-            R.id.object_spinner -> {
-                val item = parent.getItemAtPosition(position) as ObjectType
-                viewModel.selectedObjectType(item)
-            }
-        }
+    private fun showLogin() {
+        if (childFragmentManager.findFragmentByTag("login") != null) return
+        val dialog = LoginDialogFragment()
+        dialog.setListener(this)
+        dialog.show(childFragmentManager, "login")
     }
 
     private fun navigateToEditObjectFragment(obj: ObjectDisplayable) {
-        when (viewModel.spinnerObjectType.value) {
-            ObjectType.LINE04,
-            ObjectType.LINE10,
-            ObjectType.LINEABON04,
-            ObjectType.LINEABON10 -> {
-                navigateToEditorFragment(obj)
-            }
-            ObjectType.TP,
-            ObjectType.TPABON -> {
-                navigateToTpEditorFragment(obj)
-            }
-            ObjectType.KLKV04,
-            ObjectType.KLKV10,
-            ObjectType.KLKVABON04,
-            ObjectType.KLKVABON10 -> {
-                navigateToEditorFragment(obj)
-            }
-        }
-    }
-
-    private fun navigateToEditorFragment(obj: ObjectDisplayable) {
-        findNavController().navigate(
-            MainFragmentDirections.actionMainFragmentToEditorFragment(
-                obj.tplnr,
-                obj.name,
-                viewModel.spinnerObjectType.value,
-                obj.category,
-                obj.isAbon,
-                obj.pillarType
-            )
-        )
-    }
-
-    private fun navigateToTpEditorFragment(obj: ObjectDisplayable) {
-        findNavController().navigate(
+        val type = viewModel.spinnerObjectType.value
+        val directions = if (type == ObjectType.TP || type == ObjectType.TPABON) {
             MainFragmentDirections.actionMainFragmentToTpEditorFragment(
-                obj.tplnr,
-                obj.name,
-                viewModel.spinnerObjectType.value,
-                obj.category,
-                obj.isAbon,
-                obj.pillarType
+                obj.tplnr, obj.name, type, obj.category, obj.isAbon, obj.pillarType
             )
-        )
-    }
-
-    private fun chooseYourFilialDialog() {
-        val builder = AlertDialog.Builder(requireContext())
-        val inflater = this.layoutInflater
-        val dialogView = inflater.inflate(R.layout.dialog_filial, null)
-        builder.setCancelable(false)
-        builder.setView(dialogView)
-        val filials = resources.getStringArray(R.array.filials)
-        val spinner = dialogView.findViewById<View>(R.id.spinner) as Spinner
-        // Создаем адаптер ArrayAdapter с помощью массива строк и стандартной разметки элемета spinner
-        val adapter: ArrayAdapter<String> =
-            ArrayAdapter<String>(requireContext(), android.R.layout.simple_spinner_item, filials)
-        // Определяем разметку для использования при выборе элемента
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        // Применяем адаптер к элементу spinner
-        spinner.adapter = adapter
-        adapter.notifyDataSetChanged()
-        val alertDialog = builder.create()
-        alertDialog.show()
-        val create = dialogView.findViewById<Button>(R.id.choose)
-        create.setOnClickListener {
-            val filial = spinner.selectedItem.toString().take(2)
-            viewModel.selectedFilial(filial)
-            alertDialog.cancel()
+        } else {
+            MainFragmentDirections.actionMainFragmentToEditorFragment(
+                obj.tplnr, obj.name, type, obj.category, obj.isAbon, obj.pillarType
+            )
         }
-    }
-
-    override fun onNothingSelected(parent: AdapterView<*>?) {}
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        requireActivity().removeMenuProvider(this)
+        findNavController().navigate(directions)
     }
 
     override fun onLoginSuccess(login: String, password: String) {
@@ -522,6 +168,4 @@ class MainFragment : Fragment(), ObjectsAdapter.OnObjectClickListener, MenuProvi
                 }
             })
     }
-
-
 }

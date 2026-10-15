@@ -39,6 +39,8 @@ private fun golos(size: Int, weight: FontWeight, spacing: Double = 0.0, lineHeig
 /** Text styles taken from the canvas; names describe the role, sizes are in the comments. */
 @Immutable
 data class PoeTypography(
+    val display: TextStyle = golos(168, FontWeight.Black, -0.07, 0.82),     // accepted count on the sync result
+    val title: TextStyle = golos(26, FontWeight.ExtraBold, -0.02, 1.15),
     val hero: TextStyle = golos(52, FontWeight.Black, -0.045, 0.95),        // "Опора 13" in the line sheet
     val screenTitle: TextStyle = golos(44, FontWeight.Black, -0.04, 1.0),   // "Об'єкти"
     val sheetTitle: TextStyle = golos(40, FontWeight.Black, -0.04, 0.95),   // pole actions sheet
@@ -63,6 +65,7 @@ data class PoeTypography(
     val badge: TextStyle = golos(12, FontWeight.Bold),
     val small: TextStyle = golos(12, FontWeight.SemiBold),
     val mono: TextStyle = TextStyle(fontFamily = IbmPlexMono, fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 19.5.sp),
+    val monoStrong: TextStyle = TextStyle(fontFamily = IbmPlexMono, fontWeight = FontWeight.SemiBold, fontSize = 13.sp),
     val monoSmall: TextStyle = TextStyle(fontFamily = IbmPlexMono, fontWeight = FontWeight.Normal, fontSize = 12.sp),
 )
 

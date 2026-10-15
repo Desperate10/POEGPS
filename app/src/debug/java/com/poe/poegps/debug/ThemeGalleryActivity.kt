@@ -42,13 +42,38 @@ import com.poe.poegps.core.designsystem.PoeSheet
 import com.poe.poegps.core.designsystem.PoeStatTile
 import com.poe.poegps.core.designsystem.PoeStatusBadge
 import com.poe.poegps.core.designsystem.PoeTheme
+import com.poe.poegps.feature.presentation.screens.main.SyncRow
+import com.poe.poegps.feature.presentation.screens.main.SyncScreen
+import com.poe.poegps.feature.presentation.screens.main.SyncUiState
+
+private val SAMPLE_SYNC = SyncUiState.Done(
+    accepted = 15,
+    total = 16,
+    rows = listOf(
+        SyncRow("Л-12 · Кохнівка", poles = 6, reclosers = 1, rejected = false),
+        SyncRow("Л-14 · Рокита", poles = 6, reclosers = 0, rejected = false),
+        SyncRow("ТП-245", poles = 1, reclosers = 0, rejected = true),
+    ),
+    time = "09:14",
+    rejectReason = "Опора з такою назвою вже існує",
+)
 
 /** Every design-system component on one page, in the current system theme. */
 class ThemeGalleryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContent { PoeTheme { Gallery() } }
+        // --es screen sync: the upload result screen with sample data (the emulator can't reach the GIS server)
+        val sync = intent.getStringExtra("screen") == "sync"
+        setContent {
+            PoeTheme {
+                if (sync) {
+                    SyncScreen(SAMPLE_SYNC, onDone = ::finish, onRetry = {})
+                } else {
+                    Gallery()
+                }
+            }
+        }
     }
 }
 

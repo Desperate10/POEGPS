@@ -2,7 +2,9 @@ package com.poe.poegps.core.designsystem
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -204,10 +206,12 @@ fun PoeStatusBadge(
 }
 
 /** List card (r24, 16dp padding); draws a hairline border in dark. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PoeCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val c = PoeTheme.colors
@@ -217,7 +221,7 @@ fun PoeCard(
             .clip(PoeShapes.card)
             .background(c.surface)
             .border(1.dp, c.cardBorder, PoeShapes.card)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(if (onClick != null) Modifier.combinedClickable(onLongClick = onLongClick, onClick = onClick) else Modifier)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         content = content,

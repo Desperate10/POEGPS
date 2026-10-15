@@ -7,6 +7,9 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.poe.poegps.feature.data.local.entity.*
+import com.poe.poegps.feature.domain.model.LineProgress
+import com.poe.poegps.feature.domain.model.RecloserCount
+import com.poe.poegps.feature.domain.model.UploadGroup
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -262,6 +265,36 @@ interface ObjectsDao {
 
     @Query("SELECT * FROM line_pillar WHERE lat <> '0.0' AND tplnr LIKE :tplnr ORDER BY id")
     suspend fun getSavedPillarsByTplnr(tplnr: String): List<LinePillarDbModel>
+
+    @Query(
+        "SELECT tplnr, parentName, isAbon, COUNT(*) AS total, " +
+            "SUM(CASE WHEN lat <> '0.0' THEN 1 ELSE 0 END) AS captured, " +
+            "SUM(CASE WHEN lat <> '0.0' AND isSent = 0 THEN 1 ELSE 0 END) AS unsent " +
+            "FROM line_pillar GROUP BY tplnr, parentName, isAbon"
+    )
+    fun getLineProgress(): Flow<List<LineProgress>>
+
+    @Query(
+        "SELECT (SELECT COUNT(*) FROM line_pillar WHERE lat <> '0.0' AND isSent = 0) + " +
+            "(SELECT COUNT(*) FROM recloser WHERE lat <> '0.0' AND isSent = 0)"
+    )
+    fun countUnsent(): Flow<Int>
+
+    // what an upload of everything reports: the unsent poles, per line
+    @Query(
+        "SELECT tplnr, parentName AS name, COUNT(*) AS poles FROM line_pillar " +
+            "WHERE lat <> '0.0' AND isSent = 0 GROUP BY tplnr, parentName ORDER BY MIN(id)"
+    )
+    suspend fun getUnsentGroups(): List<UploadGroup>
+
+    @Query(
+        "SELECT tplnr, parentName AS name, COUNT(*) AS poles FROM line_pillar " +
+            "WHERE lat <> '0.0' AND tplnr LIKE :tplnr GROUP BY tplnr, parentName ORDER BY MIN(id)"
+    )
+    suspend fun getGroupsByTplnr(tplnr: String): List<UploadGroup>
+
+    @Query("SELECT tplnr, COUNT(*) AS count FROM recloser WHERE lat <> '0.0' AND isSent = 0 GROUP BY tplnr")
+    suspend fun getUnsentRecloserCounts(): List<RecloserCount>
 
     @Query("SELECT * FROM recloser WHERE lat <> '0.0' AND isSent = 0")
     suspend fun getSavedReclosers(): List<RecloserDbModel>

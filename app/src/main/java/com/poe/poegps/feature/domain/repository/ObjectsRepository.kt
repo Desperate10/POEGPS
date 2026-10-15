@@ -118,5 +118,12 @@ interface ObjectsRepository {
 
     fun getWireList(category: String): Flow<List<Wire>>
     suspend fun addRecloserToPillar(id: Int, name: String)
+
+    fun getLineProgress(): Flow<List<LineProgress>>
+
+    fun countUnsent(): Flow<Int>
+
+    /** Lines (and their recloser counts) an upload will report; empty tplnr = everything unsent. */
+    suspend fun getUploadGroups(tplnr: String = ""): Pair<List<UploadGroup>, Map<String, Int>>
     //suspend fun downloadReclosers(filial: String, token: String)
 }

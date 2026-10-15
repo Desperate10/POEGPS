@@ -471,6 +471,16 @@ class ObjectsRepositoryImpl @Inject constructor(
         objectsDao.updateRecloser(id, name)
     }
 
+    override fun getLineProgress(): Flow<List<LineProgress>> = objectsDao.getLineProgress()
+
+    override fun countUnsent(): Flow<Int> = objectsDao.countUnsent()
+
+    override suspend fun getUploadGroups(tplnr: String): Pair<List<UploadGroup>, Map<String, Int>> {
+        val groups = if (tplnr.isEmpty()) objectsDao.getUnsentGroups() else objectsDao.getGroupsByTplnr(tplnr)
+        val reclosers = objectsDao.getUnsentRecloserCounts().associate { it.tplnr to it.count }
+        return groups to reclosers
+    }
+
     override suspend fun savePillar(pillar: Pillar): Long {
         return objectsDao.insertSavedPillarIfNotExist(pillar.toLinePillarDbModel())
     }
