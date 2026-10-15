@@ -159,7 +159,9 @@ interface ObjectsDao {
 
     suspend fun saveNewTpCoord(tp: LinePillarDbModel) {
         if (tpAlreadySaved(tp.tplnr) == null) {
-            insertSavedPillar(tp)
+            // a new row: tp.id is the TP table's id, and inserting it here (REPLACE) would
+            // overwrite whichever captured pole happens to have the same line_pillar id
+            insertSavedPillar(tp.copy(id = 0))
         } else {
             updateSavedPillar(tp.lat, tp.lng, tp.tplnr)
         }
