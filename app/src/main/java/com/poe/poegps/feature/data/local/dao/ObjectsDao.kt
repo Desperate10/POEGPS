@@ -249,10 +249,18 @@ interface ObjectsDao {
     @Query("DELETE FROM recloser WHERE tplnr = :tplnr AND name = :name")
     suspend fun deleteRecloser(tplnr: String, name: String)
 
-    @Query("SELECT * FROM line_pillar WHERE lat <> '0.0' AND isSent = 0")
+    // the server rebuilds each line from the poles it receives, so a line with any unsent pole
+    // is sent whole (sent poles included), in editor order
+    @Query(
+        "SELECT * FROM line_pillar p WHERE p.lat <> '0.0' AND EXISTS (" +
+            "SELECT 1 FROM line_pillar u WHERE u.lat <> '0.0' AND u.isSent = 0 " +
+            "AND u.tplnr = p.tplnr AND u.parentName = p.parentName " +
+            "AND u.category = p.category AND u.isAbon = p.isAbon) " +
+            "ORDER BY p.id"
+    )
     suspend fun getSavedPillars(): List<LinePillarDbModel>
 
-    @Query("SELECT * FROM line_pillar WHERE lat <> '0.0' AND tplnr LIKE :tplnr")
+    @Query("SELECT * FROM line_pillar WHERE lat <> '0.0' AND tplnr LIKE :tplnr ORDER BY id")
     suspend fun getSavedPillarsByTplnr(tplnr: String): List<LinePillarDbModel>
 
     @Query("SELECT * FROM recloser WHERE lat <> '0.0' AND isSent = 0")
