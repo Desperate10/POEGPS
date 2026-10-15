@@ -152,6 +152,9 @@ class EditorViewModel @Inject constructor(
         val json = withTimeoutOrNull(GEOMETRY_WAIT_MS) { _gisLines.filterNotNull().first() }
         val points = gis.map { GisPoint(it.name, it.lat.toDouble(), it.lng.toDouble()) }
         val ordered = LineOrdering.order(line, points, json?.let { lineShapes(it, args.tplnr) }.orEmpty())
+        // only a line GIS draws under this name: its order is known and the server edits that drawing.
+        // Without one the order would be a guess and an upload would add a second line to GIS.
+        if (!ordered.fromShape) return@launch
         val pillarType = if (CABLE_LINE.containsMatchIn(line)) PillarType.KL else PillarType.PILLAR
         val poles = ordered.poles.map { point ->
             // the GIS row itself: its coordinates go back to the server exactly as GIS has them
@@ -164,10 +167,7 @@ class EditorViewModel @Inject constructor(
         }
         val loaded = repository.importLine(args.tplnr, line, poles)
         if (loaded > 0) {
-            _notices.send(
-                "З ГІС завантажено $loaded ${plural(loaded, "опору", "опори", "опор")}" +
-                    if (ordered.fromShape) "" else " · порядок за номерами, перевірте"
-            )
+            _notices.send("З ГІС завантажено $loaded ${plural(loaded, "опору", "опори", "опор")}")
         }
     }
 
