@@ -286,13 +286,13 @@ interface ObjectsDao {
 
     // what an upload of everything reports: the unsent poles, per line
     @Query(
-        "SELECT tplnr, parentName AS name, COUNT(*) AS poles FROM line_pillar " +
+        "SELECT tplnr, COALESCE(NULLIF(parentName, ''), MIN(name)) AS name, COUNT(*) AS poles FROM line_pillar " +
             "WHERE lat <> '0.0' AND isSent = 0 GROUP BY tplnr, parentName ORDER BY MIN(id)"
     )
     suspend fun getUnsentGroups(): List<UploadGroup>
 
     @Query(
-        "SELECT tplnr, parentName AS name, COUNT(*) AS poles FROM line_pillar " +
+        "SELECT tplnr, COALESCE(NULLIF(parentName, ''), MIN(name)) AS name, COUNT(*) AS poles FROM line_pillar " +
             "WHERE lat <> '0.0' AND tplnr LIKE :tplnr GROUP BY tplnr, parentName ORDER BY MIN(id)"
     )
     suspend fun getGroupsByTplnr(tplnr: String): List<UploadGroup>
