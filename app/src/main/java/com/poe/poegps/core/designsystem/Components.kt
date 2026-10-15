@@ -50,9 +50,11 @@ fun PoePrimaryButton(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     enabled: Boolean = true,
+    // on the grey ground (not a white sheet) surfaceMuted vanishes; pass tabTrack there
+    disabledBackground: Color = PoeTheme.colors.surfaceMuted,
 ) {
     val c = PoeTheme.colors
-    val bg = if (enabled) c.action else c.surfaceMuted
+    val bg = if (enabled) c.action else disabledBackground
     val fg = if (enabled) c.onAction else c.muted
     Row(
         modifier = modifier

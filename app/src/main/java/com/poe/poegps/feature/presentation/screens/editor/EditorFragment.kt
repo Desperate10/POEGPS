@@ -18,6 +18,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,13 +30,15 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
 import com.poe.poegps.feature.presentation.capture.CaptureFeedback
-import com.poe.poegps.feature.presentation.capture.fixGps
+import com.poe.poegps.feature.presentation.capture.ReadyChecklist
 import com.poe.poegps.feature.presentation.capture.requestLocation
 import com.poe.poegps.core.designsystem.PoeTheme
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.OprDisplayable
 import com.poe.poegps.feature.presentation.model.RecloserType
+import com.poe.poegps.feature.data.remote.utils.FilialManager
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.map
@@ -50,10 +53,8 @@ class EditorFragment : Fragment(), PoleActions, AddActions {
         EditorFragmentArgs.fromBundle(requireArguments())
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        requestLocation(viewModel::restartGps)
-    }
+    @Inject
+    lateinit var filialManager: FilialManager
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -73,6 +74,9 @@ class EditorFragment : Fragment(), PoleActions, AddActions {
         val gisPoles by viewModel.gisPoles.collectAsStateWithLifecycle()
         val trust by viewModel.trust.collectAsStateWithLifecycle()
         val captureMeta by viewModel.captureMeta.collectAsStateWithLifecycle()
+        val downloadedAt by filialManager.getDownloadedAt().collectAsStateWithLifecycle(null)
+        // B12 on entry while GPS isn't ready, and again from the GPS chip
+        var showReady by rememberSaveable { mutableStateOf(true) }
 
         Box(Modifier.fillMaxSize()) {
             EditorScreen(
@@ -88,7 +92,7 @@ class EditorFragment : Fragment(), PoleActions, AddActions {
                 gisPoles = gisPoles.map { it.lat.toDouble() to it.lng.toDouble() },
                 onBack = { findNavController().popBackStack() },
                 onSelect = viewModel::selectPole,
-                onGpsProblem = { fixGps(viewModel.gps.value.permission, viewModel::restartGps) },
+                onGpsProblem = { showReady = true },
                 actions = this@EditorFragment,
                 adds = this@EditorFragment,
             )
@@ -106,6 +110,14 @@ class EditorFragment : Fragment(), PoleActions, AddActions {
                     if (manual != null) viewModel.placeManually(c.pole, manual.first, manual.second, confirmed = true)
                     else viewModel.capture(c.pole, belowGate = c.belowGate, confirmed = true)
                 },
+            )
+            ReadyChecklist(
+                show = showReady,
+                gps = gps,
+                downloadedAt = downloadedAt,
+                onGrant = { requestLocation(viewModel::restartGps) },
+                onDismiss = { showReady = false },
+                onBack = { findNavController().popBackStack() },
             )
         }
     }

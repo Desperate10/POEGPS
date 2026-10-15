@@ -334,6 +334,7 @@ internal fun ExistingPicker(
                     onClick = { pick?.let { actions.addExisting(source, it); onAdded() } },
                     icon = if (pick != null) PoeIcons.Plus else null,
                     enabled = pick != null,
+                    disabledBackground = c.tabTrack,
                 )
             }
         }

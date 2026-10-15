@@ -174,7 +174,8 @@ class MainViewModel @Inject constructor(
 
     fun loadObjectsToDb() {
         if (filial.value != null) {
-            viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, error ->
+            val jobs = mutableListOf<Job>()
+            jobs += viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, error ->
                 _uploadState.value = UploadState.Error(error.localizedMessage ?: "Помилка завантаження даних")
             }) {
                 repository.downloadLines(filial.value!!, token.value ?: "")
@@ -182,22 +183,29 @@ class MainViewModel @Inject constructor(
                         _uploadState.value = it
                     }
             }
-            viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, _ -> }) {
+            jobs += viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, _ -> }) {
                 repository.downloadTPs(filial.value!!, token.value ?: "")
             }
-            viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, _ -> }) {
+            jobs += viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, _ -> }) {
                 repository.downloadPss(token.value ?: "")
             }
-            viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, _ -> }) {
+            jobs += viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, _ -> }) {
                 repository.downloadPillars(filial.value!!, token.value ?: "")
             }
             //загрузка проводов
-            viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, _ -> }) {
+            jobs += viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, _ -> }) {
                 repository.downloadWires(token.value ?: "")
             }
             //загрузка КЛ/КВ
-            viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, _ -> }) {
+            jobs += viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, _ -> }) {
                 repository.downloadKls(filial.value!!, token.value ?: "")
+            }
+            // B12 shows when the branch data was last downloaded in full
+            viewModelScope.launch {
+                jobs.joinAll()
+                if (jobs.none { it.isCancelled } && _uploadState.value !is UploadState.Error) {
+                    filialManager.saveDownloadedAt(System.currentTimeMillis())
+                }
             }
         } else {
             viewModelScope.launch(Dispatchers.Main) {

@@ -1,16 +1,13 @@
 package com.poe.poegps.feature.presentation.capture
 
 import android.Manifest
-import android.content.Context
-import android.location.LocationManager
 import androidx.fragment.app.Fragment
 import com.permissionx.guolindev.PermissionX
 import com.poe.poegps.R
-import com.poe.poegps.feature.presentation.screens.editor.dialog.LocationToggleDialogFragment
 
 /**
- * Asks for location permission and, once granted, calls [onGranted] and offers to switch GPS on.
- * A refusal needs no message here: the GPS chip and the capture button say so and ask again.
+ * Asks for location permission and, once granted, calls [onGranted]. Whether GPS is on is the
+ * checklist's job (B12, [ReadyChecklist]); a refusal keeps the checklist up.
  */
 fun Fragment.requestLocation(onGranted: () -> Unit) {
     PermissionX.init(this)
@@ -33,19 +30,6 @@ fun Fragment.requestLocation(onGranted: () -> Unit) {
             )
         }
         .request { allGranted, _, _ ->
-            if (allGranted) {
-                onGranted()
-                if (!isGpsEnabled()) LocationToggleDialogFragment.show(parentFragmentManager)
-            }
+            if (allGranted) onGranted()
         }
 }
-
-/** The GPS chip's "fix it" action: ask for permission, or open the GPS switch. */
-fun Fragment.fixGps(hasPermission: Boolean, onGranted: () -> Unit) {
-    if (!hasPermission) requestLocation(onGranted)
-    else LocationToggleDialogFragment.show(parentFragmentManager)
-}
-
-private fun Fragment.isGpsEnabled(): Boolean =
-    (requireContext().getSystemService(Context.LOCATION_SERVICE) as LocationManager)
-        .isProviderEnabled(LocationManager.GPS_PROVIDER)
