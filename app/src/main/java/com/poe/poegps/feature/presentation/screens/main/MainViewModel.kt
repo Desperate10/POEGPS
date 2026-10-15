@@ -91,6 +91,36 @@ class MainViewModel @Inject constructor(
     private val _message = MutableSharedFlow<String>()
     val message: SharedFlow<String> = _message
 
+    /** B1: the login form, or null when the token is fine (or couldn't be checked offline). */
+    private val _login = MutableStateFlow<LoginState?>(null)
+    val login: StateFlow<LoginState?> = _login
+
+    init {
+        viewModelScope.launch {
+            _loginResponse.collect { response ->
+                when (response) {
+                    is ApiResponse.Success -> {
+                        _loginResponse.value = ApiResponse.Loading
+                        val refused = response.data.error
+                        if (!refused.isNullOrBlank()) {
+                            _login.value = LoginState(error = "Не вдалося увійти: $refused")
+                        } else {
+                            saveToken(response.data.jwt)
+                            setTokenValidity()
+                            _login.value = null
+                            _message.emit("Вас авторизовано")
+                        }
+                    }
+                    is ApiResponse.Error -> {
+                        _loginResponse.value = ApiResponse.Loading
+                        _login.value = LoginState(error = loginError(response))
+                    }
+                    ApiResponse.Loading -> {}
+                }
+            }
+        }
+    }
+
     private val objects: Flow<List<ObjectDisplayable>> =
         combine(_spinnerObjectType, query.debounce(200)) { type, q -> type to q.trim() }
             .flatMapLatest { (type, q) -> search(type, q) }
@@ -141,6 +171,12 @@ class MainViewModel @Inject constructor(
         }
         viewModelScope.launch(Dispatchers.IO) {
             delay(500)
+            // never signed in on this phone: ask right away, the server can't say anything else
+            // read the store itself: the token StateFlow may not have been filled yet
+            if (tokenManager.getToken().first().isNullOrBlank()) {
+                requireLogin()
+                return@launch
+            }
             tokenCheck(object : CoroutinesErrorHandler {
                 override fun onError(message: String) {
                     viewModelScope.launch(Dispatchers.Main) {
@@ -322,8 +358,26 @@ class MainViewModel @Inject constructor(
         if (_sync.value != SyncUiState.Uploading) _sync.value = null
     }
 
-    fun setLoginResponseToLoading() {
-        _loginResponse.value = ApiResponse.Loading
+    /** The server said the token is missing or expired. */
+    fun requireLogin() {
+        if (_login.value == null) _login.value = LoginState()
+    }
+
+    /** B1: saves the branch (it decides what gets downloaded) and signs in. */
+    fun login(filial: String, login: String, password: String) {
+        selectedFilial(filial)
+        _login.value = LoginState(busy = true)
+        authorization(login, password, object : CoroutinesErrorHandler {
+            override fun onError(message: String) {
+                _login.value = LoginState(error = "Немає зв'язку з сервером. Перевірте інтернет і спробуйте ще раз.")
+            }
+        })
+    }
+
+    private fun loginError(error: ApiResponse.Error): String = when (error.status) {
+        401, 403 -> "Невірний логін або пароль"
+        408 -> "Сервер не відповідає. Спробуйте ще раз."
+        else -> "Не вдалося увійти: ${error.message}"
     }
 
     fun setUploadStateToIdle() {

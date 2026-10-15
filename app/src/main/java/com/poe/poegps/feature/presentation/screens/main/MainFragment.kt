@@ -33,12 +33,11 @@ import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.presentation.CoroutinesErrorHandler
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.ObjectType
-import com.poe.poegps.feature.presentation.screens.main.dialog.LoginDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
 import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
 
 @AndroidEntryPoint
-class MainFragment : Fragment(), LoginDialogFragment.Listener {
+class MainFragment : Fragment() {
 
     private val viewModel by viewModels<MainViewModel>()
 
@@ -60,6 +59,7 @@ class MainFragment : Fragment(), LoginDialogFragment.Listener {
         val state by viewModel.uiState.collectAsStateWithLifecycle()
         val sync by viewModel.sync.collectAsStateWithLifecycle()
         val filials = stringArrayResource(R.array.filials).map(Filial::parse)
+        val login by viewModel.login.collectAsStateWithLifecycle()
         val snackbar = remember { SnackbarHostState() }
 
         LaunchedEffect(Unit) {
@@ -92,6 +92,7 @@ class MainFragment : Fragment(), LoginDialogFragment.Listener {
                 onDownload = viewModel::loadObjectsToDb,
                 onUploadAll = { viewModel.upload() },
                 onFilialSelected = viewModel::selectedFilial,
+                askFilial = login == null,
             )
             SnackbarHost(
                 snackbar,
@@ -107,41 +108,27 @@ class MainFragment : Fragment(), LoginDialogFragment.Listener {
                 BackHandler { viewModel.closeSync() }
                 SyncScreen(s, onDone = viewModel::closeSync, onRetry = viewModel::retryUpload)
             }
+            login?.let { l ->
+                LoginScreen(
+                    state = l,
+                    filials = filials,
+                    savedFilial = state.filial,
+                    onSubmit = viewModel::login,
+                    onExit = { requireActivity().finish() },
+                )
+            }
         }
     }
 
-    // B1 (login) is redesigned later; until then the old dialog stays
     private fun collectLogin() {
-        collectLifecycleFlow(viewModel.loginResponse) { loginResponse ->
-            when (loginResponse) {
-                is ApiResponse.Error -> {
-                    Toast.makeText(requireContext(), loginResponse.message, Toast.LENGTH_SHORT).show()
-                    showLogin()
-                }
-                ApiResponse.Loading -> {}
-                is ApiResponse.Success -> {
-                    Toast.makeText(requireContext(), "Вас авторизовано!", Toast.LENGTH_SHORT).show()
-                    viewModel.setTokenValidity()
-                    viewModel.setLoginResponseToLoading()
-                    viewModel.saveToken(loginResponse.data.jwt)
-                }
-            }
-        }
         collectLifecycleFlow(viewModel.tokenValidity) { tokenResponse ->
             when (tokenResponse) {
-                is ApiResponse.Success -> if (tokenResponse.data.error) showLogin()
+                is ApiResponse.Success -> if (tokenResponse.data.error) viewModel.requireLogin()
                 is ApiResponse.Error ->
                     Toast.makeText(requireContext(), "Error! ${tokenResponse.message}", Toast.LENGTH_SHORT).show()
                 else -> {}
             }
         }
-    }
-
-    private fun showLogin() {
-        if (childFragmentManager.findFragmentByTag("login") != null) return
-        val dialog = LoginDialogFragment()
-        dialog.setListener(this)
-        dialog.show(childFragmentManager, "login")
     }
 
     private fun navigateToEditObjectFragment(obj: ObjectDisplayable) {
@@ -156,16 +143,5 @@ class MainFragment : Fragment(), LoginDialogFragment.Listener {
             )
         }
         findNavController().navigate(directions)
-    }
-
-    override fun onLoginSuccess(login: String, password: String) {
-        viewModel.authorization(
-            login,
-            password,
-            object : CoroutinesErrorHandler {
-                override fun onError(message: String) {
-                    Toast.makeText(context, "Error! $message", Toast.LENGTH_SHORT).show()
-                }
-            })
     }
 }

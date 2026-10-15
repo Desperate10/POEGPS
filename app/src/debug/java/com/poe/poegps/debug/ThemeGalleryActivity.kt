@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,7 +25,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.unit.dp
+import com.poe.poegps.R
 import com.poe.poegps.core.designsystem.BadgeTone
 import com.poe.poegps.core.designsystem.PoeActionRow
 import com.poe.poegps.core.designsystem.PoeCard
@@ -42,6 +45,9 @@ import com.poe.poegps.core.designsystem.PoeSheet
 import com.poe.poegps.core.designsystem.PoeStatTile
 import com.poe.poegps.core.designsystem.PoeStatusBadge
 import com.poe.poegps.core.designsystem.PoeTheme
+import com.poe.poegps.feature.presentation.screens.main.Filial
+import com.poe.poegps.feature.presentation.screens.main.LoginScreen
+import com.poe.poegps.feature.presentation.screens.main.LoginState
 import com.poe.poegps.feature.presentation.screens.main.SyncRow
 import com.poe.poegps.feature.presentation.screens.main.SyncScreen
 import com.poe.poegps.feature.presentation.screens.main.SyncUiState
@@ -64,6 +70,7 @@ class ThemeGalleryActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         // --es screen sync: the upload result screen with sample data (the emulator can't reach the GIS server)
+        // --es screen login | login-busy | login-error: B1 (the emulator can't reach the auth server)
         // --es screen gps-…: the line editor in GPS states, see EditorScenarios.kt
         val screen = intent.getStringExtra("screen")
         setContent {
@@ -71,6 +78,18 @@ class ThemeGalleryActivity : ComponentActivity() {
                 when {
                     screen == "sync" -> SyncScreen(SAMPLE_SYNC, onDone = ::finish, onRetry = {})
                     screen?.startsWith("gps-") == true -> EditorScenario(screen, onExit = ::finish)
+                    // the app pads below the status bar (MainActivity); do the same here
+                    screen?.startsWith("login") == true -> Box(Modifier.statusBarsPadding()) { LoginScreen(
+                        state = when (screen) {
+                            "login-busy" -> LoginState(busy = true)
+                            "login-error" -> LoginState(error = "Невірний логін або пароль")
+                            else -> LoginState()
+                        },
+                        filials = stringArrayResource(R.array.filials).map(Filial::parse),
+                        savedFilial = "23",
+                        onSubmit = { _, _, _ -> },
+                        onExit = ::finish,
+                    ) }
                     else -> Gallery()
                 }
             }

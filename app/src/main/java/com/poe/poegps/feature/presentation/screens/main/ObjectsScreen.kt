@@ -94,6 +94,8 @@ fun ObjectsScreen(
     onDownload: () -> Unit,
     onUploadAll: () -> Unit,
     onFilialSelected: (String) -> Unit,
+    // false while B1 is up: the login form asks for the branch itself
+    askFilial: Boolean = true,
 ) {
     val c = PoeTheme.colors
     val type = state.objectType
@@ -185,7 +187,7 @@ fun ObjectsScreen(
     }
 
     // the branch has to be chosen before anything can be downloaded
-    if (pickFilial || state.filial == "00") {
+    if (pickFilial || (askFilial && state.filial == "00")) {
         FilialDialog(
             filials = filials,
             selected = state.filial,
@@ -456,7 +458,7 @@ private fun EmptyBranch(
 }
 
 @Composable
-private fun FilialDialog(
+internal fun FilialDialog(
     filials: List<Filial>,
     selected: String?,
     dismissible: Boolean,
