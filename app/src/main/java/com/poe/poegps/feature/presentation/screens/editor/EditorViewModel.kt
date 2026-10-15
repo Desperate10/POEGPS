@@ -5,12 +5,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.poe.poegps.core.location.Geo
 import com.poe.poegps.core.location.GpsFix
-import com.poe.poegps.core.location.GpsTracker
-import com.poe.poegps.core.location.TrustAssessor
 import com.poe.poegps.core.location.TrustState
 import com.poe.poegps.feature.data.local.CaptureLog
 import com.poe.poegps.feature.data.local.CaptureMeta
 import com.poe.poegps.feature.data.repository.GeoRepository
+import com.poe.poegps.feature.presentation.capture.CapturePolicy
+import com.poe.poegps.feature.presentation.capture.CaptureResult
+import com.poe.poegps.feature.presentation.capture.CaptureSessionFactory
 import com.poe.poegps.feature.domain.model.Pillar
 import com.poe.poegps.feature.domain.model.Recloser
 import com.poe.poegps.feature.domain.repository.ObjectsRepository
@@ -46,39 +47,12 @@ sealed class InsertResult {
     object Failure : InsertResult() // For any other unexpected error
 }
 
-sealed class CaptureResult {
-    data class Captured(val pole: String, val accuracy: Float?, val belowGate: Boolean) : CaptureResult()
-    data class Placed(val pole: String) : CaptureResult()
-    object NoFix : CaptureResult()
-    data class Locked(val trust: TrustState) : CaptureResult()
-    data class NeedsAccuracy(val accuracy: Float?) : CaptureResult()
-    /** The position passed the gate but looks wrong for this pole; the crew confirms or cancels. */
-    data class NeedsConfirm(
-        val pole: OprDisplayable,
-        val belowGate: Boolean,
-        val warnings: List<String>,
-        /** Set when confirming a manual placement rather than a GPS capture. */
-        val manual: Pair<Double, Double>? = null,
-    ) : CaptureResult()
-}
-
-object CapturePolicy {
-    /** B13: capture waits for this accuracy unless the crew explicitly overrides. */
-    const val ACCURACY_GATE_M = 5f
-    // longer spans than these are almost always a wrong position, not a long span
-    const val MAX_SPAN_04_M = 150f
-    const val MAX_SPAN_10_M = 350f
-    /** GIS coordinates are often off, so only a gross difference asks for confirmation. */
-    const val MAX_GIS_OFFSET_M = 200f
-}
-
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class EditorViewModel @Inject constructor(
     private val repository: ObjectsRepository,
     private val geoRepository: GeoRepository,
-    private val gpsTracker: GpsTracker,
-    private val captureLog: CaptureLog,
+    captureSessionFactory: CaptureSessionFactory,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -101,21 +75,14 @@ class EditorViewModel @Inject constructor(
     private val _captureResult = Channel<CaptureResult>()
     val captureResult = _captureResult.receiveAsFlow()
 
-    // bumped after the location permission is granted, to start listening again
-    private val gpsRestart = MutableStateFlow(0)
-    val gps: StateFlow<GpsFix> = gpsRestart
-        .flatMapLatest { gpsTracker.fixes() }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(2_000), GpsFix())
+    private val session = captureSessionFactory.create(viewModelScope)
+    val gps: StateFlow<GpsFix> = session.gps
+    val trust: StateFlow<TrustState> = session.trust
 
-    private val trustAssessor = TrustAssessor()
-
-    /** Whether the current position can be trusted; jamming and spoofing lock capture. */
-    val trust: StateFlow<TrustState> = gps
-        .map { trustAssessor.update(it.toSample()) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(2_000), TrustState())
-
-    /** How each pole on this phone was captured (kept on the phone only). */
-    val captureMeta: StateFlow<Map<Int, CaptureMeta>> = captureLog.entries
+    /** How each pole on this phone was captured (kept on the phone only), by pole id. */
+    val captureMeta: StateFlow<Map<Int, CaptureMeta>> = session.log
+        .map { log -> log.mapNotNull { (key, meta) -> key.toIntOrNull()?.let { it to meta } }.toMap() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     /** The pole the big button captures; null = the first one without coordinates. */
     private val _selectedPoleId = MutableStateFlow<Int?>(null)
@@ -138,10 +105,6 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch {
             geoRepository.branchLines().collect { _gisLines.value = it }
         }
-        viewModelScope.launch {
-            geoRepository.branchArea().collect { trustAssessor.setBranch(it) }
-        }
-        viewModelScope.launch { captureLog.load() }
         viewModelScope.launch {
             _lineName.flatMapLatest {
                 repository.getSavedPillars(it)
@@ -278,14 +241,14 @@ class EditorViewModel @Inject constructor(
         pillar ?: return
         viewModelScope.launch(Dispatchers.IO) {
             repository.updatePillarCoords(pillar.id, "0.0", "0.0")
-            captureLog.forget(pillar.id)
+            session.forget(CaptureLog.poleKey(pillar.id))
         }
     }
 
     fun deleteOpr(pillar: OprDisplayable?) {
         viewModelScope.launch(Dispatchers.IO) {
             pillar?.toDomainModel()?.let { repository.deletePillar(it) }
-            pillar?.let { captureLog.forget(it.id) }
+            pillar?.let { session.forget(CaptureLog.poleKey(it.id)) }
         }
     }
 
@@ -295,54 +258,36 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    fun restartGps() {
-        gpsRestart.value++
-    }
+    fun restartGps() = session.restartGps()
 
     fun selectPole(id: Int?) {
         _selectedPoleId.value = id
     }
 
     /**
-     * Stores the current GPS fix as [opr]'s position, in the same "%.5f" text the upload has always
-     * sent. In order: a fix is needed, jamming/spoofing refuses, the accuracy gate waits unless
-     * [belowGate], and implausible positions ask for confirmation unless [confirmed].
+     * Stores the current GPS fix as [opr]'s position. In order: a fix is needed, jamming/spoofing
+     * refuses, the accuracy gate waits unless [belowGate], and implausible positions ask for
+     * confirmation unless [confirmed].
      */
     fun capture(opr: OprDisplayable, belowGate: Boolean = false, confirmed: Boolean = false) {
-        val fix = gps.value
-        val location = fix.current
-        val trustNow = trust.value
+        val (reading, blocked) = session.read(belowGate)
         viewModelScope.launch(Dispatchers.IO) {
-            val accuracy = fix.accuracy
-            val warnings = location?.let { plausibilityWarnings(opr, it.latitude, it.longitude) }.orEmpty()
-            val blocked = when {
-                location == null -> CaptureResult.NoFix
-                trustNow.level.locksCapture -> CaptureResult.Locked(trustNow)
-                !belowGate && (accuracy == null || accuracy > CapturePolicy.ACCURACY_GATE_M) ->
-                    CaptureResult.NeedsAccuracy(accuracy)
-                !confirmed && warnings.isNotEmpty() -> CaptureResult.NeedsConfirm(opr, belowGate, warnings)
-                else -> null
-            }
-            if (blocked != null || location == null) {
+            if (reading == null) {
                 _captureResult.send(blocked ?: CaptureResult.NoFix)
                 return@launch
             }
-            storePosition(opr, location.latitude, location.longitude)
-            captureLog.record(
-                opr.id,
-                CaptureMeta(
-                    timeMs = System.currentTimeMillis(),
-                    accuracyM = accuracy,
-                    satellites = fix.satellitesUsed,
-                    trust = trustNow.level.name,
-                    reasons = trustNow.reasons,
-                    belowAccuracyGate = accuracy == null || accuracy > CapturePolicy.ACCURACY_GATE_M,
-                    confirmedWarnings = warnings,
-                ),
-            )
+            val lat = reading.location.latitude
+            val lng = reading.location.longitude
+            val warnings = plausibilityWarnings(opr, lat, lng)
+            if (!confirmed && warnings.isNotEmpty()) {
+                _captureResult.send(CaptureResult.NeedsConfirm(opr, belowGate, warnings))
+                return@launch
+            }
+            storePosition(opr, lat, lng)
+            session.recordGps(CaptureLog.poleKey(opr.id), reading, warnings)
             // the button moves on to the next pole without coordinates
             if (_selectedPoleId.value == opr.id) _selectedPoleId.value = null
-            _captureResult.send(CaptureResult.Captured(opr.name, accuracy, belowGate))
+            _captureResult.send(CaptureResult.Captured(opr.name, reading.accuracy, belowGate))
         }
     }
 
@@ -351,8 +296,6 @@ class EditorViewModel @Inject constructor(
      * span and GIS checks apply; the capture log records it as manual, with its offset from GPS.
      */
     fun placeManually(opr: OprDisplayable, lat: Double, lng: Double, confirmed: Boolean = false) {
-        val fix = gps.value
-        val trustNow = trust.value
         viewModelScope.launch(Dispatchers.IO) {
             val warnings = plausibilityWarnings(opr, lat, lng)
             if (!confirmed && warnings.isNotEmpty()) {
@@ -360,19 +303,7 @@ class EditorViewModel @Inject constructor(
                 return@launch
             }
             storePosition(opr, lat, lng)
-            // GPS under jamming/spoofing says nothing about where the pole is
-            val here = fix.current?.takeIf { !trustNow.level.locksCapture }
-            captureLog.record(
-                opr.id,
-                CaptureMeta(
-                    timeMs = System.currentTimeMillis(),
-                    trust = trustNow.level.name,
-                    reasons = trustNow.reasons,
-                    confirmedWarnings = warnings,
-                    source = CaptureMeta.SOURCE_MANUAL,
-                    gpsOffsetM = here?.let { Geo.distanceM(it.latitude, it.longitude, lat, lng).toFloat() },
-                ),
-            )
+            session.recordManual(CaptureLog.poleKey(opr.id), lat, lng, warnings)
             if (_selectedPoleId.value == opr.id) _selectedPoleId.value = null
             _captureResult.send(CaptureResult.Placed(opr.name))
         }

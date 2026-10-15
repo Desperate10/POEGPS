@@ -24,7 +24,8 @@ fun Tp.toObjectDisplayable() = ObjectDisplayable(
     name = name,
     category = "10 кВ",//добавить категорию к запросу тп и пс
     pillarType = pillarType,
-    isAbon = isAbon
+    isAbon = isAbon,
+    hasGisPoint = (lat.toDoubleOrNull() ?: 0.0) != 0.0 && (lng.toDoubleOrNull() ?: 0.0) != 0.0
 )
 
 fun Tp.toOprDisplayable() = OprDisplayable(

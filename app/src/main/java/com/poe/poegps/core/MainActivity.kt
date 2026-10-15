@@ -20,7 +20,7 @@ import com.poe.poegps.databinding.ActivityMainBinding
 import dagger.hilt.android.AndroidEntryPoint
 
 // Screens already moved to Compose draw their own header, so the old toolbar is hidden on them
-private val REDESIGNED = setOf(R.id.mainFragment, R.id.editorFragment)
+private val REDESIGNED = setOf(R.id.mainFragment, R.id.editorFragment, R.id.tpEditorFragment)
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {

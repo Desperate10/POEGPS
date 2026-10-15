@@ -1,8 +1,5 @@
 package com.poe.poegps.feature.presentation.screens.editor
 
-import android.Manifest
-import android.content.Context
-import android.location.LocationManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -31,8 +28,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
-import com.permissionx.guolindev.PermissionX
-import com.poe.poegps.R
+import com.poe.poegps.feature.presentation.capture.CaptureFeedback
+import com.poe.poegps.feature.presentation.capture.fixGps
+import com.poe.poegps.feature.presentation.capture.requestLocation
 import com.poe.poegps.core.designsystem.PoeTheme
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.OprDisplayable
@@ -63,7 +61,7 @@ class EditorFragment : Fragment(),
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        checkPermissions()
+        requestLocation(viewModel::restartGps)
     }
 
     override fun onCreateView(
@@ -84,35 +82,6 @@ class EditorFragment : Fragment(),
         val gisPoles by viewModel.gisPoles.collectAsStateWithLifecycle()
         val trust by viewModel.trust.collectAsStateWithLifecycle()
         val captureMeta by viewModel.captureMeta.collectAsStateWithLifecycle()
-        val snackbar = remember { SnackbarHostState() }
-        var confirm by remember { mutableStateOf<CaptureResult.NeedsConfirm?>(null) }
-
-        LaunchedEffect(Unit) {
-            merge(
-                viewModel.insertResultFlow.map {
-                    when (it) {
-                        InsertResult.Success -> "Опору збережено"
-                        InsertResult.Duplicate -> "Опора з такою назвою вже існує"
-                        InsertResult.Failure -> "Помилка створення нової опори. Зверніться до адміністратора"
-                    }
-                },
-                viewModel.captureResult.mapNotNull {
-                    when (it) {
-                        is CaptureResult.Captured ->
-                            "${it.pole}: координати знято" + (it.accuracy?.let { a -> String.format(Locale.US, " · ±%.1f м", a) } ?: "")
-                        is CaptureResult.Placed -> "${it.pole}: позицію поставлено вручну"
-                        CaptureResult.NoFix -> "Немає позиції GPS — зачекайте на супутники"
-                        is CaptureResult.Locked -> "Знімання вимкнено: ${it.trust.level.label.lowercase()} GPS"
-                        is CaptureResult.NeedsAccuracy ->
-                            "Точність ${it.accuracy?.let { a -> String.format(Locale.US, "±%.0f м", a) } ?: "невідома"} — чекаємо ≤ 5 м"
-                        is CaptureResult.NeedsConfirm -> {
-                            confirm = it
-                            null
-                        }
-                    }
-                },
-            ).collect { snackbar.showSnackbar(it) }
-        }
 
         Box(Modifier.fillMaxSize()) {
             EditorScreen(
@@ -129,41 +98,24 @@ class EditorFragment : Fragment(),
                 onBack = { findNavController().popBackStack() },
                 onAdd = ::openAddDialog,
                 onSelect = viewModel::selectPole,
-                onGpsProblem = ::fixGps,
+                onGpsProblem = { fixGps(viewModel.gps.value.permission, viewModel::restartGps) },
                 actions = this@EditorFragment,
             )
-            confirm?.let { c ->
-                AlertDialog(
-                    onDismissRequest = { confirm = null },
-                    containerColor = PoeTheme.colors.surface,
-                    title = { Text("Позиція схожа на хибну", style = PoeTheme.type.statValue, color = PoeTheme.colors.ink) },
-                    text = {
-                        Text(
-                            c.warnings.joinToString("\n") { "• $it" } + "\n\nПеревірте, що ви біля «${c.pole.name}».",
-                            style = PoeTheme.type.body, color = PoeTheme.colors.ink,
-                        )
-                    },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            confirm = null
-                            val manual = c.manual
-                            if (manual != null) viewModel.placeManually(c.pole, manual.first, manual.second, confirmed = true)
-                            else viewModel.capture(c.pole, belowGate = c.belowGate, confirmed = true)
-                        }) { Text("Зняти все одно", style = PoeTheme.type.button, color = PoeTheme.colors.actionText) }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { confirm = null }) {
-                            Text("Скасувати", style = PoeTheme.type.button, color = PoeTheme.colors.ink)
-                        }
-                    },
-                )
-            }
-            SnackbarHost(
-                snackbar,
-                Modifier.align(Alignment.TopCenter).padding(top = 112.dp, start = 16.dp, end = 16.dp),
-            ) { data ->
-                Snackbar(data, containerColor = PoeTheme.colors.inverse, contentColor = PoeTheme.colors.onInverse)
-            }
+            CaptureFeedback(
+                results = viewModel.captureResult,
+                messages = viewModel.insertResultFlow.map {
+                    when (it) {
+                        InsertResult.Success -> "Опору збережено"
+                        InsertResult.Duplicate -> "Опора з такою назвою вже існує"
+                        InsertResult.Failure -> "Помилка створення нової опори. Зверніться до адміністратора"
+                    }
+                },
+                onConfirmed = { c ->
+                    val manual = c.manual
+                    if (manual != null) viewModel.placeManually(c.pole, manual.first, manual.second, confirmed = true)
+                    else viewModel.capture(c.pole, belowGate = c.belowGate, confirmed = true)
+                },
+            )
         }
     }
 
@@ -225,41 +177,4 @@ class EditorFragment : Fragment(),
     override fun delete(pole: OprDisplayable) = viewModel.deleteOpr(pole)
 
     override fun placeManually(pole: OprDisplayable, lat: Double, lng: Double) = viewModel.placeManually(pole, lat, lng)
-
-    private fun fixGps() {
-        if (!viewModel.gps.value.permission) checkPermissions()
-        else LocationToggleDialogFragment.show(parentFragmentManager)
-    }
-
-    private fun checkPermissions() {
-        PermissionX.init(this)
-            .permissions(
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            )
-            .onExplainRequestReason { scope, deniedList ->
-                scope.showRequestReasonDialog(
-                    deniedList,
-                    getString(R.string.explain_permission_text),
-                    getString(R.string.yes), getString(R.string.cancel)
-                )
-            }
-            .onForwardToSettings { scope, deniedList ->
-                scope.showForwardToSettingsDialog(
-                    deniedList,
-                    getString(R.string.forward_to_settings_text),
-                    getString(R.string.yes), getString(R.string.cancel)
-                )
-            }
-            .request { allGranted, _, _ ->
-                if (allGranted) {
-                    viewModel.restartGps()
-                    val manager = requireContext().getSystemService(Context.LOCATION_SERVICE) as LocationManager
-                    if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                        LocationToggleDialogFragment.show(parentFragmentManager)
-                    }
-                }
-                // denied: the GPS chip and the capture button say so and offer to ask again
-            }
-    }
 }

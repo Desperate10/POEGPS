@@ -41,7 +41,7 @@ data class CaptureMeta(
 
 /**
  * Capture metadata kept on the phone only: the GIS database gets no new columns, and the upload
- * contract is unchanged. Keyed by the line_pillar row id.
+ * contract is unchanged. Keys: [poleKey] for a line_pillar row, [tpKey] for a TP.
  */
 @Singleton
 class CaptureLog @Inject constructor(@ApplicationContext context: Context) {
@@ -49,30 +49,35 @@ class CaptureLog @Inject constructor(@ApplicationContext context: Context) {
     private val file = File(context.filesDir, "capture_log.json")
     private val json = Json { ignoreUnknownKeys = true }
     private val mutex = Mutex()
-    private val _entries = MutableStateFlow<Map<Int, CaptureMeta>>(emptyMap())
-    val entries: StateFlow<Map<Int, CaptureMeta>> = _entries
+    private val _entries = MutableStateFlow<Map<String, CaptureMeta>>(emptyMap())
+    val entries: StateFlow<Map<String, CaptureMeta>> = _entries
     private var loaded = false
 
     suspend fun load() = mutex.withLock { ensureLoaded() }
 
-    suspend fun record(poleId: Int, meta: CaptureMeta) = update { it + (poleId to meta) }
+    suspend fun record(key: String, meta: CaptureMeta) = update { it + (key to meta) }
 
-    suspend fun forget(poleId: Int) = update { it - poleId }
+    suspend fun forget(key: String) = update { it - key }
 
-    private suspend fun update(change: (Map<Int, CaptureMeta>) -> Map<Int, CaptureMeta>) = mutex.withLock {
+    private suspend fun update(change: (Map<String, CaptureMeta>) -> Map<String, CaptureMeta>) = mutex.withLock {
         ensureLoaded()
         val next = change(_entries.value)
         _entries.value = next
-        withContext(Dispatchers.IO) { file.writeText(json.encodeToString(next.mapKeys { it.key.toString() })) }
+        withContext(Dispatchers.IO) { file.writeText(json.encodeToString(next)) }
     }
 
     private suspend fun ensureLoaded() {
         if (loaded) return
         _entries.value = withContext(Dispatchers.IO) {
             runCatching {
-                json.decodeFromString<Map<String, CaptureMeta>>(file.readText()).mapKeys { it.key.toInt() }
+                json.decodeFromString<Map<String, CaptureMeta>>(file.readText())
             }.getOrDefault(emptyMap())
         }
         loaded = true
+    }
+
+    companion object {
+        fun poleKey(id: Int) = id.toString()
+        fun tpKey(tplnr: String) = "tp:$tplnr"
     }
 }

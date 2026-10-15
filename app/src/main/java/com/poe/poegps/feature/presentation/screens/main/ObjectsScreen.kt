@@ -257,7 +257,7 @@ private fun ObjectCard(
                         PoeStatusBadge(if (isTp) "не надіслано" else "${p.unsent} не надіслано", BadgeTone.Pending)
                     p != null && p.isComplete ->
                         PoeStatusBadge(if (isTp) "Знято" else "Готово", BadgeTone.Done, icon = PoeIcons.Check)
-                    isTp && p == null -> PoeStatusBadge("без координат", BadgeTone.Neutral)
+                    isTp && p == null -> PoeStatusBadge(if (obj.hasGisPoint) "координати з ГІС" else "без координат", BadgeTone.Neutral)
                 }
             }
             if (p != null && !isTp) {

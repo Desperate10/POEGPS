@@ -10,7 +10,9 @@ data class ObjectDisplayable(
     val name: String,
     val category: String,
     val pillarType: String,
-    val isAbon: Boolean
+    val isAbon: Boolean,
+    /** A TP whose point GIS already has (taken on this phone or not). */
+    val hasGisPoint: Boolean = false
 ) : Parcelable {
     override fun toString(): String {
         return "$tplnr $name"

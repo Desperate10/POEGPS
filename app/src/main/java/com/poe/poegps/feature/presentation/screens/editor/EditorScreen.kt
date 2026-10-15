@@ -55,6 +55,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.poe.poegps.core.designsystem.BadgeTone
+import com.poe.poegps.feature.presentation.capture.CapturePolicy
 import com.poe.poegps.core.designsystem.PoeActionRow
 import com.poe.poegps.core.designsystem.PoeColors
 import com.poe.poegps.core.designsystem.PoeIcons
@@ -172,7 +173,7 @@ fun EditorScreen(
             gps = here?.let { MapGps(it.latitude, it.longitude, it.takeIf { l -> l.hasAccuracy() }?.accuracy) },
             recenter = recenter,
             topInset = 120.dp,
-            bottomInset = with(density) { sheetHeight.toDp() } - 24.dp,
+            bottomInset = (with(density) { sheetHeight.toDp() } - 24.dp).coerceAtLeast(0.dp),
             onPoleClick = { if (adjusting == null) actionsFor = it },
             modifier = Modifier.fillMaxSize(),
             focus = focus,
@@ -189,7 +190,7 @@ fun EditorScreen(
                 previous = previousOf(adjusting),
                 step = ADJUST_STEPS[stepIndex],
                 topInset = 120.dp,
-                bottomInset = with(density) { sheetHeight.toDp() } - 24.dp,
+                bottomInset = (with(density) { sheetHeight.toDp() } - 24.dp).coerceAtLeast(0.dp),
                 onSheetHeight = { sheetHeight = it },
                 onStep = { stepIndex = (stepIndex + 1) % ADJUST_STEPS.size },
                 onNudge = { north, east -> center?.let { focusOn(offsetBy(it, north, east), null, animate = false) } },
@@ -281,7 +282,7 @@ fun EditorScreen(
 }
 
 @Composable
-private fun GpsStatus(gps: GpsFix, trust: TrustState, onProblem: () -> Unit, modifier: Modifier = Modifier) {
+internal fun GpsStatus(gps: GpsFix, trust: TrustState, onProblem: () -> Unit, modifier: Modifier = Modifier) {
     val c = PoeTheme.colors
     val accuracy = gps.accuracy
     val problem = !gps.permission || !gps.enabled
@@ -293,9 +294,8 @@ private fun GpsStatus(gps: GpsFix, trust: TrustState, onProblem: () -> Unit, mod
         gps.current == null -> "Пошук супутників…"
         alarm -> "${trust.level.label} · ±${accuracy?.format1() ?: "?"} м"
         accuracy == null || accuracy > CapturePolicy.ACCURACY_GATE_M -> "±${accuracy?.roundToInt() ?: "?"} м · шукаємо точніше"
-        accuracy != null && gps.satellitesUsed > 0 -> "±${accuracy.format1()} м · ${gps.satellitesUsed} супутн."
-        accuracy != null -> "±${accuracy.format1()} м"
-        else -> "GPS"
+        gps.satellitesUsed > 0 -> "±${accuracy.format1()} м · ${gps.satellitesUsed} супутн."
+        else -> "±${accuracy.format1()} м"
     }
     val strong = !problem && !alarm && accuracy != null && accuracy <= CapturePolicy.ACCURACY_GATE_M
     val (bg, fg) = when {
@@ -422,7 +422,7 @@ private fun ColumnScope.NextPole(
 
 /** B13: how far the fix is from the capture gate. */
 @Composable
-private fun AccuracyGauge(accuracy: Float?) {
+internal fun AccuracyGauge(accuracy: Float?) {
     val c = PoeTheme.colors
     val gate = CapturePolicy.ACCURACY_GATE_M
     val scaleMax = 20f
@@ -459,7 +459,7 @@ private fun AccuracyGauge(accuracy: Float?) {
 
 /** Jamming or spoofing: capture is refused and the crew is told why. */
 @Composable
-private fun TrustLock(trust: TrustState, onManual: () -> Unit) {
+internal fun TrustLock(trust: TrustState, onManual: () -> Unit) {
     val c = PoeTheme.colors
     Column(
         Modifier
@@ -488,7 +488,7 @@ private fun TrustLock(trust: TrustState, onManual: () -> Unit) {
 
 /** Something looks off, but the position may still be right: capture stays allowed. */
 @Composable
-private fun TrustWarning(trust: TrustState) {
+internal fun TrustWarning(trust: TrustState) {
     val c = PoeTheme.colors
     Row(
         Modifier
@@ -800,5 +800,5 @@ private fun distance(from: OprDisplayable, to: Location): Float {
     return out[0]
 }
 
-private fun Float.format1() = String.format(Locale.US, "%.1f", this)
-private fun Double.format5() = String.format(Locale.US, "%.5f", this)
+internal fun Float.format1() = String.format(Locale.US, "%.1f", this)
+internal fun Double.format5() = String.format(Locale.US, "%.5f", this)
