@@ -64,13 +64,14 @@ class ThemeGalleryActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         // --es screen sync: the upload result screen with sample data (the emulator can't reach the GIS server)
-        val sync = intent.getStringExtra("screen") == "sync"
+        // --es screen gps-…: the line editor in GPS states, see EditorScenarios.kt
+        val screen = intent.getStringExtra("screen")
         setContent {
             PoeTheme {
-                if (sync) {
-                    SyncScreen(SAMPLE_SYNC, onDone = ::finish, onRetry = {})
-                } else {
-                    Gallery()
+                when {
+                    screen == "sync" -> SyncScreen(SAMPLE_SYNC, onDone = ::finish, onRetry = {})
+                    screen?.startsWith("gps-") == true -> EditorScenario(screen, onExit = ::finish)
+                    else -> Gallery()
                 }
             }
         }

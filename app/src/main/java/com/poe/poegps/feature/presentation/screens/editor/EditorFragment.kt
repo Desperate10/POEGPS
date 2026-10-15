@@ -10,13 +10,18 @@ import android.view.ViewGroup
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
@@ -36,6 +41,7 @@ import com.poe.poegps.feature.presentation.screens.editor.dialog.*
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import java.util.Locale
 
 @AndroidEntryPoint
@@ -76,7 +82,10 @@ class EditorFragment : Fragment(),
         val gps by viewModel.gps.collectAsStateWithLifecycle()
         val gisLines by viewModel.gisLines.collectAsStateWithLifecycle()
         val gisPoles by viewModel.gisPoles.collectAsStateWithLifecycle()
+        val trust by viewModel.trust.collectAsStateWithLifecycle()
+        val captureMeta by viewModel.captureMeta.collectAsStateWithLifecycle()
         val snackbar = remember { SnackbarHostState() }
+        var confirm by remember { mutableStateOf<CaptureResult.NeedsConfirm?>(null) }
 
         LaunchedEffect(Unit) {
             merge(
@@ -87,11 +96,18 @@ class EditorFragment : Fragment(),
                         InsertResult.Failure -> "Помилка створення нової опори. Зверніться до адміністратора"
                     }
                 },
-                viewModel.captureResult.map {
+                viewModel.captureResult.mapNotNull {
                     when (it) {
                         is CaptureResult.Captured ->
                             "${it.pole}: координати знято" + (it.accuracy?.let { a -> String.format(Locale.US, " · ±%.1f м", a) } ?: "")
                         CaptureResult.NoFix -> "Немає позиції GPS — зачекайте на супутники"
+                        is CaptureResult.Locked -> "Знімання вимкнено: ${it.trust.level.label.lowercase()} GPS"
+                        is CaptureResult.NeedsAccuracy ->
+                            "Точність ${it.accuracy?.let { a -> String.format(Locale.US, "±%.0f м", a) } ?: "невідома"} — чекаємо ≤ 5 м"
+                        is CaptureResult.NeedsConfirm -> {
+                            confirm = it
+                            null
+                        }
                     }
                 },
             ).collect { snackbar.showSnackbar(it) }
@@ -105,6 +121,8 @@ class EditorFragment : Fragment(),
                 poles = poles,
                 selectedId = selected,
                 gps = gps,
+                trust = trust,
+                captureMeta = captureMeta,
                 gisLines = gisLines,
                 gisPoles = gisPoles.map { it.lat.toDouble() to it.lng.toDouble() },
                 onBack = { findNavController().popBackStack() },
@@ -113,6 +131,30 @@ class EditorFragment : Fragment(),
                 onGpsProblem = ::fixGps,
                 actions = this@EditorFragment,
             )
+            confirm?.let { c ->
+                AlertDialog(
+                    onDismissRequest = { confirm = null },
+                    containerColor = PoeTheme.colors.surface,
+                    title = { Text("Позиція схожа на хибну", style = PoeTheme.type.statValue, color = PoeTheme.colors.ink) },
+                    text = {
+                        Text(
+                            c.warnings.joinToString("\n") { "• $it" } + "\n\nПеревірте, що ви біля «${c.pole.name}».",
+                            style = PoeTheme.type.body, color = PoeTheme.colors.ink,
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            confirm = null
+                            viewModel.capture(c.pole, belowGate = c.belowGate, confirmed = true)
+                        }) { Text("Зняти все одно", style = PoeTheme.type.button, color = PoeTheme.colors.actionText) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { confirm = null }) {
+                            Text("Скасувати", style = PoeTheme.type.button, color = PoeTheme.colors.ink)
+                        }
+                    },
+                )
+            }
             SnackbarHost(
                 snackbar,
                 Modifier.align(Alignment.TopCenter).padding(top = 112.dp, start = 16.dp, end = 16.dp),
@@ -163,7 +205,7 @@ class EditorFragment : Fragment(),
     }
 
     // B4 actions
-    override fun capture(pole: OprDisplayable) = viewModel.capture(pole)
+    override fun capture(pole: OprDisplayable, belowGate: Boolean) = viewModel.capture(pole, belowGate)
 
     override fun createTap(pole: OprDisplayable) {
         OnCreateOtpDialogFragment.newInstance(pole)

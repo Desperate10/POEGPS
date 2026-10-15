@@ -73,6 +73,13 @@ interface ObjectsApi {
         @Header("Authorization") token: String
     ): Response<ResponseBody>
 
+    // the branch outline as a GeoJSON Feature (Polygon or MultiPolygon); 404 until configured on the server
+    @GET("geo/branch")
+    suspend fun getGeoBranch(
+        @Query("filial") filial: String,
+        @Header("Authorization") token: String
+    ): Response<ResponseBody>
+
     @POST("save")
     suspend fun uploadSaveRequest(
         @Header("Authorization") token: String,

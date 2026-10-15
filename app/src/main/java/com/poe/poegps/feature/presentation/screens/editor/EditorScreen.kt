@@ -11,15 +11,19 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -43,7 +47,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.poe.poegps.core.designsystem.BadgeTone
@@ -61,12 +68,17 @@ import com.poe.poegps.core.designsystem.PoeStatTile
 import com.poe.poegps.core.designsystem.PoeStatusBadge
 import com.poe.poegps.core.designsystem.PoeTheme
 import com.poe.poegps.core.location.GpsFix
+import com.poe.poegps.core.location.TrustLevel
+import com.poe.poegps.core.location.TrustState
+import com.poe.poegps.feature.data.local.CaptureMeta
 import com.poe.poegps.feature.presentation.map.LineMap
 import com.poe.poegps.feature.presentation.map.MapConfig
 import com.poe.poegps.feature.presentation.map.MapGps
 import com.poe.poegps.feature.presentation.map.MapPole
 import com.poe.poegps.feature.presentation.model.OprDisplayable
 import com.poe.poegps.feature.presentation.screens.main.plural
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -80,7 +92,7 @@ enum class AddOption(val title: String, val subtitle: String) {
 
 /** Everything the pole actions (B4) can do; the fragment opens the existing dialogs for most of them. */
 interface PoleActions {
-    fun capture(pole: OprDisplayable)
+    fun capture(pole: OprDisplayable, belowGate: Boolean)
     fun createTap(pole: OprDisplayable)
     fun addRecloser(pole: OprDisplayable)
     fun clearCoordinates(pole: OprDisplayable)
@@ -97,6 +109,8 @@ fun EditorScreen(
     poles: List<OprDisplayable>,
     selectedId: Int?,
     gps: GpsFix,
+    trust: TrustState,
+    captureMeta: Map<Int, CaptureMeta>,
     gisLines: String?,
     gisPoles: List<Pair<Double, Double>>,
     onBack: () -> Unit,
@@ -150,7 +164,7 @@ fun EditorScreen(
             )
             PoeOverlayIconButton(PoeIcons.Plus, "Додати опору", { showAdd = true }, filled = true)
         }
-        GpsStatus(gps, onGpsProblem, Modifier.align(Alignment.TopEnd).padding(top = 68.dp, end = 14.dp))
+        GpsStatus(gps, trust, onGpsProblem, Modifier.align(Alignment.TopEnd).padding(top = 68.dp, end = 14.dp))
 
         // above the sheet: attribution and "back to me"
         Row(
@@ -177,10 +191,11 @@ fun EditorScreen(
                 else -> NextPole(
                     pole = target,
                     gps = gps,
+                    trust = trust,
                     span = span,
                     upcoming = poles.drop(targetIndex + 1).filter { !it.hasCoordinates }.take(2),
                     total = poles.size,
-                    onCapture = { actions.capture(target) },
+                    onCapture = { belowGate -> actions.capture(target, belowGate) },
                     onSelect = onSelect,
                     onAll = { showAll = true },
                     onGpsProblem = onGpsProblem,
@@ -190,7 +205,11 @@ fun EditorScreen(
     }
 
     poles.firstOrNull { it.id == actionsFor }?.let { pole ->
-        PoleActionsSheet(pole, gps, actions, onDismiss = { actionsFor = null })
+        PoleActionsSheet(
+            pole, gps, captureMeta[pole.id], actions,
+            onRetake = { onSelect(pole.id) },
+            onDismiss = { actionsFor = null },
+        )
     }
     if (showAdd) {
         AddSheet(onPick = { showAdd = false; onAdd(it) }, onDismiss = { showAdd = false })
@@ -207,34 +226,46 @@ fun EditorScreen(
 }
 
 @Composable
-private fun GpsStatus(gps: GpsFix, onProblem: () -> Unit, modifier: Modifier = Modifier) {
+private fun GpsStatus(gps: GpsFix, trust: TrustState, onProblem: () -> Unit, modifier: Modifier = Modifier) {
     val c = PoeTheme.colors
     val accuracy = gps.accuracy
-    val (text, strong) = when {
-        !gps.permission -> "Немає дозволу на GPS" to false
-        !gps.enabled -> "GPS вимкнено" to false
-        gps.current == null -> "Пошук супутників…" to false
-        accuracy != null && gps.satellitesUsed > 0 -> "±${accuracy.format1()} м · ${gps.satellitesUsed} супутн." to true
-        accuracy != null -> "±${accuracy.format1()} м" to true
-        else -> "GPS" to true
-    }
     val problem = !gps.permission || !gps.enabled
+    val alarm = trust.level != TrustLevel.RELIABLE
+    val text = when {
+        !gps.permission -> "Немає дозволу на GPS"
+        !gps.enabled -> "GPS вимкнено"
+        trust.level.locksCapture -> "${trust.level.label} GPS"
+        gps.current == null -> "Пошук супутників…"
+        alarm -> "${trust.level.label} · ±${accuracy?.format1() ?: "?"} м"
+        accuracy == null || accuracy > CapturePolicy.ACCURACY_GATE_M -> "±${accuracy?.roundToInt() ?: "?"} м · шукаємо точніше"
+        accuracy != null && gps.satellitesUsed > 0 -> "±${accuracy.format1()} м · ${gps.satellitesUsed} супутн."
+        accuracy != null -> "±${accuracy.format1()} м"
+        else -> "GPS"
+    }
+    val strong = !problem && !alarm && accuracy != null && accuracy <= CapturePolicy.ACCURACY_GATE_M
+    val (bg, fg) = when {
+        trust.level.locksCapture -> c.action to c.onAction
+        alarm -> c.actionContainer to c.onActionContainer
+        strong -> c.gpsStrong to c.onGpsStrong
+        problem -> c.overlay to c.actionText
+        else -> c.overlay to c.gpsText
+    }
     Row(
         modifier
             .height(36.dp)
             .clip(PoeShapes.pill)
-            .background(if (strong) c.gpsStrong else c.overlay)
+            .background(bg)
             .then(if (problem) Modifier.clickable(role = Role.Button, onClick = onProblem) else Modifier)
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (strong) {
-            Icon(PoeIcons.Crosshair, null, tint = c.onGpsStrong, modifier = Modifier.size(16.dp))
-        } else {
-            Box(Modifier.size(8.dp).clip(CircleShape).background(if (problem) c.action else c.gps))
+        when {
+            alarm -> Icon(PoeIcons.Alert, null, tint = fg, modifier = Modifier.size(16.dp))
+            strong -> Icon(PoeIcons.Crosshair, null, tint = fg, modifier = Modifier.size(16.dp))
+            else -> Box(Modifier.size(8.dp).clip(CircleShape).background(if (problem) c.action else c.gps))
         }
-        Text(text, style = PoeTheme.type.captionStrong, color = if (strong) c.onGpsStrong else if (problem) c.actionText else c.gpsText)
+        Text(text, style = PoeTheme.type.captionStrong, color = fg)
     }
 }
 
@@ -242,58 +273,180 @@ private fun GpsStatus(gps: GpsFix, onProblem: () -> Unit, modifier: Modifier = M
 private fun ColumnScope.NextPole(
     pole: OprDisplayable,
     gps: GpsFix,
+    trust: TrustState,
     span: Float?,
     upcoming: List<OprDisplayable>,
     total: Int,
-    onCapture: () -> Unit,
+    onCapture: (belowGate: Boolean) -> Unit,
     onSelect: (Int?) -> Unit,
     onAll: () -> Unit,
     onGpsProblem: () -> Unit,
 ) {
     val c = PoeTheme.colors
     val here = gps.current
+    val accuracy = gps.accuracy
+    val locked = trust.level.locksCapture
+    val gateOpen = here != null && accuracy != null && accuracy <= CapturePolicy.ACCURACY_GATE_M
+    val waiting = gps.permission && gps.enabled && !locked && !gateOpen
+
     Row(verticalAlignment = Alignment.Bottom) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            PoeOverline(if (pole.hasCoordinates) "Перезняти опору" else "Наступна опора")
+            PoeOverline(
+                if (pole.hasCoordinates) "Перезняти опору" else "Наступна опора",
+                color = if (gateOpen && !locked) c.actionText else c.muted,
+            )
             Text(pole.name, style = PoeTheme.type.hero, color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text(
-            if (here != null) "${here.latitude.format5()}\n${here.longitude.format5()}" else "—\n—",
-            style = PoeTheme.type.mono, color = c.muted, textAlign = TextAlign.End,
-        )
+        if (waiting) {
+            Text(
+                "${gps.satellitesUsed} / ${gps.satellitesVisible} супутн.",
+                style = PoeTheme.type.label, color = c.muted,
+            )
+        } else {
+            Text(
+                if (here != null) "${here.latitude.format5()}\n${here.longitude.format5()}" else "—\n—",
+                style = PoeTheme.type.mono, color = c.muted, textAlign = TextAlign.End,
+            )
+        }
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        PoeStatTile(
-            "Точність", gps.accuracy?.let { "${it.format1()} м" } ?: "—", Modifier.weight(1f),
-            valueColor = if (gps.accuracy != null) c.gpsText else c.muted,
-        )
-        PoeStatTile(
-            "Супутники", "${gps.satellitesUsed}", Modifier.weight(1f),
-            suffix = if (gps.satellitesVisible > 0) "/${gps.satellitesVisible}" else null,
-        )
-        PoeStatTile("Прогон", span?.let { "${it.roundToInt()} м" } ?: "—", Modifier.weight(1f))
+
+    when {
+        locked -> TrustLock(trust)
+        waiting -> AccuracyGauge(accuracy)
+        else -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PoeStatTile(
+                "Точність", accuracy?.let { "${it.format1()} м" } ?: "—", Modifier.weight(1f),
+                valueColor = if (accuracy != null) c.gpsText else c.muted,
+            )
+            PoeStatTile(
+                "Супутники", "${gps.satellitesUsed}", Modifier.weight(1f),
+                suffix = if (gps.satellitesVisible > 0) "/${gps.satellitesVisible}" else null,
+            )
+            PoeStatTile("Прогон", span?.let { "${it.roundToInt()} м" } ?: "—", Modifier.weight(1f))
+        }
     }
-    val waiting = when {
+    if (trust.level == TrustLevel.SUSPICIOUS) TrustWarning(trust)
+
+    val blocker = when {
         !gps.permission -> "Дозвольте доступ до GPS"
         !gps.enabled -> "Увімкніть GPS"
+        locked -> "Знімання вимкнено"
         here == null -> "Чекаємо на GPS"
+        !gateOpen -> "Чекаємо точності ≤ ${CapturePolicy.ACCURACY_GATE_M.toInt()} м"
         else -> null
     }
     PoePrimaryButton(
-        text = waiting ?: if (pole.hasCoordinates) "Перезняти координати" else "Зняти координати",
-        onClick = onCapture,
-        icon = if (waiting == null) PoeIcons.Capture else PoeIcons.Clock,
-        enabled = waiting == null,
+        text = blocker ?: if (pole.hasCoordinates) "Перезняти координати" else "Зняти координати",
+        onClick = { onCapture(false) },
+        icon = if (blocker == null) PoeIcons.Capture else PoeIcons.Clock,
+        enabled = blocker == null,
     )
-    if (!gps.permission || !gps.enabled) {
-        TextButton(onClick = onGpsProblem, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+    when {
+        !gps.permission || !gps.enabled -> TextButton(onClick = onGpsProblem, modifier = Modifier.align(Alignment.CenterHorizontally)) {
             Text(if (!gps.permission) "Надати дозвіл" else "Відкрити налаштування GPS", style = PoeTheme.type.label, color = c.actionText)
         }
+        // B13: the crew may knowingly take a worse fix, e.g. under trees right at the pole
+        !locked && here != null && accuracy != null && !gateOpen -> TextButton(
+            onClick = { onCapture(true) },
+            modifier = Modifier.align(Alignment.CenterHorizontally).heightIn(min = 44.dp),
+        ) {
+            Text(
+                "Зняти зараз з похибкою ±${accuracy.roundToInt()} м",
+                style = PoeTheme.type.label.copy(textDecoration = TextDecoration.Underline),
+                color = c.actionText,
+            )
+        }
+        else -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Далі:", style = PoeTheme.type.caption, color = c.muted, modifier = Modifier.weight(1f))
+            upcoming.forEach { p -> SmallButton(p.chipLabel, onClick = { onSelect(p.id) }) }
+            SmallButton("Усі $total", onClick = onAll, outlined = true, trailing = PoeIcons.ChevronDown)
+        }
     }
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Далі:", style = PoeTheme.type.caption, color = c.muted, modifier = Modifier.weight(1f))
-        upcoming.forEach { p -> SmallButton(p.chipLabel, onClick = { onSelect(p.id) }) }
-        SmallButton("Усі $total", onClick = onAll, outlined = true, trailing = PoeIcons.ChevronDown)
+}
+
+/** B13: how far the fix is from the capture gate. */
+@Composable
+private fun AccuracyGauge(accuracy: Float?) {
+    val c = PoeTheme.colors
+    val gate = CapturePolicy.ACCURACY_GATE_M
+    val scaleMax = 20f
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text("Точність", style = PoeTheme.type.tabSelected, color = c.ink, modifier = Modifier.weight(1f))
+            Text(accuracy?.let { "±${it.roundToInt()} м" } ?: "—", style = PoeTheme.type.statValue, color = c.gpsText)
+        }
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(14.dp)
+                .clip(RoundedCornerShape(7.dp))
+                .background(c.surfaceMuted)
+                .semantics { contentDescription = "Точність ${accuracy?.roundToInt() ?: "невідома"} метрів, потрібно не гірше $gate" },
+        ) {
+            Box(Modifier.fillMaxWidth(gate / scaleMax).fillMaxHeight().background(c.gpsContainer))
+            Box(
+                Modifier
+                    .fillMaxWidth(((accuracy ?: scaleMax) / scaleMax).coerceIn(0.05f, 1f))
+                    .fillMaxHeight()
+                    .background(c.gps.copy(alpha = 0.25f))
+            )
+            Box(Modifier.fillMaxWidth(gate / scaleMax).fillMaxHeight().wrapContentWidth(Alignment.End)) {
+                Box(Modifier.width(2.dp).fillMaxHeight().background(c.ink))
+            }
+        }
+        Row {
+            Text("≤ ${gate.toInt()} м — можна знімати", style = PoeTheme.type.small, color = c.muted, modifier = Modifier.weight(1f))
+            Text("відійдіть від дерев і будівель", style = PoeTheme.type.small, color = c.muted)
+        }
+    }
+}
+
+/** Jamming or spoofing: capture is refused and the crew is told why. */
+@Composable
+private fun TrustLock(trust: TrustState) {
+    val c = PoeTheme.colors
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(PoeShapes.row)
+            .background(c.actionContainer)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(PoeIcons.Alert, null, tint = c.onActionContainer, modifier = Modifier.size(20.dp))
+            Text(
+                if (trust.level == TrustLevel.JAMMING) "Схоже на глушіння GPS" else "Схоже на підміну GPS",
+                style = PoeTheme.type.rowTitle, color = c.onActionContainer,
+            )
+        }
+        trust.reasons.take(3).forEach { Text("• $it", style = PoeTheme.type.captionRegular, color = c.ink) }
+        Text(
+            "Координати зараз не знімаються, щоб не записати хибну позицію. Перевірка повторюється сама — " +
+                "відійдіть від джерела перешкод або зачекайте.",
+            style = PoeTheme.type.captionRegular, color = c.muted,
+        )
+    }
+}
+
+/** Something looks off, but the position may still be right: capture stays allowed. */
+@Composable
+private fun TrustWarning(trust: TrustState) {
+    val c = PoeTheme.colors
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(PoeShapes.tile)
+            .background(c.actionContainer)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(PoeIcons.Alert, null, tint = c.onActionContainer, modifier = Modifier.size(18.dp))
+        Text(
+            trust.reasons.joinToString("; ").ifEmpty { "Позиція GPS виглядає підозріло" },
+            style = PoeTheme.type.captionRegular, color = c.onActionContainer,
+        )
     }
 }
 
@@ -339,7 +492,14 @@ private fun SmallButton(text: String, onClick: () -> Unit, outlined: Boolean = f
 /** B4 · Дії з опорою. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PoleActionsSheet(pole: OprDisplayable, gps: GpsFix, actions: PoleActions, onDismiss: () -> Unit) {
+private fun PoleActionsSheet(
+    pole: OprDisplayable,
+    gps: GpsFix,
+    meta: CaptureMeta?,
+    actions: PoleActions,
+    onRetake: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     val c = PoeTheme.colors
     var confirmDelete by remember { mutableStateOf(false) }
     ModalBottomSheet(
@@ -368,6 +528,14 @@ private fun PoleActionsSheet(pole: OprDisplayable, gps: GpsFix, actions: PoleAct
                 }
             }
             val facts = listOfNotNull(
+                meta?.takeIf { pole.hasCoordinates }?.let { m ->
+                    "Знято ${SimpleDateFormat("dd.MM HH:mm", Locale.getDefault()).format(Date(m.timeMs))}" +
+                        (m.accuracyM?.let { " · ±${it.format1()} м" } ?: "")
+                },
+                meta?.takeIf { pole.hasCoordinates && it.belowAccuracyGate }?.let { "до досягнення точності" },
+                meta?.takeIf { pole.hasCoordinates }?.confirmedWarnings?.firstOrNull()?.let { "підтверджено: $it" },
+                meta?.takeIf { pole.hasCoordinates && it.trust != TrustLevel.RELIABLE.name }
+                    ?.let { m -> TrustLevel.entries.firstOrNull { it.name == m.trust }?.label?.let { "GPS: $it" } },
                 pole.wire.takeIf { it.isNotBlank() }?.let { "Провід $it" },
                 pole.recloserName.takeIf { it.isNotBlank() }?.let { "Апарат: $it" },
             )
@@ -395,7 +563,8 @@ private fun PoleActionsSheet(pole: OprDisplayable, gps: GpsFix, actions: PoleAct
                         accuracy != null -> "Зараз: ±${accuracy.format1()} м"
                         else -> "Поточна позиція GPS"
                     },
-                    onClick = { onDismiss(); actions.capture(pole) },
+                    // makes it the sheet's target, where the accuracy gate and the checks apply
+                    onClick = { onDismiss(); onRetake() },
                     iconBackground = if (c.isDark) c.gpsContainer else c.gps,
                     iconTint = if (c.isDark) c.gps else c.onGpsStrong,
                 )

@@ -3,8 +3,13 @@ package com.poe.poegps.feature.presentation.screens.editor
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.poe.poegps.core.location.Geo
 import com.poe.poegps.core.location.GpsFix
 import com.poe.poegps.core.location.GpsTracker
+import com.poe.poegps.core.location.TrustAssessor
+import com.poe.poegps.core.location.TrustState
+import com.poe.poegps.feature.data.local.CaptureLog
+import com.poe.poegps.feature.data.local.CaptureMeta
 import com.poe.poegps.feature.data.repository.GeoRepository
 import com.poe.poegps.feature.domain.model.Pillar
 import com.poe.poegps.feature.domain.model.Recloser
@@ -42,8 +47,22 @@ sealed class InsertResult {
 }
 
 sealed class CaptureResult {
-    data class Captured(val pole: String, val accuracy: Float?) : CaptureResult()
+    data class Captured(val pole: String, val accuracy: Float?, val belowGate: Boolean) : CaptureResult()
     object NoFix : CaptureResult()
+    data class Locked(val trust: TrustState) : CaptureResult()
+    data class NeedsAccuracy(val accuracy: Float?) : CaptureResult()
+    /** The position passed the gate but looks wrong for this pole; the crew confirms or cancels. */
+    data class NeedsConfirm(val pole: OprDisplayable, val belowGate: Boolean, val warnings: List<String>) : CaptureResult()
+}
+
+object CapturePolicy {
+    /** B13: capture waits for this accuracy unless the crew explicitly overrides. */
+    const val ACCURACY_GATE_M = 5f
+    // longer spans than these are almost always a wrong position, not a long span
+    const val MAX_SPAN_04_M = 150f
+    const val MAX_SPAN_10_M = 350f
+    /** GIS coordinates are often off, so only a gross difference asks for confirmation. */
+    const val MAX_GIS_OFFSET_M = 200f
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -52,6 +71,7 @@ class EditorViewModel @Inject constructor(
     private val repository: ObjectsRepository,
     private val geoRepository: GeoRepository,
     private val gpsTracker: GpsTracker,
+    private val captureLog: CaptureLog,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -80,6 +100,16 @@ class EditorViewModel @Inject constructor(
         .flatMapLatest { gpsTracker.fixes() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(2_000), GpsFix())
 
+    private val trustAssessor = TrustAssessor()
+
+    /** Whether the current position can be trusted; jamming and spoofing lock capture. */
+    val trust: StateFlow<TrustState> = gps
+        .map { trustAssessor.update(it.toSample()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(2_000), TrustState())
+
+    /** How each pole on this phone was captured (kept on the phone only). */
+    val captureMeta: StateFlow<Map<Int, CaptureMeta>> = captureLog.entries
+
     /** The pole the big button captures; null = the first one without coordinates. */
     private val _selectedPoleId = MutableStateFlow<Int?>(null)
     val selectedPoleId: StateFlow<Int?> = _selectedPoleId
@@ -101,6 +131,10 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch {
             geoRepository.branchLines().collect { _gisLines.value = it }
         }
+        viewModelScope.launch {
+            geoRepository.branchArea().collect { trustAssessor.setBranch(it) }
+        }
+        viewModelScope.launch { captureLog.load() }
         viewModelScope.launch {
             _lineName.flatMapLatest {
                 repository.getSavedPillars(it)
@@ -237,12 +271,14 @@ class EditorViewModel @Inject constructor(
         pillar ?: return
         viewModelScope.launch(Dispatchers.IO) {
             repository.updatePillarCoords(pillar.id, "0.0", "0.0")
+            captureLog.forget(pillar.id)
         }
     }
 
     fun deleteOpr(pillar: OprDisplayable?) {
         viewModelScope.launch(Dispatchers.IO) {
             pillar?.toDomainModel()?.let { repository.deletePillar(it) }
+            pillar?.let { captureLog.forget(it.id) }
         }
     }
 
@@ -260,12 +296,28 @@ class EditorViewModel @Inject constructor(
         _selectedPoleId.value = id
     }
 
-    /** Stores the current GPS fix as [opr]'s position, in the same "%.5f" text the upload has always sent. */
-    fun capture(opr: OprDisplayable) {
-        val location = gps.value.current
+    /**
+     * Stores the current GPS fix as [opr]'s position, in the same "%.5f" text the upload has always
+     * sent. In order: a fix is needed, jamming/spoofing refuses, the accuracy gate waits unless
+     * [belowGate], and implausible positions ask for confirmation unless [confirmed].
+     */
+    fun capture(opr: OprDisplayable, belowGate: Boolean = false, confirmed: Boolean = false) {
+        val fix = gps.value
+        val location = fix.current
+        val trustNow = trust.value
         viewModelScope.launch(Dispatchers.IO) {
-            if (location == null) {
-                _captureResult.send(CaptureResult.NoFix)
+            val accuracy = fix.accuracy
+            val warnings = location?.let { plausibilityWarnings(opr, it.latitude, it.longitude) }.orEmpty()
+            val blocked = when {
+                location == null -> CaptureResult.NoFix
+                trustNow.level.locksCapture -> CaptureResult.Locked(trustNow)
+                !belowGate && (accuracy == null || accuracy > CapturePolicy.ACCURACY_GATE_M) ->
+                    CaptureResult.NeedsAccuracy(accuracy)
+                !confirmed && warnings.isNotEmpty() -> CaptureResult.NeedsConfirm(opr, belowGate, warnings)
+                else -> null
+            }
+            if (blocked != null || location == null) {
+                _captureResult.send(blocked ?: CaptureResult.NoFix)
                 return@launch
             }
             repository.updatePillarCoords(
@@ -273,10 +325,43 @@ class EditorViewModel @Inject constructor(
                 String.format(Locale.US, "%.5f", location.latitude),
                 String.format(Locale.US, "%.5f", location.longitude),
             )
+            captureLog.record(
+                opr.id,
+                CaptureMeta(
+                    timeMs = System.currentTimeMillis(),
+                    accuracyM = accuracy,
+                    satellites = fix.satellitesUsed,
+                    trust = trustNow.level.name,
+                    reasons = trustNow.reasons,
+                    belowAccuracyGate = accuracy == null || accuracy > CapturePolicy.ACCURACY_GATE_M,
+                    confirmedWarnings = warnings,
+                ),
+            )
             // the button moves on to the next pole without coordinates
             if (_selectedPoleId.value == opr.id) _selectedPoleId.value = null
-            _captureResult.send(CaptureResult.Captured(opr.name, location.takeIf { it.hasAccuracy() }?.accuracy))
+            _captureResult.send(CaptureResult.Captured(opr.name, accuracy, belowGate))
         }
+    }
+
+    /** Span from the previous captured pole and offset from where GIS has this pole. */
+    private fun plausibilityWarnings(opr: OprDisplayable, lat: Double, lng: Double): List<String> {
+        val warnings = mutableListOf<String>()
+        val poles = _oprDisplayable.value
+        val index = poles.indexOfFirst { it.id == opr.id }
+        val previous = poles.take(index.coerceAtLeast(0)).lastOrNull { it.hasCoordinates }
+        val lowVoltage = args.category.contains("0,4") || args.category.contains("0.4")
+        val maxSpan = if (lowVoltage) CapturePolicy.MAX_SPAN_04_M else CapturePolicy.MAX_SPAN_10_M
+        if (previous != null) {
+            val span = Geo.distanceM(previous.lat.toDouble(), previous.lng.toDouble(), lat, lng)
+            if (span > maxSpan) {
+                warnings += "Прогон від «${previous.name}» — ${span.toInt()} м, більше, ніж буває на такій лінії"
+            }
+        }
+        gisPoles.value.firstOrNull { it.name == opr.name }?.let { gis ->
+            val offset = Geo.distanceM(gis.lat.toDouble(), gis.lng.toDouble(), lat, lng)
+            if (offset > CapturePolicy.MAX_GIS_OFFSET_M) warnings += "${offset.toInt()} м від позиції цієї опори в ГІС"
+        }
+        return warnings
     }
 
     fun saveCoordinates(opr: OprDisplayable, lat: String, lng: String) {
