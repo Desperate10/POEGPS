@@ -465,6 +465,17 @@ private fun ColumnScope.NextPole(
         icon = if (blocker == null) PoeIcons.Capture else PoeIcons.Clock,
         enabled = blocker == null,
     )
+    // no fix at all (no permission, GPS off, indoors): the pole can still be put on the map by hand, as from
+    // its actions; a jammed or spoofed fix has its own button in TrustLock
+    if (!locked && here == null) {
+        TextButton(onClick = onManual, modifier = Modifier.align(Alignment.CenterHorizontally).heightIn(min = 44.dp)) {
+            Icon(PoeIcons.Move, null, Modifier.size(18.dp), tint = c.actionText)
+            Text(
+                if (pole.hasCoordinates) "  Уточнити на мапі вручну" else "  Поставити на мапі вручну",
+                style = PoeTheme.type.label, color = c.actionText,
+            )
+        }
+    }
     when {
         !gps.permission || !gps.enabled -> TextButton(onClick = onGpsProblem, modifier = Modifier.align(Alignment.CenterHorizontally)) {
             Text(if (!gps.permission) "Надати дозвіл" else "Відкрити налаштування GPS", style = PoeTheme.type.label, color = c.actionText)

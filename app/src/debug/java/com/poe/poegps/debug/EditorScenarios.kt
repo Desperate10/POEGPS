@@ -28,7 +28,7 @@ import kotlinx.coroutines.flow.flowOf
 
 /**
  * The line editor in GPS states the emulator can't produce (it always reports ±5 m and never
- * looks jammed): `--es screen gps-waiting | gps-suspicious | gps-spoofing | gps-jamming`.
+ * looks jammed): `--es screen gps-waiting | gps-nofix | gps-suspicious | gps-spoofing | gps-jamming`.
  */
 @Composable
 fun EditorScenario(name: String, onExit: () -> Unit) {
@@ -53,6 +53,7 @@ fun EditorScenario(name: String, onExit: () -> Unit) {
     val gps = when (name) {
         "gps-jamming" -> GpsFix(permission = true, enabled = true, satellitesUsed = 0, satellitesVisible = 9)
         "gps-waiting" -> GpsFix(permission = true, enabled = true, location = here, satellitesUsed = 4, satellitesVisible = 22)
+        "gps-nofix" -> GpsFix(permission = true, enabled = true, satellitesUsed = 0, satellitesVisible = 22)
         else -> GpsFix(permission = true, enabled = true, location = here, satellitesUsed = 14, satellitesVisible = 22)
     }
     val trust = when (name) {
