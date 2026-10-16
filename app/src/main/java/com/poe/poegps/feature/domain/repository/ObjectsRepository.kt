@@ -32,7 +32,9 @@ interface ObjectsRepository {
     suspend fun downloadPss(token: String)
 
     //Получение списка опор из апи
-    suspend fun downloadPillars(filial: String, token: String)
+    suspend fun downloadPillars04(filial: String, token: String)
+
+    suspend fun downloadPillars10(filial: String, token: String)
 
     //Получение списка проводов
     suspend fun downloadWires(token: String)

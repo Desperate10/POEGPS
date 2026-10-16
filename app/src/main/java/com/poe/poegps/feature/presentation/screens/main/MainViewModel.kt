@@ -226,8 +226,12 @@ class MainViewModel @Inject constructor(
             jobs += viewModelScope.launch(Dispatchers.IO + partFailed("ПС")) {
                 repository.downloadPss(token.value ?: "")
             }
-            jobs += viewModelScope.launch(Dispatchers.IO + partFailed("опори")) {
-                repository.downloadPillars(filial.value!!, token.value ?: "")
+            // separate jobs: a slow or failed 0,4 kV layer no longer holds back the 6-10 kV one
+            jobs += viewModelScope.launch(Dispatchers.IO + partFailed("опори 0,4 кВ")) {
+                repository.downloadPillars04(filial.value!!, token.value ?: "")
+            }
+            jobs += viewModelScope.launch(Dispatchers.IO + partFailed("опори 6-10 кВ")) {
+                repository.downloadPillars10(filial.value!!, token.value ?: "")
             }
             //загрузка проводов
             jobs += viewModelScope.launch(Dispatchers.IO + partFailed("марки проводів")) {

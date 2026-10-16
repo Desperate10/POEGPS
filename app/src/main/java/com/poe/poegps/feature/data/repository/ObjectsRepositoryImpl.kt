@@ -227,25 +227,16 @@ class ObjectsRepositoryImpl @Inject constructor(
         }*/
     }
 
-    override suspend fun downloadPillars(filial: String, token: String) {
-        objectsApi.getPillarObjects04(filial, "Bearer $token")
-            .map { pillar ->
-                pillar.toDomainModel()
-            }
-            .also { pillars ->
-                pillars.map {
-                    objectsDao.insertPillar04IfNotExist(it.to04DbModel())
-                }
-            }
-        objectsApi.getPillarObjects10(filial, "Bearer $token")
-            .map { pillar ->
-                pillar.toDomainModel()
-            }
-            .also { pillars ->
-                pillars.map {
-                    objectsDao.insertPillar10IfNotExist(it.to10DbModel())
-                }
-            }
+    override suspend fun downloadPillars04(filial: String, token: String) {
+        val pillars = objectsApi.getPillarObjects04(filial, "Bearer $token")
+            .map { it.toDomainModel().to04DbModel() }
+        objectsDao.insertPillars04IfNotExist(pillars)
+    }
+
+    override suspend fun downloadPillars10(filial: String, token: String) {
+        val pillars = objectsApi.getPillarObjects10(filial, "Bearer $token")
+            .map { it.toDomainModel().to10DbModel() }
+        objectsDao.insertPillars10IfNotExist(pillars)
     }
 
     override suspend fun downloadWires(token: String) {

@@ -128,6 +128,32 @@ interface ObjectsDao {
     @Query("SELECT * FROM pillars10 WHERE tplnr = :tplnr AND name = :name LIMIT 1")
     suspend fun getSinglePillar10(tplnr: String, name: String): Pillar10DbModel?
 
+    // A branch has tens of thousands of poles and the tables have no index on (tplnr, name):
+    // checking them one by one took minutes. Same rule, one read of the keys and one transaction.
+    @Transaction
+    suspend fun insertPillars04IfNotExist(pillars: List<Pillar04DbModel>) {
+        val known = getPillar04Keys().toHashSet()
+        insertPillars04(pillars.filter { known.add(PoleKey(it.tplnr, it.name)) })
+    }
+
+    @Transaction
+    suspend fun insertPillars10IfNotExist(pillars: List<Pillar10DbModel>) {
+        val known = getPillar10Keys().toHashSet()
+        insertPillars10(pillars.filter { known.add(PoleKey(it.tplnr, it.name)) })
+    }
+
+    @Query("SELECT tplnr, name FROM pillars04")
+    suspend fun getPillar04Keys(): List<PoleKey>
+
+    @Query("SELECT tplnr, name FROM pillars10")
+    suspend fun getPillar10Keys(): List<PoleKey>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPillars04(pillars: List<Pillar04DbModel>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPillars10(pillars: List<Pillar10DbModel>)
+
     suspend fun insertWire04IfNotExist(wire: Wire04DbModel) {
         if (getSingleWire04(wire.name) == null) {
             insertWire04(wire)
