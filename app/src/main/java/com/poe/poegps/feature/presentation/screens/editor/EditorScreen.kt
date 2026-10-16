@@ -49,6 +49,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
@@ -408,12 +410,13 @@ private fun ColumnScope.NextPole(
                 if (pole.hasCoordinates) "Перезняти опору" else "Наступна опора",
                 color = if (gateOpen && !locked) c.actionText else c.muted,
             )
-            Text(pole.title, style = PoeTheme.type.hero, color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // the pole number is what the crew checks against the plate: smaller, never "Опора …"
+            ShrinkToFitText(pole.title, PoeTheme.type.hero, c.ink)
         }
         if (waiting) {
             Text(
-                "${gps.satellitesUsed} / ${gps.satellitesVisible} супутн.",
-                style = PoeTheme.type.label, color = c.muted,
+                "${gps.satellitesUsed} / ${gps.satellitesVisible}\nсупутн.",
+                style = PoeTheme.type.label, color = c.muted, textAlign = TextAlign.End,
             )
         } else {
             Text(
@@ -875,6 +878,26 @@ private fun distance(from: OprDisplayable, to: Location): Float {
     val out = FloatArray(1)
     Location.distanceBetween(from.lat.toDouble(), from.lng.toDouble(), to.latitude, to.longitude, out)
     return out[0]
+}
+
+/** One line of [text] in [style], stepped down in size (to 60% at most) until it fits instead of being cut. */
+@Composable
+private fun ShrinkToFitText(text: String, style: TextStyle, color: Color) {
+    var size by remember(text, style) { mutableStateOf(style.fontSize) }
+    var fits by remember(text, style) { mutableStateOf(false) }
+    Text(
+        text,
+        style = style.copy(fontSize = size, lineHeight = size * 1.05f),
+        color = color,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Clip,
+        onTextLayout = { layout ->
+            if (layout.hasVisualOverflow && size.value > style.fontSize.value * 0.6f) size *= 0.9f else fits = true
+        },
+        // the oversized tries aren't drawn, so the title doesn't flicker
+        modifier = Modifier.drawWithContent { if (fits) drawContent() },
+    )
 }
 
 internal fun Float.format1() = String.format(Locale.US, "%.1f", this)

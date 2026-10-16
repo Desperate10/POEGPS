@@ -270,20 +270,16 @@ private fun ObjectCard(
                 // GIS already has this line's poles: the job is checking them, not drawing the line from scratch
                 val checked = p?.captured ?: 0
                 GisLineGraphic(p, gis)
-                Row(Modifier.fillMaxWidth()) {
-                    Text(
-                        buildAnnotatedString {
-                            withStyle(SpanStyle(color = c.ink, fontWeight = PoeTheme.type.rowTitle.fontWeight)) { append("$gis") }
-                            append(" ${plural(gis, "опора", "опори", "опор")} в ГІС (з відпайками)")
-                            if (checked > 0) append(" · уточнено $checked")
-                        },
-                        style = PoeTheme.type.caption, color = c.inkSecondaryOrMuted(),
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (p != null && p.captured > 0 && p.unsent == 0) {
-                        Text("усі надіслано", style = PoeTheme.type.caption, color = c.inkSecondaryOrMuted())
-                    }
-                }
+                // one text that wraps as a whole: the GIS caption is too long to share a row
+                Text(
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(color = c.ink, fontWeight = PoeTheme.type.rowTitle.fontWeight)) { append("$gis") }
+                        append(" ${plural(gis, "опора", "опори", "опор")} в ГІС (з відпайками)")
+                        if (checked > 0) append(" · уточнено $checked")
+                        if (p != null && p.captured > 0 && p.unsent == 0) append(" · усі надіслано")
+                    },
+                    style = PoeTheme.type.caption, color = c.inkSecondaryOrMuted(),
+                )
             } else if (p != null && !isTp) {
                 LineProgressGraphic(p)
                 Row(Modifier.fillMaxWidth()) {
