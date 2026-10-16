@@ -130,6 +130,8 @@ interface ObjectsRepository {
 
     fun getLineProgress(): Flow<List<LineProgress>>
 
+    fun getGisPoleCounts(highVoltage: Boolean): Flow<List<GisPoleCount>>
+
     fun countUnsent(): Flow<Int>
 
     /** Lines (and their recloser counts) an upload will report; empty tplnr = everything unsent. */

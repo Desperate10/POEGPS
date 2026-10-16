@@ -8,6 +8,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.poe.poegps.feature.data.local.entity.*
+import com.poe.poegps.feature.domain.model.GisPoleCount
 import com.poe.poegps.feature.domain.model.LineProgress
 import com.poe.poegps.feature.domain.model.RecloserCount
 import com.poe.poegps.feature.domain.model.UploadGroup
@@ -433,6 +434,17 @@ interface ObjectsDao {
 
     @Query("SELECT * FROM pillars10 WHERE tplnr LIKE :tplnr")
     fun getPillars10ByTplnr(tplnr: String): Flow<List<Pillar10DbModel>>
+
+    // GIS poles per line for the object cards, credited to the line's first row like B9 below
+    @Query("SELECT p.tplnr AS tplnr, " +
+            "(SELECT l.name FROM line04 l WHERE l.tplnr = p.tplnr ORDER BY l.id LIMIT 1) AS name, " +
+            "COUNT(*) AS poles FROM pillars04 p GROUP BY p.tplnr")
+    fun getGisPoleCounts04(): Flow<List<GisPoleCount>>
+
+    @Query("SELECT p.tplnr AS tplnr, " +
+            "(SELECT l.name FROM line10 l WHERE l.tplnr = p.tplnr ORDER BY l.id LIMIT 1) AS name, " +
+            "COUNT(*) AS poles FROM pillars10 p GROUP BY p.tplnr")
+    fun getGisPoleCounts10(): Flow<List<GisPoleCount>>
 
     // B9: GIS poles inside a lat/lng box, each with its line's name (taps share the line's tplnr, so the first one)
     @Query("SELECT p.id, p.tplnr, p.name, p.wire, p.lat, p.lng, " +

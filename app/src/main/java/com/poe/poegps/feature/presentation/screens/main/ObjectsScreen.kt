@@ -246,6 +246,7 @@ private fun ObjectCard(
     val c = PoeTheme.colors
     val obj = item.obj
     val p = item.progress?.takeIf { it.total > 0 }
+    val gis = item.gisPoles
     var menu by remember { mutableStateOf(false) }
 
     Box {
@@ -254,7 +255,7 @@ private fun ObjectCard(
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(obj.name, style = PoeTheme.type.cardTitle, color = c.ink)
                     val meta = listOfNotNull(obj.tplnr, obj.category.takeIf { it.isNotBlank() && !isTp })
-                        .joinToString(" · ") + if (p == null && !isTp) " · ще не розпочато" else ""
+                        .joinToString(" · ") + if (p == null && gis == 0 && !isTp) " · ще не розпочато" else ""
                     Text(meta, style = PoeTheme.type.monoSmall, color = c.muted)
                 }
                 when {
@@ -265,7 +266,25 @@ private fun ObjectCard(
                     isTp && p == null -> PoeStatusBadge(if (obj.hasGisPoint) "координати з ГІС" else "без координат", BadgeTone.Neutral)
                 }
             }
-            if (p != null && !isTp) {
+            if (gis > 0 && !isTp) {
+                // GIS already has this line's poles: the job is checking them, not drawing the line from scratch
+                val checked = p?.captured ?: 0
+                GisLineGraphic(p, gis)
+                Row(Modifier.fillMaxWidth()) {
+                    Text(
+                        buildAnnotatedString {
+                            withStyle(SpanStyle(color = c.ink, fontWeight = PoeTheme.type.rowTitle.fontWeight)) { append("$gis") }
+                            append(" ${plural(gis, "опора", "опори", "опор")} в ГІС (з відпайками)")
+                            if (checked > 0) append(" · уточнено $checked")
+                        },
+                        style = PoeTheme.type.caption, color = c.inkSecondaryOrMuted(),
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (p != null && p.captured > 0 && p.unsent == 0) {
+                        Text("усі надіслано", style = PoeTheme.type.caption, color = c.inkSecondaryOrMuted())
+                    }
+                }
+            } else if (p != null && !isTp) {
                 LineProgressGraphic(p)
                 Row(Modifier.fillMaxWidth()) {
                     Text(
@@ -345,6 +364,24 @@ private fun LineProgressGraphic(p: LineProgress) {
                 drawCircle(c.surface, 3.dp.toPx(), o)
                 drawCircle(c.outline, 3.dp.toPx(), o, style = Stroke(2.dp.toPx()))
             }
+        }
+    }
+}
+
+/** A line GIS already has: a full light bar, with the share of poles checked on site drawn over it. */
+@Composable
+private fun GisLineGraphic(p: LineProgress?, gisPoles: Int) {
+    val c = PoeTheme.colors
+    if (p != null && p.isComplete) {
+        LineProgressGraphic(p)
+        return
+    }
+    val checked = p?.captured ?: 0
+    val of = maxOf(gisPoles, p?.total ?: 0)
+    val label = "$gisPoles ${plural(gisPoles, "опора", "опори", "опор")} в ГІС з відпайками, уточнено $checked"
+    Box(Modifier.fillMaxWidth().height(8.dp).clip(PoeShapes.pill).background(c.action.copy(alpha = 0.35f)).semantics { contentDescription = label }) {
+        if (checked > 0) {
+            Box(Modifier.fillMaxWidth((checked / of.toFloat()).coerceAtMost(1f)).height(8.dp).clip(PoeShapes.pill).background(c.action))
         }
     }
 }

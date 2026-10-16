@@ -28,6 +28,8 @@ import javax.inject.Inject
 data class ObjectItem(
     val obj: ObjectDisplayable,
     val progress: LineProgress?,
+    /** Poles GIS already has for this line (0 for taps, TPs and cables). */
+    val gisPoles: Int = 0,
 )
 
 data class MainUiState(
@@ -129,8 +131,17 @@ class MainViewModel @Inject constructor(
     private val total: Flow<Int> =
         _spinnerObjectType.flatMapLatest { search(it, "") }.map { it.size }
 
+    private val gisPoleCounts: Flow<Map<Pair<String, String?>, Int>> =
+        _spinnerObjectType.flatMapLatest { type ->
+            when (type) {
+                ObjectType.LINE04 -> repository.getGisPoleCounts(highVoltage = false)
+                ObjectType.LINE10 -> repository.getGisPoleCounts(highVoltage = true)
+                else -> flowOf(emptyList())
+            }
+        }.map { counts -> counts.associate { (it.tplnr to it.name) to it.poles } }
+
     private val items: Flow<List<ObjectItem>> =
-        combine(objects, repository.getLineProgress()) { list, progress ->
+        combine(objects, repository.getLineProgress(), gisPoleCounts) { list, progress, gis ->
             val byLine = progress.associateBy { it.tplnr to it.parentName }
             // a TP's coordinates are one line_pillar row keyed by its tplnr
             val byTplnr = progress.groupBy { it.tplnr }.mapValues { (_, rows) ->
@@ -138,7 +149,11 @@ class MainViewModel @Inject constructor(
             }
             val isTp = _spinnerObjectType.value == ObjectType.TP || _spinnerObjectType.value == ObjectType.TPABON
             list.map { obj ->
-                ObjectItem(obj, if (isTp) byTplnr[obj.tplnr] else byLine[obj.tplnr to obj.name])
+                ObjectItem(
+                    obj,
+                    if (isTp) byTplnr[obj.tplnr] else byLine[obj.tplnr to obj.name],
+                    gis[obj.tplnr to obj.name] ?: 0,
+                )
             }
         }
 

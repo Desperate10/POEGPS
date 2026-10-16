@@ -10,6 +10,13 @@ data class LineProgress(
     val unsent: Int,
 )
 
+/** How many poles GIS has for a line; [name] is the line's first row (taps share its tplnr). */
+data class GisPoleCount(
+    val tplnr: String,
+    val name: String?,
+    val poles: Int,
+)
+
 /** Captured poles of one line that go into an upload. */
 data class UploadGroup(
     val tplnr: String,

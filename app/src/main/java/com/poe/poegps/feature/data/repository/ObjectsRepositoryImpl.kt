@@ -472,6 +472,9 @@ class ObjectsRepositoryImpl @Inject constructor(
 
     override fun getLineProgress(): Flow<List<LineProgress>> = objectsDao.getLineProgress()
 
+    override fun getGisPoleCounts(highVoltage: Boolean): Flow<List<GisPoleCount>> =
+        if (highVoltage) objectsDao.getGisPoleCounts10() else objectsDao.getGisPoleCounts04()
+
     override fun countUnsent(): Flow<Int> = objectsDao.countUnsent()
 
     override suspend fun getUploadGroups(tplnr: String): Pair<List<UploadGroup>, Map<String, Int>> {
