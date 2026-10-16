@@ -284,6 +284,7 @@ fun EditorScreen(
                 lineName = lineName,
                 lastPole = poles.lastOrNull()?.name,
                 taken = poles.map { it.name.trim() }.toSet(),
+                tplnr = tplnr,
                 here = here,
                 actions = adds,
                 afterId = addAfter,

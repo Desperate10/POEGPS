@@ -228,6 +228,8 @@ internal fun ExistingPicker(
     lineName: String,
     lastPole: String?,
     taken: Set<String>,
+    // the object being edited: a namesake from it is the same pole, from another object only the same number
+    tplnr: String,
     here: Location?,
     actions: AddActions,
     // the pole the new one goes after; null = the end of the line
@@ -279,7 +281,7 @@ internal fun ExistingPicker(
                     else -> if (list.isEmpty()) {
                         Hint("У радіусі ${(EditorViewModel.NEARBY_RADIUS_M / 1000).roundToInt()} км немає ${if (source.isTp) "ТП" else "опор"} з координатами. Шукайте за назвою.")
                     } else {
-                        PickList(list, here, selected, taken, onSelect = { selected = it })
+                        PickList(list, here, selected, taken, tplnr, onSelect = { selected = it })
                     }
                 }
                 !source.isTp && line == null -> {
@@ -318,7 +320,7 @@ internal fun ExistingPicker(
                         when {
                             filtered == null -> Hint("Завантаження…")
                             filtered.isEmpty() -> Hint(if (source.isTp) "ТП з координатами не знайдено" else "У цієї лінії немає опор з координатами")
-                            else -> PickList(filtered, here, selected, taken, onSelect = { selected = it }, showLine = source.isTp)
+                            else -> PickList(filtered, here, selected, taken, tplnr, onSelect = { selected = it }, showLine = source.isTp)
                         }
                     }
                 }
@@ -356,6 +358,7 @@ private fun PickList(
     here: Location?,
     selected: PickItem?,
     taken: Set<String>,
+    ownTplnr: String,
     onSelect: (PickItem) -> Unit,
     // inside one line's list the header already names the line
     showLine: Boolean = true,
@@ -368,7 +371,9 @@ private fun PickList(
         items(items, key = { it.key }) { item ->
             val isSelected = item.key == selected?.key
             val already = item.name.trim() in taken
+            // farther than a crew could be from the pole it adds (a wrong fix, or picking from the office): no figure
             val distance = here?.let { Geo.distanceM(it.latitude, it.longitude, item.lat.toDouble(), item.lng.toDouble()) }
+                ?.takeIf { it < MAX_SHOWN_DISTANCE_M }
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -402,7 +407,11 @@ private fun PickList(
                     )
                     Text(
                         // GIS keeps up to 14 decimals; 5 (about a metre) is what the screen needs
-                        if (already) "вже є на цій лінії" else "${item.lat.coord5()} · ${item.lng.coord5()}",
+                        if (already) {
+                            // TPs carry no tplnr; a pole of another object only shares the number
+                            if (item.tplnr.isEmpty() || item.tplnr == ownTplnr) "вже є на цій лінії"
+                            else "на лінії вже є опора з цим номером"
+                        } else "${item.lat.coord5()} · ${item.lng.coord5()}",
                         style = if (already) PoeTheme.type.captionRegular else PoeTheme.type.monoSmall, color = c.muted, maxLines = 1,
                     )
                 }
@@ -703,7 +712,14 @@ private fun Hint(text: String) {
     )
 }
 
-private fun formatDistance(m: Double): String = if (m < 1000) "${m.roundToInt()} м" else String.format(java.util.Locale.US, "%.1f км", m / 1000)
+// the column fits "999 м" and "9.9 км"; tens of km round to whole ones
+private fun formatDistance(m: Double): String = when {
+    m < 1000 -> "${m.roundToInt()} м"
+    m < 10_000 -> String.format(java.util.Locale.US, "%.1f км", m / 1000)
+    else -> "${(m / 1000).roundToInt()} км"
+}
+
+private const val MAX_SHOWN_DISTANCE_M = 100_000.0
 
 private val POLE_WORD = Regex("^Опора\\s+", RegexOption.IGNORE_CASE)
 
