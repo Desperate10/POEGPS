@@ -10,6 +10,7 @@ import androidx.room.Transaction
 import com.poe.poegps.feature.data.local.entity.*
 import com.poe.poegps.feature.domain.model.GisPoleCount
 import com.poe.poegps.feature.domain.model.LineProgress
+import com.poe.poegps.feature.domain.model.UploadLine
 import com.poe.poegps.feature.domain.model.RecloserCount
 import com.poe.poegps.feature.domain.model.UploadGroup
 import kotlinx.coroutines.flow.Flow
@@ -364,6 +365,18 @@ interface ObjectsDao {
             "WHERE lat <> '0.0' AND tplnr LIKE :tplnr GROUP BY tplnr, parentName ORDER BY MIN(id)"
     )
     suspend fun getGroupsByTplnr(tplnr: String): List<UploadGroup>
+
+    // the lines an upload sends, picked like getSavedPillars (all) and getSavedPillarsByTplnr (one object)
+    @Query(
+        "SELECT tplnr, parentName AS name, MIN(pillarType) AS pillarType, category, isAbon, COUNT(*) AS poles " +
+            "FROM line_pillar p WHERE lat <> '0.0' AND parentName <> '' AND (" +
+            "(:tplnr <> '' AND tplnr LIKE :tplnr) OR (:tplnr = '' AND EXISTS (" +
+            "SELECT 1 FROM line_pillar u WHERE u.lat <> '0.0' AND u.isSent = 0 " +
+            "AND u.tplnr = p.tplnr AND u.parentName = p.parentName " +
+            "AND u.category = p.category AND u.isAbon = p.isAbon))) " +
+            "GROUP BY tplnr, parentName, category, isAbon"
+    )
+    suspend fun getLinesToUpload(tplnr: String): List<UploadLine>
 
     @Query("SELECT tplnr, COUNT(*) AS count FROM recloser WHERE lat <> '0.0' AND isSent = 0 GROUP BY tplnr")
     suspend fun getUnsentRecloserCounts(): List<RecloserCount>

@@ -136,5 +136,8 @@ interface ObjectsRepository {
 
     /** Lines (and their recloser counts) an upload will report; empty tplnr = everything unsent. */
     suspend fun getUploadGroups(tplnr: String = ""): Pair<List<UploadGroup>, Map<String, Int>>
+
+    /** The lines an upload of everything ("") or of one object sends. */
+    suspend fun getLinesToUpload(tplnr: String = ""): List<UploadLine>
     //suspend fun downloadReclosers(filial: String, token: String)
 }

@@ -722,7 +722,8 @@ private fun PoleActionsSheet(
             title = { Text("Видалити ${pole.title}?", style = PoeTheme.type.statValue, color = c.ink) },
             text = {
                 Text(
-                    if (pole.fromGis || pole.isSent) "Опору буде прибрано з лінії. Після вивантаження лінію в ГІС буде перебудовано без неї."
+                    // the server only edits what it receives: a pole left out stays in GIS, and so does its bend
+                    if (pole.fromGis || pole.isSent) "Опору буде прибрано з лінії на цьому телефоні. У ГІС опора й лінія залишаться без змін: якщо опори насправді немає, її треба видалити в ГІС."
                     else "Опору буде прибрано з лінії на цьому телефоні.",
                     style = PoeTheme.type.body, color = c.muted,
                 )

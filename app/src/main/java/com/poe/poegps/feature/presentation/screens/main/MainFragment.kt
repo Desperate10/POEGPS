@@ -58,6 +58,7 @@ class MainFragment : Fragment() {
     private fun MainRoute() {
         val state by viewModel.uiState.collectAsStateWithLifecycle()
         val sync by viewModel.sync.collectAsStateWithLifecycle()
+        val newLines by viewModel.newLines.collectAsStateWithLifecycle()
         val filials = stringArrayResource(R.array.filials).map(Filial::parse)
         val login by viewModel.login.collectAsStateWithLifecycle()
         val snackbar = remember { SnackbarHostState() }
@@ -103,6 +104,9 @@ class MainFragment : Fragment() {
                     containerColor = PoeTheme.colors.inverse,
                     contentColor = PoeTheme.colors.onInverse,
                 )
+            }
+            newLines?.let { p ->
+                NewLinesDialog(p, onConfirm = viewModel::confirmNewLines, onCancel = viewModel::cancelNewLines)
             }
             sync?.let { s ->
                 BackHandler { viewModel.closeSync() }

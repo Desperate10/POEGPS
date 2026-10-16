@@ -8,7 +8,11 @@ import com.poe.poegps.feature.data.remote.model.upload.UploadState
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.data.remote.utils.FilialManager
 import com.poe.poegps.feature.data.remote.utils.TokenManager
+import com.poe.poegps.feature.data.repository.GeoRepository
+import com.poe.poegps.feature.domain.linesNewToGis
 import com.poe.poegps.feature.domain.model.LineProgress
+import com.poe.poegps.feature.domain.model.UploadLine
+import com.poe.poegps.feature.presentation.map.gisLineKeys
 import com.poe.poegps.feature.domain.model.UploadGroup
 import com.poe.poegps.feature.domain.repository.ObjectsRepository
 import com.poe.poegps.feature.presentation.BaseViewModel
@@ -31,6 +35,14 @@ data class ObjectItem(
     /** Poles GIS already has for this line (0 for taps, TPs and cables). */
     val gisPoles: Int = 0,
 )
+
+/** Before an upload of [tplnr] ("" = everything): the lines GIS will get as new drawings. */
+data class NewLinesPrompt(
+    val tplnr: String,
+    val names: List<String>,
+)
+
+private const val GIS_LINES_WAIT_MS = 10_000L
 
 data class MainUiState(
     val objectType: ObjectType = ObjectType.LINE04,
@@ -66,7 +78,8 @@ data class SyncRow(
 class MainViewModel @Inject constructor(
     private val repository: ObjectsRepository,
     private val tokenManager: TokenManager,
-    private val filialManager: FilialManager
+    private val filialManager: FilialManager,
+    private val geoRepository: GeoRepository,
 ) : BaseViewModel() {
 
     private val token = MutableStateFlow<String?>("")
@@ -321,8 +334,53 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    /** Uploads everything unsent, or one object when [tplnr] is given, and reports the result for B5. */
+    private val _newLines = MutableStateFlow<NewLinesPrompt?>(null)
+    /** Lines GIS has no drawing for: the upload waits until the user confirms adding them. */
+    val newLines: StateFlow<NewLinesPrompt?> = _newLines
+
+    /**
+     * Uploads everything unsent, or one object when [tplnr] is given. Lines GIS doesn't have under
+     * the same name would be added as new ones, so those are shown for confirmation first.
+     */
     fun upload(tplnr: String = "") {
+        if (_sync.value == SyncUiState.Uploading || _newLines.value != null) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val fresh = try {
+                findNewLines(tplnr)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // the check only warns; the server never replaces an existing drawing anyway
+                Log.w("MainViewModel", "new-line check skipped", e)
+                emptyList()
+            }
+            if (fresh.isEmpty()) send(tplnr)
+            else _newLines.value = NewLinesPrompt(tplnr, fresh.map { it.name })
+        }
+    }
+
+    fun confirmNewLines() {
+        val prompt = _newLines.value ?: return
+        _newLines.value = null
+        send(prompt.tplnr)
+    }
+
+    fun cancelNewLines() {
+        _newLines.value = null
+    }
+
+    private suspend fun findNewLines(tplnr: String): List<UploadLine> {
+        val lines = repository.getLinesToUpload(tplnr)
+        if (lines.isEmpty()) return emptyList()
+        // the fresh branch GeoJSON, so a line this phone already added to GIS isn't reported again;
+        // the cached one when the server doesn't answer in time
+        var json: String? = null
+        withTimeoutOrNull(GIS_LINES_WAIT_MS) { geoRepository.branchLines().collect { json = it } }
+        val gis = gisLineKeys(json ?: return emptyList()) ?: return emptyList()
+        return linesNewToGis(lines, gis)
+    }
+
+    private fun send(tplnr: String) {
         if (_sync.value == SyncUiState.Uploading) return
         lastUploadTplnr = tplnr
         _sync.value = SyncUiState.Uploading
@@ -371,7 +429,8 @@ class MainViewModel @Inject constructor(
 
     fun retryUpload() {
         _sync.value = null
-        upload(lastUploadTplnr)
+        // already confirmed the first time
+        send(lastUploadTplnr)
     }
 
     fun closeSync() {

@@ -1,9 +1,21 @@
 package com.poe.poegps.feature.presentation.map
 
+import com.poe.poegps.feature.domain.GisLineKey
 import com.poe.poegps.feature.domain.GisShape
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.MultiLineString
+
+/** Every line drawing in the branch GeoJSON (/gis/geo/lines), or null when it can't be read. */
+fun gisLineKeys(geoJson: String): Set<GisLineKey>? = runCatching {
+    FeatureCollection.fromJson(geoJson).features().orEmpty().mapNotNullTo(HashSet()) { f ->
+        // unnamed drawings (JSON null) can't be what a named line is matched to
+        val props = listOf("tplnr", "name", "layer").map { key ->
+            f.getProperty(key)?.takeUnless { it.isJsonNull }?.asString ?: return@mapNotNullTo null
+        }
+        GisLineKey(props[0], props[1], props[2])
+    }
+}.getOrNull()
 
 /** The line geometries of object [tplnr] in the branch GeoJSON (/gis/geo/lines); empty if none or unreadable. */
 fun lineShapes(geoJson: String, tplnr: String): List<GisShape> = runCatching {

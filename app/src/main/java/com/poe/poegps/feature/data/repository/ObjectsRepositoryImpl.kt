@@ -477,6 +477,8 @@ class ObjectsRepositoryImpl @Inject constructor(
 
     override fun countUnsent(): Flow<Int> = objectsDao.countUnsent()
 
+    override suspend fun getLinesToUpload(tplnr: String): List<UploadLine> = objectsDao.getLinesToUpload(tplnr)
+
     override suspend fun getUploadGroups(tplnr: String): Pair<List<UploadGroup>, Map<String, Int>> {
         val groups = if (tplnr.isEmpty()) objectsDao.getUnsentGroups() else objectsDao.getGroupsByTplnr(tplnr)
         val reclosers = objectsDao.getUnsentRecloserCounts().associate { it.tplnr to it.count }

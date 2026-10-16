@@ -17,6 +17,16 @@ data class GisPoleCount(
     val poles: Int,
 )
 
+/** A line an upload sends, with what decides the GIS table the server writes it to. */
+data class UploadLine(
+    val tplnr: String,
+    val name: String,
+    val pillarType: String,
+    val category: String,
+    val isAbon: Boolean,
+    val poles: Int,
+)
+
 /** Captured poles of one line that go into an upload. */
 data class UploadGroup(
     val tplnr: String,
