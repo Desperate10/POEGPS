@@ -43,7 +43,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Locale
 import kotlin.math.cos
 import com.poe.poegps.feature.domain.GisPoint
 import com.poe.poegps.feature.domain.LineOrdering
@@ -530,13 +529,8 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    // the same "%.5f" text the upload has always sent
     private suspend fun storePosition(opr: OprDisplayable, lat: Double, lng: Double) {
-        repository.updatePillarCoords(
-            opr.id,
-            String.format(Locale.US, "%.5f", lat),
-            String.format(Locale.US, "%.5f", lng),
-        )
+        repository.updatePillarCoords(opr.id, Geo.coordText(lat), Geo.coordText(lng))
     }
 
     /** Span from the previous captured pole and offset from where GIS has this pole. */

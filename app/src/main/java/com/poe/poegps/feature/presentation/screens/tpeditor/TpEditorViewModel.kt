@@ -28,7 +28,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.Locale
 import javax.inject.Inject
 
 /** B7 · ТП/РП: capture of a substation's single point, with the same gate and checks as poles. */
@@ -108,9 +107,9 @@ class TpEditorViewModel @Inject constructor(
         }
     }
 
-    // saveTpCoord writes the upload row and the TP table, in the same "%.5f" text as before
+    // saveTpCoord writes the upload row and the TP table
     private suspend fun store(tp: OprDisplayable, lat: Double, lng: Double) {
-        val saved = tp.copy(lat = String.format(Locale.US, "%.5f", lat), lng = String.format(Locale.US, "%.5f", lng))
+        val saved = tp.copy(lat = Geo.coordText(lat), lng = Geo.coordText(lng))
         repository.saveTpCoord(saved.toDomainModel())
         _tp.value = saved
     }

@@ -15,6 +15,12 @@ typealias Area = List<List<Ring>>
 object Geo {
     private const val EARTH_RADIUS_M = 6_371_000.0
 
+    /**
+     * A coordinate as the text stored and uploaded: 7 decimals, about 1 cm. Five (the old format) is a
+     * 1.1 m step and moved every captured pole by up to half a metre; screens still show five.
+     */
+    fun coordText(degrees: Double): String = String.format(java.util.Locale.US, "%.7f", degrees)
+
     fun distanceM(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
         val dLat = (lat2 - lat1).rad
         val dLng = (lng2 - lng1).rad
