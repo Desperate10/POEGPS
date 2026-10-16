@@ -49,15 +49,26 @@ class LineOrderingTest {
     }
 
     @Test
-    fun `unnamed main geometry falls back to pole numbers without the taps`() {
+    fun `a main line drawn under another name or none is found by its poles`() {
+        for (drawn in listOf("", "ПЛ-10 кВ Л-3 (як у ГІС)")) {
+            val shapes = listOf(
+                GisShape(drawn, listOf(at(p1), at(p2), at(p3), at(p4))),
+                GisShape("Відп. від оп. 3 до оп. 1", listOf(at(p3), at(t1), at(t2))),
+            )
+            val result = LineOrdering.order("Л-1", listOf(p4, t1, p2, t2, p3, p1), shapes)
+            assertTrue(result.fromShape)
+            assertEquals(listOf(p1, p2, p3, p4), result.poles)
+        }
+    }
+
+    @Test
+    fun `two drawings through as many poles give no main line`() {
         val shapes = listOf(
-            GisShape("", listOf(at(p1), at(p2), at(p3), at(p4))),
-            GisShape("Відп. від оп. 3 до оп. 1", listOf(at(p3), at(t1), at(t2))),
+            GisShape("", listOf(at(p1), at(p2))),
+            GisShape("", listOf(at(p3), at(p4))),
         )
-        val result = LineOrdering.order("Л-1", listOf(p4, t1, p2, t2, p3, p1), shapes)
+        val result = LineOrdering.order("Л-1", listOf(p1, p2, p3, p4), shapes)
         assertFalse(result.fromShape)
-        // the junction pole 3 stays on the main line; the tap's own poles go
-        assertEquals(listOf(p1, p2, p3, p4), result.poles)
     }
 
     @Test

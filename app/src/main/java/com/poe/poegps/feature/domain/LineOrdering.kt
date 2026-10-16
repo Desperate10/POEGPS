@@ -22,6 +22,7 @@ object LineOrdering {
     fun order(lineName: String, poles: List<GisPoint>, shapes: List<GisShape>): OrderedLine {
         val main = shapes.firstOrNull { it.name == lineName }
             ?: shapes.firstOrNull { it.name.isNotBlank() && it.name.equals(lineName, ignoreCase = true) }
+            ?: mainByPoles(poles, shapes)
         if (main != null) {
             val ordered = walk(main.vertices, poles)
             if (ordered.size >= 2) return OrderedLine(ordered, fromShape = true)
@@ -34,6 +35,18 @@ object LineOrdering {
             .flatMap { shape -> walk(if (isTap(shape.name)) shape.vertices.drop(1) else shape.vertices, poles) }
             .toSet()
         return OrderedLine(poles.filter { it !in elsewhere }.sortedWith(BY_NUMBER), fromShape = false)
+    }
+
+    /**
+     * GIS doesn't keep drawing names (pltxt) in step with the line list, so when no drawing has the line's
+     * name the main line is the drawing that isn't a tap and passes through the most of the object's
+     * poles, at least two; the server picks the drawing to edit the same way. A tie means no main line.
+     */
+    private fun mainByPoles(poles: List<GisPoint>, shapes: List<GisShape>): GisShape? {
+        val counted = shapes.filter { !isTap(it.name) }.map { it to walk(it.vertices, poles).size }
+        val best = counted.maxOfOrNull { it.second } ?: return null
+        if (best < 2) return null
+        return counted.filter { it.second == best }.singleOrNull()?.first
     }
 
     /** The poles the vertices pass through, in vertex order, each pole at most once. */

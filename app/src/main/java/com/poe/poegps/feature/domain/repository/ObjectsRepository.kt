@@ -151,11 +151,5 @@ interface ObjectsRepository {
 
     /** The line's poles that have coordinates, as lat to lng. */
     suspend fun getLinePolePositions(tplnr: String, lineName: String): List<Pair<Double, Double>>
-
-    /** Names of the object's lines on the phone. */
-    suspend fun getLineNamesOf(tplnr: String): Set<String>
-
-    /** Gives the line the name GIS has it under; false when another line of the object already has it. */
-    suspend fun renameLine(tplnr: String, oldName: String, newName: String): Boolean
     //suspend fun downloadReclosers(filial: String, token: String)
 }

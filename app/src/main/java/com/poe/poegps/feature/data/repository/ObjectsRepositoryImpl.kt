@@ -486,10 +486,6 @@ class ObjectsRepositoryImpl @Inject constructor(
             lat to lng
         }
 
-    override suspend fun getLineNamesOf(tplnr: String): Set<String> = objectsDao.getLineNamesOf(tplnr).toSet()
-
-    override suspend fun renameLine(tplnr: String, oldName: String, newName: String): Boolean =
-        objectsDao.renameLine(tplnr, oldName, newName)
 
     override suspend fun getUploadGroups(tplnr: String): Pair<List<UploadGroup>, Map<String, Int>> {
         val groups = if (tplnr.isEmpty()) objectsDao.getUnsentGroups() else objectsDao.getGroupsByTplnr(tplnr)

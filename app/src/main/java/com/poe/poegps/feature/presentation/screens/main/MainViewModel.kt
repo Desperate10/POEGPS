@@ -10,9 +10,8 @@ import com.poe.poegps.feature.data.remote.utils.FilialManager
 import com.poe.poegps.feature.data.remote.utils.TokenManager
 import com.poe.poegps.feature.data.repository.GeoRepository
 import com.poe.poegps.feature.domain.UploadReport
-import com.poe.poegps.feature.domain.NameCandidate
 import com.poe.poegps.feature.domain.gisLayerOf
-import com.poe.poegps.feature.domain.gisNameCandidates
+import com.poe.poegps.feature.domain.drawnInGis
 import com.poe.poegps.feature.domain.linesNewToGis
 import com.poe.poegps.feature.domain.model.LineProgress
 import com.poe.poegps.feature.presentation.map.gisLineKeys
@@ -46,11 +45,10 @@ data class NewLinesPrompt(
     val lines: List<NewLine>,
 )
 
-/** A line GIS has no drawing of under its name, and GIS drawings of its object it may be under another name. */
+/** A line GIS has no drawing of, by name or through its poles: an upload adds it. */
 data class NewLine(
     val tplnr: String,
     val name: String,
-    val candidates: List<NameCandidate>,
 )
 
 private const val GIS_LINES_WAIT_MS = 10_000L
@@ -373,21 +371,12 @@ class MainViewModel @Inject constructor(
     }
 
     /**
-     * [gisNames]: for lines that are a GIS drawing under another name, that name. Those lines take it
-     * on the phone first, so the upload edits the drawing; the rest go to GIS as new lines.
+     * The crew confirmed that these lines are new to GIS: upload.
      */
-    fun confirmNewLines(gisNames: Map<NewLine, String>) {
+    fun confirmNewLines() {
         val prompt = _newLines.value ?: return
         _newLines.value = null
-        viewModelScope.launch(Dispatchers.IO) {
-            val clashes = gisNames.filterNot { (line, name) -> repository.renameLine(line.tplnr, line.name, name) }
-            if (clashes.isNotEmpty()) {
-                // another line of the object took that name meanwhile: nothing is sent, the crew looks again
-                _message.emit("Назву «${clashes.values.first()}» вже має інша лінія. Нічого не надіслано.")
-                return@launch
-            }
-            send(prompt.tplnr)
-        }
+        send(prompt.tplnr)
     }
 
     fun cancelNewLines() {
@@ -405,20 +394,12 @@ class MainViewModel @Inject constructor(
         val gis = gisLineKeys(geo) ?: return emptyList()
         val fresh = linesNewToGis(lines, gis)
         if (fresh.isEmpty()) return emptyList()
+        // no drawing under its name, but one through its poles: the server edits that drawing, not new
         val shapes = lineShapes(geo, fresh.map { it.tplnr }.toSet())
-        return fresh.map { line ->
+        return fresh.filterNot { line ->
             val layer = gisLayerOf(line.pillarType, line.category, line.isAbon).orEmpty()
-            NewLine(
-                tplnr = line.tplnr,
-                name = line.name,
-                candidates = gisNameCandidates(
-                    line.name, layer,
-                    repository.getLinePolePositions(line.tplnr, line.name),
-                    shapes[line.tplnr].orEmpty(),
-                    usedNames = repository.getLineNamesOf(line.tplnr),
-                ),
-            )
-        }
+            drawnInGis(layer, repository.getLinePolePositions(line.tplnr, line.name), shapes[line.tplnr].orEmpty())
+        }.map { NewLine(it.tplnr, it.name) }
     }
 
     private fun send(tplnr: String) {
