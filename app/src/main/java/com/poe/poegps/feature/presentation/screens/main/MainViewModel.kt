@@ -9,6 +9,7 @@ import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.data.remote.utils.FilialManager
 import com.poe.poegps.feature.data.remote.utils.TokenManager
 import com.poe.poegps.feature.data.repository.GeoRepository
+import com.poe.poegps.feature.domain.UploadReport
 import com.poe.poegps.feature.domain.linesNewToGis
 import com.poe.poegps.feature.domain.model.LineProgress
 import com.poe.poegps.feature.domain.model.UploadLine
@@ -71,6 +72,8 @@ data class SyncRow(
     val poles: Int,
     val reclosers: Int,
     val rejected: Boolean,
+    /** The server's reason for this row; blank when it didn't say which line. */
+    val reason: String = "",
 )
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -418,8 +421,11 @@ class MainViewModel @Inject constructor(
     ): SyncUiState.Done {
         // reclosers are reported on the first row of their line, or on a row of their own
         val unclaimed = reclosers.toMutableMap()
+        // the server refuses by tplnr; its message says which line, so the object's other lines aren't marked
+        val parsed = UploadReport.parse(message)
         val rows = groups.map { g ->
-            SyncRow(g.name, g.poles, unclaimed.remove(g.tplnr) ?: 0, g.tplnr in rejected)
+            val reason = UploadReport.reasonFor(g.name, g.tplnr, rejected, parsed)
+            SyncRow(g.name, g.poles, unclaimed.remove(g.tplnr) ?: 0, reason != null, reason.orEmpty())
         } + unclaimed.map { (tplnr, count) -> SyncRow(tplnr, 0, count, tplnr in rejected) }
         val total = rows.sumOf { it.poles + it.reclosers }
         val accepted = rows.filterNot { it.rejected }.sumOf { it.poles + it.reclosers }

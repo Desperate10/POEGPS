@@ -142,7 +142,7 @@ private fun SyncRowCard(row: SyncRow, rejectReason: String) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(row.name, style = PoeTheme.type.rowTitle, color = c.ink)
             val detail = if (row.rejected) {
-                rejectReason.ifBlank { "Сервер не прийняв цей об'єкт" }
+                row.reason.ifBlank { rejectReason.ifBlank { "Сервер не прийняв цей об'єкт" } }
             } else {
                 listOfNotNull(
                     // the whole line is sent, but only these poles were new or changed

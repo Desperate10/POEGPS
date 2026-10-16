@@ -400,7 +400,14 @@ interface ObjectsDao {
     )
     suspend fun getSavedPillars(): List<LinePillarDbModel>
 
-    @Query("SELECT * FROM line_pillar WHERE lat <> '0.0' AND tplnr LIKE :tplnr ORDER BY sortOrder, id")
+    // one object: like getSavedPillars, only its lines with an unsent pole (a tap's change doesn't resend the main line)
+    @Query(
+        "SELECT * FROM line_pillar p WHERE p.lat <> '0.0' AND p.tplnr LIKE :tplnr AND EXISTS (" +
+            "SELECT 1 FROM line_pillar u WHERE u.lat <> '0.0' AND u.isSent = 0 " +
+            "AND u.tplnr = p.tplnr AND u.parentName = p.parentName " +
+            "AND u.category = p.category AND u.isAbon = p.isAbon) " +
+            "ORDER BY p.sortOrder, p.id"
+    )
     suspend fun getSavedPillarsByTplnr(tplnr: String): List<LinePillarDbModel>
 
     @Query(
@@ -427,18 +434,18 @@ interface ObjectsDao {
 
     @Query(
         "SELECT tplnr, COALESCE(NULLIF(parentName, ''), MIN(name)) AS name, COUNT(*) AS poles FROM line_pillar " +
-            "WHERE lat <> '0.0' AND tplnr LIKE :tplnr GROUP BY tplnr, parentName ORDER BY MIN(id)"
+            "WHERE lat <> '0.0' AND isSent = 0 AND tplnr LIKE :tplnr GROUP BY tplnr, parentName ORDER BY MIN(id)"
     )
     suspend fun getGroupsByTplnr(tplnr: String): List<UploadGroup>
 
     // the lines an upload sends, picked like getSavedPillars (all) and getSavedPillarsByTplnr (one object)
     @Query(
         "SELECT tplnr, parentName AS name, MIN(pillarType) AS pillarType, category, isAbon, COUNT(*) AS poles " +
-            "FROM line_pillar p WHERE lat <> '0.0' AND parentName <> '' AND (" +
-            "(:tplnr <> '' AND tplnr LIKE :tplnr) OR (:tplnr = '' AND EXISTS (" +
+            "FROM line_pillar p WHERE lat <> '0.0' AND parentName <> '' " +
+            "AND (:tplnr = '' OR tplnr LIKE :tplnr) AND EXISTS (" +
             "SELECT 1 FROM line_pillar u WHERE u.lat <> '0.0' AND u.isSent = 0 " +
             "AND u.tplnr = p.tplnr AND u.parentName = p.parentName " +
-            "AND u.category = p.category AND u.isAbon = p.isAbon))) " +
+            "AND u.category = p.category AND u.isAbon = p.isAbon) " +
             "GROUP BY tplnr, parentName, category, isAbon"
     )
     suspend fun getLinesToUpload(tplnr: String): List<UploadLine>
@@ -449,7 +456,7 @@ interface ObjectsDao {
     @Query("SELECT * FROM recloser WHERE lat <> '0.0' AND isSent = 0")
     suspend fun getSavedReclosers(): List<RecloserDbModel>
 
-    @Query("SELECT * FROM recloser WHERE tplnr LIKE '%' || :tplnr || '%'")
+    @Query("SELECT * FROM recloser WHERE lat <> '0.0' AND isSent = 0 AND tplnr LIKE '%' || :tplnr || '%'")
     suspend fun getSavedReclosersByTplnr(tplnr: String): List<RecloserDbModel>
 
     @Query("SELECT * FROM tp WHERE lat <> '0.0' ORDER BY pltxt ASC")
