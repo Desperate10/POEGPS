@@ -307,6 +307,42 @@ interface ObjectsDao {
     @Query("SELECT id FROM line_pillar WHERE tplnr = :tplnr AND parentName = :parentName")
     suspend fun getLinePoleIds(tplnr: String, parentName: String): List<Int>
 
+    @Query("SELECT * FROM line_pillar WHERE tplnr = :tplnr AND parentName = :parentName AND lat <> '0.0' ORDER BY sortOrder, id")
+    suspend fun getCapturedLinePoles(tplnr: String, parentName: String): List<LinePillarDbModel>
+
+    @Query("SELECT DISTINCT parentName FROM line_pillar WHERE tplnr = :tplnr")
+    suspend fun getLineNamesOf(tplnr: String): List<String>
+
+    @Query("UPDATE line_pillar SET parentName = :newName WHERE tplnr = :tplnr AND parentName = :oldName")
+    suspend fun renameLinePoles(tplnr: String, oldName: String, newName: String)
+
+    @Query("UPDATE line04 SET name = :newName WHERE tplnr = :tplnr AND name = :oldName")
+    suspend fun renameLine04(tplnr: String, oldName: String, newName: String)
+
+    @Query("UPDATE line10 SET name = :newName WHERE tplnr = :tplnr AND name = :oldName")
+    suspend fun renameLine10(tplnr: String, oldName: String, newName: String)
+
+    @Query("UPDATE abon_line04 SET name = :newName WHERE tplnr = :tplnr AND name = :oldName")
+    suspend fun renameAbonLine04(tplnr: String, oldName: String, newName: String)
+
+    @Query("UPDATE abon_line10 SET name = :newName WHERE tplnr = :tplnr AND name = :oldName")
+    suspend fun renameAbonLine10(tplnr: String, oldName: String, newName: String)
+
+    /**
+     * Gives a line the name GIS has it under, so the upload edits that drawing instead of adding one.
+     * False (nothing changed) when another line of the object on the phone already has that name.
+     */
+    @Transaction
+    suspend fun renameLine(tplnr: String, oldName: String, newName: String): Boolean {
+        if (oldName == newName || newName in getLineNamesOf(tplnr)) return false
+        renameLinePoles(tplnr, oldName, newName)
+        renameLine04(tplnr, oldName, newName)
+        renameLine10(tplnr, oldName, newName)
+        renameAbonLine04(tplnr, oldName, newName)
+        renameAbonLine10(tplnr, oldName, newName)
+        return true
+    }
+
     @Query("UPDATE line_pillar SET sortOrder = :order WHERE id = :id")
     suspend fun setSortOrder(id: Int, order: Double)
 

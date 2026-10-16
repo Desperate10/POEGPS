@@ -6,7 +6,7 @@ import com.poe.poegps.core.location.Geo
 data class GisPoint(val name: String, val lat: Double, val lng: Double)
 
 /** One line geometry of the object from /gis/geo/lines: the main line, a tap ("Відп. від оп. …") or unnamed. */
-data class GisShape(val name: String, val vertices: List<Pair<Double, Double>>)
+data class GisShape(val name: String, val vertices: List<Pair<Double, Double>>, val layer: String = "")
 
 /** The poles of one line in the order to load them; [fromShape] = taken from its GIS geometry, else by pole number. */
 data class OrderedLine(val poles: List<GisPoint>, val fromShape: Boolean)

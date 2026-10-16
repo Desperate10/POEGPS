@@ -18,16 +18,21 @@ fun gisLineKeys(geoJson: String): Set<GisLineKey>? = runCatching {
 }.getOrNull()
 
 /** The line geometries of object [tplnr] in the branch GeoJSON (/gis/geo/lines); empty if none or unreadable. */
-fun lineShapes(geoJson: String, tplnr: String): List<GisShape> = runCatching {
+fun lineShapes(geoJson: String, tplnr: String): List<GisShape> = lineShapes(geoJson, setOf(tplnr))[tplnr].orEmpty()
+
+/** The line geometries of several objects, by tplnr, from one read of the branch GeoJSON; empty if unreadable. */
+fun lineShapes(geoJson: String, tplnrs: Set<String>): Map<String, List<GisShape>> = runCatching {
     FeatureCollection.fromJson(geoJson).features().orEmpty()
-        .filter { it.hasProperty("tplnr") && it.getStringProperty("tplnr") == tplnr }
-        .flatMap { f ->
+        .filter { it.hasProperty("tplnr") && it.getStringProperty("tplnr") in tplnrs }
+        .groupBy({ it.getStringProperty("tplnr") }) { f ->
             // a JSON null name would throw and lose every shape of the object
             val name = f.getProperty("name")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+            val layer = f.getProperty("layer")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
             when (val g = f.geometry()) {
-                is LineString -> listOf(GisShape(name, g.coordinates().map { it.latitude() to it.longitude() }))
-                is MultiLineString -> g.coordinates().map { part -> GisShape(name, part.map { it.latitude() to it.longitude() }) }
+                is LineString -> listOf(GisShape(name, g.coordinates().map { it.latitude() to it.longitude() }, layer))
+                is MultiLineString -> g.coordinates().map { part -> GisShape(name, part.map { it.latitude() to it.longitude() }, layer) }
                 else -> emptyList()
             }
         }
-}.getOrDefault(emptyList())
+        .mapValues { (_, shapes) -> shapes.flatten() }
+}.getOrDefault(emptyMap())

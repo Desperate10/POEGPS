@@ -10,10 +10,13 @@ import com.poe.poegps.feature.data.remote.utils.FilialManager
 import com.poe.poegps.feature.data.remote.utils.TokenManager
 import com.poe.poegps.feature.data.repository.GeoRepository
 import com.poe.poegps.feature.domain.UploadReport
+import com.poe.poegps.feature.domain.NameCandidate
+import com.poe.poegps.feature.domain.gisLayerOf
+import com.poe.poegps.feature.domain.gisNameCandidates
 import com.poe.poegps.feature.domain.linesNewToGis
 import com.poe.poegps.feature.domain.model.LineProgress
-import com.poe.poegps.feature.domain.model.UploadLine
 import com.poe.poegps.feature.presentation.map.gisLineKeys
+import com.poe.poegps.feature.presentation.map.lineShapes
 import com.poe.poegps.feature.domain.model.UploadGroup
 import com.poe.poegps.feature.domain.repository.ObjectsRepository
 import com.poe.poegps.feature.presentation.BaseViewModel
@@ -40,7 +43,14 @@ data class ObjectItem(
 /** Before an upload of [tplnr] ("" = everything): the lines GIS will get as new drawings. */
 data class NewLinesPrompt(
     val tplnr: String,
-    val names: List<String>,
+    val lines: List<NewLine>,
+)
+
+/** A line GIS has no drawing of under its name, and GIS drawings of its object it may be under another name. */
+data class NewLine(
+    val tplnr: String,
+    val name: String,
+    val candidates: List<NameCandidate>,
 )
 
 private const val GIS_LINES_WAIT_MS = 10_000L
@@ -358,29 +368,57 @@ class MainViewModel @Inject constructor(
                 emptyList()
             }
             if (fresh.isEmpty()) send(tplnr)
-            else _newLines.value = NewLinesPrompt(tplnr, fresh.map { it.name })
+            else _newLines.value = NewLinesPrompt(tplnr, fresh)
         }
     }
 
-    fun confirmNewLines() {
+    /**
+     * [gisNames]: for lines that are a GIS drawing under another name, that name. Those lines take it
+     * on the phone first, so the upload edits the drawing; the rest go to GIS as new lines.
+     */
+    fun confirmNewLines(gisNames: Map<NewLine, String>) {
         val prompt = _newLines.value ?: return
         _newLines.value = null
-        send(prompt.tplnr)
+        viewModelScope.launch(Dispatchers.IO) {
+            val clashes = gisNames.filterNot { (line, name) -> repository.renameLine(line.tplnr, line.name, name) }
+            if (clashes.isNotEmpty()) {
+                // another line of the object took that name meanwhile: nothing is sent, the crew looks again
+                _message.emit("Назву «${clashes.values.first()}» вже має інша лінія. Нічого не надіслано.")
+                return@launch
+            }
+            send(prompt.tplnr)
+        }
     }
 
     fun cancelNewLines() {
         _newLines.value = null
     }
 
-    private suspend fun findNewLines(tplnr: String): List<UploadLine> {
+    private suspend fun findNewLines(tplnr: String): List<NewLine> {
         val lines = repository.getLinesToUpload(tplnr)
         if (lines.isEmpty()) return emptyList()
         // the fresh branch GeoJSON, so a line this phone already added to GIS isn't reported again;
         // the cached one when the server doesn't answer in time
         var json: String? = null
         withTimeoutOrNull(GIS_LINES_WAIT_MS) { geoRepository.branchLines().collect { json = it } }
-        val gis = gisLineKeys(json ?: return emptyList()) ?: return emptyList()
-        return linesNewToGis(lines, gis)
+        val geo = json ?: return emptyList()
+        val gis = gisLineKeys(geo) ?: return emptyList()
+        val fresh = linesNewToGis(lines, gis)
+        if (fresh.isEmpty()) return emptyList()
+        val shapes = lineShapes(geo, fresh.map { it.tplnr }.toSet())
+        return fresh.map { line ->
+            val layer = gisLayerOf(line.pillarType, line.category, line.isAbon).orEmpty()
+            NewLine(
+                tplnr = line.tplnr,
+                name = line.name,
+                candidates = gisNameCandidates(
+                    line.name, layer,
+                    repository.getLinePolePositions(line.tplnr, line.name),
+                    shapes[line.tplnr].orEmpty(),
+                    usedNames = repository.getLineNamesOf(line.tplnr),
+                ),
+            )
+        }
     }
 
     private fun send(tplnr: String) {
