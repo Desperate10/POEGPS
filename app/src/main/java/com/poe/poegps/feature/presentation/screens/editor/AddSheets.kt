@@ -94,6 +94,8 @@ data class PickItem(
     val lng: String,
     val category: String,
     val isAbon: Boolean,
+    /** The GIS object of a pole ("" for TPs). */
+    val tplnr: String = "",
 ) {
     val hasCoordinates: Boolean
         get() = lat.toDoubleOrNull()?.let { it != 0.0 } == true && lng.toDoubleOrNull()?.let { it != 0.0 } == true

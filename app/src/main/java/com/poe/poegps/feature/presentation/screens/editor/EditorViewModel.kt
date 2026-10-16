@@ -275,6 +275,14 @@ class EditorViewModel @Inject constructor(
     /** B9: copies an existing GIS point (pole of another line, or a TP) into this line. */
     fun addExisting(source: PickSource, item: PickItem, afterId: Int? = null) {
         val isTp = source == PickSource.TP || source == PickSource.ABON_TP
+        // a pole of this object from the table the editor reads GIS poles from: it is that GIS pole, at its
+        // GIS position, so it can be put back there later. A pole of another object would be looked up
+        // among this object's namesakes, so it stays a plain new pole. Unsent either way: it is new to this line.
+        val sameGisPole = item.tplnr == args.tplnr && when (source) {
+            PickSource.POLE_04 -> args.objectType == ObjectType.LINE04 || args.objectType == ObjectType.LINEABON04
+            PickSource.POLE_10 -> args.objectType == ObjectType.LINE10 || args.objectType == ObjectType.LINEABON10
+            else -> false
+        }
         addPillarToDisplay(
             OprDisplayable(
                 id = 0,
@@ -286,6 +294,8 @@ class EditorViewModel @Inject constructor(
                 pillarType = if (isTp) "" else PillarType.PILLAR.name,
                 lat = item.lat,
                 lng = item.lng,
+                fromGis = sameGisPole,
+                gisOrigin = sameGisPole,
             ),
             afterId,
         )
@@ -598,7 +608,7 @@ class EditorViewModel @Inject constructor(
 }
 
 private fun com.poe.poegps.feature.domain.model.Pillar.toPickItem(line: String) =
-    PickItem("$tplnr#$id", name, line, lat, lng, category, isAbon)
+    PickItem("$tplnr#$id", name, line, lat, lng, category, isAbon, tplnr)
 
 /** "2", "13а", "13/1", "16": by the leading number, then the rest; names without one go last. */
 private val POLE_ORDER = compareBy<PickItem>(
