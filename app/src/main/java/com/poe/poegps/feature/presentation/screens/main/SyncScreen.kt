@@ -145,7 +145,8 @@ private fun SyncRowCard(row: SyncRow, rejectReason: String) {
                 rejectReason.ifBlank { "Сервер не прийняв цей об'єкт" }
             } else {
                 listOfNotNull(
-                    row.poles.takeIf { it > 0 }?.let { "$it ${plural(it, "опора", "опори", "опор")}" },
+                    // the whole line is sent, but only these poles were new or changed
+                    row.poles.takeIf { it > 0 }?.let { "змінено $it ${plural(it, "опору", "опори", "опор")}" },
                     row.reclosers.takeIf { it > 0 }?.let { "$it ${plural(it, "реклоузер", "реклоузери", "реклоузерів")}" },
                 ).joinToString(" · ")
             }

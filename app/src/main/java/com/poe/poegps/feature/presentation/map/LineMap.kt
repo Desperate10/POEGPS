@@ -111,6 +111,8 @@ fun LineMap(
     focus: MapFocus? = null,
     /** Reports the point under the centre of the visible area as the camera moves (B6). */
     onCenterChange: ((Double, Double) -> Unit)? = null,
+    /** Where the dashed span to the GPS dot starts (lat, lng); null draws none. */
+    gpsLinkFrom: Pair<Double, Double>? = poles.lastOrNull()?.let { it.lat to it.lng },
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -215,7 +217,7 @@ fun LineMap(
             features(if (poles.size > 1) Feature.fromGeometry(LineString.fromLngLats(poles.map { Point.fromLngLat(it.lng, it.lat) })) else null)
         )
     }
-    LaunchedEffect(style, gps, poles) {
+    LaunchedEffect(style, gps, gpsLinkFrom) {
         val s = style ?: return@LaunchedEffect
         val g = gps
         s.getSourceAs<GeoJsonSource>(SRC_GPS)?.setGeoJson(
@@ -224,11 +226,11 @@ fun LineMap(
         s.getSourceAs<GeoJsonSource>(SRC_GPS_ACCURACY)?.setGeoJson(
             features(g?.accuracy?.let { Feature.fromGeometry(circle(g.lat, g.lng, it.toDouble())) })
         )
-        val last = poles.lastOrNull()
+        val from = gpsLinkFrom
         s.getSourceAs<GeoJsonSource>(SRC_GPS_LINK)?.setGeoJson(
             features(
-                if (g == null || last == null) null
-                else Feature.fromGeometry(LineString.fromLngLats(listOf(Point.fromLngLat(last.lng, last.lat), Point.fromLngLat(g.lng, g.lat))))
+                if (g == null || from == null) null
+                else Feature.fromGeometry(LineString.fromLngLats(listOf(Point.fromLngLat(from.second, from.first), Point.fromLngLat(g.lng, g.lat))))
             )
         )
     }

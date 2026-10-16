@@ -1,5 +1,6 @@
 package com.poe.poegps.feature.presentation.screens.main
 
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.poe.poegps.feature.data.remote.model.LoginResponse
 import com.poe.poegps.feature.data.remote.model.TokenCheckResponse
@@ -219,21 +220,21 @@ class MainViewModel @Inject constructor(
                         _uploadState.value = it
                     }
             }
-            jobs += viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, _ -> }) {
+            jobs += viewModelScope.launch(Dispatchers.IO + partFailed("ТП")) {
                 repository.downloadTPs(filial.value!!, token.value ?: "")
             }
-            jobs += viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, _ -> }) {
+            jobs += viewModelScope.launch(Dispatchers.IO + partFailed("ПС")) {
                 repository.downloadPss(token.value ?: "")
             }
-            jobs += viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, _ -> }) {
+            jobs += viewModelScope.launch(Dispatchers.IO + partFailed("опори")) {
                 repository.downloadPillars(filial.value!!, token.value ?: "")
             }
             //загрузка проводов
-            jobs += viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, _ -> }) {
+            jobs += viewModelScope.launch(Dispatchers.IO + partFailed("марки проводів")) {
                 repository.downloadWires(token.value ?: "")
             }
             //загрузка КЛ/КВ
-            jobs += viewModelScope.launch(Dispatchers.IO + CoroutineExceptionHandler { _, _ -> }) {
+            jobs += viewModelScope.launch(Dispatchers.IO + partFailed("КЛ/КВ")) {
                 repository.downloadKls(filial.value!!, token.value ?: "")
             }
             // B12 shows when the branch data was last downloaded in full
@@ -356,6 +357,12 @@ class MainViewModel @Inject constructor(
 
     fun closeSync() {
         if (_sync.value != SyncUiState.Uploading) _sync.value = null
+    }
+
+    /** A part of the branch download failed: say which, instead of silently leaving that layer empty. */
+    private fun partFailed(what: String) = CoroutineExceptionHandler { _, error ->
+        Log.w("MainViewModel", "download of $what failed", error)
+        viewModelScope.launch { _message.emit("Не завантажено: $what. Спробуйте ще раз.") }
     }
 
     /** The server said the token is missing or expired. */

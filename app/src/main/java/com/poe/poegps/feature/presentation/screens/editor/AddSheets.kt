@@ -111,7 +111,7 @@ interface AddActions {
 }
 
 /**
- * B8 suggestions after [last]: the next number first, then "13а", "13/1" and the one after next.
+ * B8 suggestions after [last]: the next number first, then "13б" (GIS marks extra poles with б), "13/1" and the one after next.
  * Keeps the last name's prefix ("Опора 13" → "Опора 14"); names already on the line are skipped.
  */
 internal fun nextPoleNames(last: String?, taken: Collection<String>): List<String> {
@@ -121,7 +121,7 @@ internal fun nextPoleNames(last: String?, taken: Collection<String>): List<Strin
     val prefix = match.groupValues[1]
     val number = match.groupValues[2].toLongOrNull() ?: return emptyList()
     val base = prefix + match.groupValues[2]
-    return listOf("$prefix${number + 1}", "${base}а", "$base/1", "$prefix${number + 2}")
+    return listOf("$prefix${number + 1}", "${base}б", "$base/1", "$prefix${number + 2}")
         .filter { it !in taken }
         .distinct()
 }

@@ -279,9 +279,10 @@ fun PillarObjects04DTO.toDomainModel() = Pillar(
     category = "0,4 кВ",
     isAbon = false,
     pillarType = PillarType.PILLAR.name,
-    wire = wire,
-    lat = lat,
-    lng = lng,
+    wire = wire.orEmpty(),
+    // "0.0" is how the app marks "no coordinates" everywhere
+    lat = lat ?: "0.0",
+    lng = lng ?: "0.0",
     recloser = ""
 )
 
@@ -293,9 +294,9 @@ fun PillarObjects10DTO.toDomainModel() = Pillar(
     category = "10 кВ",
     pillarType = PillarType.PILLAR.name,
     isAbon = false,
-    wire = wire,
-    lat = lat,
-    lng = lng,
+    wire = wire.orEmpty(),
+    lat = lat ?: "0.0",
+    lng = lng ?: "0.0",
     recloser = ""
 )
 

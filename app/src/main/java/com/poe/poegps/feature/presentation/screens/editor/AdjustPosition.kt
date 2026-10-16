@@ -55,6 +55,12 @@ import kotlin.math.roundToInt
 /** Arrow steps in metres; 1 m is about the precision of the five-decimal coordinates the upload sends. */
 val ADJUST_STEPS = listOf(1f, 5f)
 
+/** Farther than this from the pole, the crew isn't standing at it: the move is a correction from the map. */
+private const val DESK_CORRECTION_M = 50.0
+
+private fun formatKm(m: Double): String =
+    if (m < 1000) "${m.roundToInt()} м" else String.format(Locale.US, "%.1f км", m / 1000)
+
 /** (lat, lng) moved [north] and [east] metres. */
 fun offsetBy(point: Pair<Double, Double>, north: Double, east: Double): Pair<Double, Double> {
     val (lat, lng) = point
@@ -162,6 +168,11 @@ fun BoxScope.AdjustOverlay(
             offset != null && offset < 1.0 -> InfoChip(
                 PoeIcons.Crosshair, "Позиція GPS" + (gps.accuracy?.let { String.format(Locale.US, " · ±%.1f м", it) } ?: ""),
                 bg = c.gpsContainer, fg = c.onGpsContainer,
+            )
+            // far from the pole: a correction made from the map (e.g. in the office), nothing to warn about
+            offset != null && offset > DESK_CORRECTION_M -> InfoChip(
+                PoeIcons.Move, "Коригування з мапи · ви за ${formatKm(offset)} від опори",
+                bg = c.surfaceMuted, fg = c.inkSecondary,
             )
             offset != null -> InfoChip(
                 PoeIcons.Edit, "Вручну: на ${String.format(Locale.US, "%.1f", offset)} м від GPS (${direction(gpsUsable!!.latitude, gpsUsable.longitude, center!!)})",

@@ -12,7 +12,7 @@ class NextPoleNamesTest {
 
     @Test
     fun `plain number suggests next, letter, slash and the one after`() {
-        assertEquals(listOf("14", "13а", "13/1", "15"), nextPoleNames("13", setOf("13")))
+        assertEquals(listOf("14", "13б", "13/1", "15"), nextPoleNames("13", setOf("13")))
     }
 
     @Test
@@ -27,7 +27,7 @@ class NextPoleNamesTest {
 
     @Test
     fun `names already on the line are skipped`() {
-        assertEquals(listOf("14", "13/1", "15"), nextPoleNames("13а", setOf("13", "13а")))
+        assertEquals(listOf("14", "13/1", "15"), nextPoleNames("13б", setOf("13", "13б")))
     }
 
     @Test

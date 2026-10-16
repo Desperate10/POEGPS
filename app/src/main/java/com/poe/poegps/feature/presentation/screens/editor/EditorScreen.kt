@@ -180,6 +180,8 @@ fun EditorScreen(
             modifier = Modifier.fillMaxSize(),
             focus = focus,
             onCenterChange = { lat, lng -> center = lat to lng },
+            // the span being measured: from the pole before the one to capture; none when nothing is next
+            gpsLinkFrom = if (target != null) previous?.let { it.lat.toDouble() to it.lng.toDouble() } else null,
         )
 
         if (adjusting != null) {
