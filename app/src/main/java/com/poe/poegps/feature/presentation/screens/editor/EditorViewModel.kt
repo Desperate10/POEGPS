@@ -264,9 +264,10 @@ class EditorViewModel @Inject constructor(
      * B11: a tap from [from] whose first pole is [firstPole]. The name keeps the generated format the
      * server receives as the line name. [open] switches the editor to the tap, as the old dialog always did.
      */
-    fun createTap(from: OprDisplayable, firstPole: String, open: Boolean) {
+    fun createTap(from: OprDisplayable, firstPole: String, open: Boolean, gisName: String? = null) {
         val first = firstPole.trim()
-        val name = tapName(from.name, first)
+        // a tap GIS already has keeps its exact name, so the upload edits it instead of adding another
+        val name = gisName ?: tapName(from.name, first)
         createOtp(
             from.copy(parentName = name),
             OprDisplayable(

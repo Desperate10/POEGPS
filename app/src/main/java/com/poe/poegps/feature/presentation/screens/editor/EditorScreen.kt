@@ -35,6 +35,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import com.poe.poegps.feature.domain.GisTap
+import com.poe.poegps.feature.domain.gisTapsAt
+import com.poe.poegps.feature.presentation.map.lineShapes
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -307,9 +313,17 @@ fun EditorScreen(
         )
     }
     poles.firstOrNull { it.id == tapFor }?.let { pole ->
+        // parsing the branch GeoJSON takes a moment: off the main thread, the sheet fills in when ready
+        val gisTaps by produceState(emptyList<GisTap>(), gisLines, pole.id, lineName) {
+            val json = gisLines ?: return@produceState
+            value = withContext(Dispatchers.Default) {
+                gisTapsAt(pole.name, pole.lat.toDoubleOrNull()?.takeIf { it != 0.0 }, pole.lng.toDoubleOrNull(),
+                    lineShapes(json, tplnr), exclude = setOf(lineName))
+            }
+        }
         TapSheet(
-            pole, lineName,
-            onCreate = { first, open -> tapFor = null; adds.createTap(pole, first, open) },
+            pole, lineName, gisTaps,
+            onCreate = { first, open, gisName -> tapFor = null; adds.createTap(pole, first, open, gisName) },
             onDismiss = { tapFor = null },
         )
     }

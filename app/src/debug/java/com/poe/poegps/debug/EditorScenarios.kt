@@ -109,6 +109,6 @@ private object SampleAddActions : AddActions {
     override fun lines(source: PickSource): Flow<List<ObjectDisplayable>> = flowOf(lines)
     override fun candidates(source: PickSource, line: ObjectDisplayable?): Flow<List<PickItem>> = flowOf(near)
     override suspend fun nearby(source: PickSource, lat: Double, lng: Double): List<PickItem> = near
-    override fun createTap(from: OprDisplayable, firstPole: String, open: Boolean) {}
+    override fun createTap(from: OprDisplayable, firstPole: String, open: Boolean, gisName: String?) {}
     override fun saveRecloser(pole: OprDisplayable, type: RecloserType, name: String) {}
 }

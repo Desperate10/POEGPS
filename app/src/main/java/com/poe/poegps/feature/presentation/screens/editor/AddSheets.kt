@@ -68,6 +68,7 @@ import com.poe.poegps.core.designsystem.PoeSegmentedTabs
 import com.poe.poegps.core.designsystem.PoeShapes
 import com.poe.poegps.core.designsystem.PoeTheme
 import com.poe.poegps.core.location.Geo
+import com.poe.poegps.feature.domain.GisTap
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.OprDisplayable
 import com.poe.poegps.feature.presentation.model.RecloserType
@@ -106,7 +107,8 @@ interface AddActions {
     fun lines(source: PickSource): Flow<List<ObjectDisplayable>>
     fun candidates(source: PickSource, line: ObjectDisplayable?): Flow<List<PickItem>>
     suspend fun nearby(source: PickSource, lat: Double, lng: Double): List<PickItem>
-    fun createTap(from: OprDisplayable, firstPole: String, open: Boolean)
+    /** [gisName]: the exact name of a tap GIS already has, instead of a generated one. */
+    fun createTap(from: OprDisplayable, firstPole: String, open: Boolean, gisName: String?)
     fun saveRecloser(pole: OprDisplayable, type: RecloserType, name: String)
 }
 
@@ -474,22 +476,48 @@ internal fun RecloserSheet(
     }
 }
 
-/** B11 · Нова відпайка. The name is generated: the server takes it as the tap's line name. */
+/**
+ * B11 · Нова відпайка. The name is generated: the server takes it as the tap's line name. When GIS
+ * already draws taps from this pole ([gisTaps]), one can be picked to keep its exact GIS name, so the
+ * upload edits that tap instead of adding a second one.
+ */
 @Composable
 internal fun TapSheet(
     pole: OprDisplayable,
     lineName: String,
-    onCreate: (firstPole: String, open: Boolean) -> Unit,
+    gisTaps: List<GisTap>,
+    onCreate: (firstPole: String, open: Boolean, gisName: String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val c = PoeTheme.colors
     // no default: the crew reads the first pole's number off the pole
     var first by rememberSaveable { mutableStateOf("") }
     var open by rememberSaveable { mutableStateOf(true) }
+    var gisName by rememberSaveable { mutableStateOf<String?>(null) }
+    // when GIS has taps here, "a new one" must be picked on purpose: skipping the list makes duplicates
+    var other by rememberSaveable { mutableStateOf(false) }
+    val mustChoose = gisTaps.isNotEmpty() && gisName == null && !other
     FormSheet(onDismiss) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             PoeOverline("Від ${pole.name.shortPoleName()} · $lineName")
             Text("Нова відпайка", style = sheetHeading, color = c.ink)
+        }
+        if (gisTaps.isNotEmpty()) {
+            Field("Уже є в ГІС від цієї опори") {
+                Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    gisTaps.forEach { tap ->
+                        TapChoice(tap.name, "взяти назву з ГІС", selected = gisName == tap.name) {
+                            gisName = tap.name
+                            other = false
+                            if (first.isBlank()) first = tap.firstPole.orEmpty()
+                        }
+                    }
+                    TapChoice("Інша, якої немає в ГІС", "назву буде створено", selected = other) {
+                        gisName = null
+                        other = true
+                    }
+                }
+            }
         }
         Field("Назва відпайки") {
             Box(
@@ -502,7 +530,7 @@ internal fun TapSheet(
                 contentAlignment = Alignment.CenterStart,
             ) {
                 Text(
-                    EditorViewModel.tapName(pole.name, first.trim().ifEmpty { "…" }),
+                    gisName ?: EditorViewModel.tapName(pole.name, first.trim().ifEmpty { "…" }),
                     style = PoeTheme.type.rowTitle.copy(fontSize = 18.sp), color = c.ink,
                 )
             }
@@ -540,11 +568,37 @@ internal fun TapSheet(
             Text("Одразу перейти до зйомки відпайки", style = PoeTheme.type.tabSelected, color = c.ink)
         }
         PoePrimaryButton(
-            text = if (first.isBlank()) "Вкажіть першу опору" else "Створити відпайку",
-            onClick = { onCreate(first, open) },
+            text = when {
+                mustChoose -> "Виберіть відпайку вище"
+                first.isBlank() -> "Вкажіть першу опору"
+                else -> "Створити відпайку"
+            },
+            onClick = { onCreate(first, open, gisName) },
             icon = PoeIcons.Tap,
-            enabled = first.isNotBlank(),
+            enabled = first.isNotBlank() && !mustChoose,
         )
+    }
+}
+
+@Composable
+private fun TapChoice(title: String, note: String, selected: Boolean, onSelect: () -> Unit) {
+    val c = PoeTheme.colors
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp)
+            .clip(PoeShapes.row)
+            // the sheet is the same colour as a card: unselected rows need their own fill to read as options
+            .background(if (selected) c.surface else c.surfaceMuted)
+            .border(if (selected) 2.5.dp else 1.dp, if (selected) c.action else c.outlineVariant, PoeShapes.row)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, style = PoeTheme.type.rowTitle, color = c.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(note, style = PoeTheme.type.captionRegular, color = if (selected) c.actionText else c.muted)
+        }
     }
 }
 

@@ -145,8 +145,8 @@ class EditorFragment : Fragment(), PoleActions, AddActions {
     override suspend fun nearby(source: PickSource, lat: Double, lng: Double): List<PickItem> =
         viewModel.nearby(source, lat, lng)
 
-    override fun createTap(from: OprDisplayable, firstPole: String, open: Boolean) =
-        viewModel.createTap(from, firstPole, open)
+    override fun createTap(from: OprDisplayable, firstPole: String, open: Boolean, gisName: String?) =
+        viewModel.createTap(from, firstPole, open, gisName)
 
     override fun saveRecloser(pole: OprDisplayable, type: RecloserType, name: String) =
         viewModel.saveRecloser(pole, type, name)

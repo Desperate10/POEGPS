@@ -22,7 +22,8 @@ fun lineShapes(geoJson: String, tplnr: String): List<GisShape> = runCatching {
     FeatureCollection.fromJson(geoJson).features().orEmpty()
         .filter { it.hasProperty("tplnr") && it.getStringProperty("tplnr") == tplnr }
         .flatMap { f ->
-            val name = if (f.hasProperty("name")) f.getStringProperty("name").orEmpty() else ""
+            // a JSON null name would throw and lose every shape of the object
+            val name = f.getProperty("name")?.takeUnless { it.isJsonNull }?.asString.orEmpty()
             when (val g = f.geometry()) {
                 is LineString -> listOf(GisShape(name, g.coordinates().map { it.latitude() to it.longitude() }))
                 is MultiLineString -> g.coordinates().map { part -> GisShape(name, part.map { it.latitude() to it.longitude() }) }
