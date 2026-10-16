@@ -503,6 +503,9 @@ class ObjectsRepositoryImpl @Inject constructor(
 
     override suspend fun movePole(id: Int, lat: String, lng: String): Int = objectsDao.movePole(id, lat, lng)
 
+    override suspend fun restoreGisPosition(id: Int, lat: String, lng: String): Int =
+        objectsDao.restoreGisPosition(id, lat, lng)
+
     override suspend fun saveRecloser(recloser: Recloser): Long {
         return objectsDao.insertSavedRecloser(recloser.toRecloserDbModel())
     }

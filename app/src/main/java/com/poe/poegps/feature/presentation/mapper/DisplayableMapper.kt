@@ -63,6 +63,7 @@ fun Pillar.toOprDisplayable() = OprDisplayable(
     recloserName = recloser,
     isSent = isSent,
     fromGis = fromGis,
+    gisOrigin = gisOrigin,
 )
 
 fun OprDisplayable.toDomainModel() = Pillar(
@@ -79,6 +80,7 @@ fun OprDisplayable.toDomainModel() = Pillar(
     recloser = recloserName,
     isSent = isSent,
     fromGis = fromGis,
+    gisOrigin = gisOrigin,
 )
 
 fun RecloserDisplayable.toDomainModel() = Recloser(

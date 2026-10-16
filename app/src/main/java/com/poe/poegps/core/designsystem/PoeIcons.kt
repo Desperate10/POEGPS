@@ -38,6 +38,7 @@ object PoeIcons {
     val NudgeLeft = icon("nudge_left", 2.8f, "M15 6l-6 6 6 6")
     val NudgeRight = icon("nudge_right", 2.8f, "M9 6l6 6-6 6")
     val Edit = icon("edit", 2.4f, "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z")
+    val Undo = icon("undo", 2.4f, "M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11")
 }
 
 private fun circle(cx: Float, cy: Float, r: Float) =

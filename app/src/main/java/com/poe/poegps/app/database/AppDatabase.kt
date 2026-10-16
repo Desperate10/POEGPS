@@ -31,7 +31,7 @@ import com.poe.poegps.feature.data.local.entity.*
         AbonKl04DbModel::class,
         AbonKl10DbModel::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

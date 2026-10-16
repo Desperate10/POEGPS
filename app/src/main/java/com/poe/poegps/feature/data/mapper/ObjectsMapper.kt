@@ -375,6 +375,7 @@ fun LinePillarDbModel.toDomainModel() = Pillar(
     recloser = recloser ?: "",
     isSent = isSent,
     fromGis = fromGis,
+    gisOrigin = gisOrigin,
 )
 
 fun LinePillarDbModel.toDTObject() = LinePillarDTO(
@@ -403,6 +404,7 @@ fun Pillar.toLinePillarDbModel() = LinePillarDbModel(
     lng = lng,
     isSent = isSent,
     fromGis = fromGis,
+    gisOrigin = gisOrigin,
 )
 
 fun Recloser.toRecloserDbModel() = RecloserDbModel(

@@ -1,9 +1,23 @@
 package com.poe.poegps.feature.domain
 
+import com.poe.poegps.core.location.Geo
+
 /** One place in a merged line: a pole already on the phone (by id) or a GIS pole to add. */
 sealed interface MergedPole {
     data class Local(val id: Int) : MergedPole
     data class Gis(val point: GisPoint) : MergedPole
+}
+
+/**
+ * Which of [gis] is the GIS row of the pole [name] now at [lat]/[lng]: its namesake nearest to it, as the
+ * server picks the row it updates (taps reuse numbers, a moved pole is metres away). Without coordinates
+ * only a single namesake counts. Null when GIS has none.
+ */
+fun nearestNamesake(name: String, lat: Double?, lng: Double?, gis: List<GisPoint>): Int? {
+    val key = name.trim().lowercase()
+    val namesakes = gis.indices.filter { gis[it].name.trim().lowercase() == key }
+    if (lat == null || lng == null) return namesakes.singleOrNull()
+    return namesakes.minByOrNull { Geo.distanceM(lat, lng, gis[it].lat, gis[it].lng) }
 }
 
 /** A pole of the line on the phone, in its line order. */

@@ -19,6 +19,8 @@ data class OprDisplayable(
     val isSent: Boolean = false,
     /** As GIS has it, not re-surveyed on this phone yet. */
     val fromGis: Boolean = false,
+    /** Loaded from GIS; stays true when the pole is moved, so it can be put back as GIS has it. */
+    val gisOrigin: Boolean = false,
 ) : Parcelable {
     override fun toString(): String {
         return name

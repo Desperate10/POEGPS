@@ -359,6 +359,22 @@ interface ObjectsDao {
      * Taps reuse pole numbers, so a copy is told by its unchanged coordinates, never by name alone;
      * a pole that had none has no copy to tell apart.
      */
+    /**
+     * A moved GIS pole put back where GIS has it ([lat]/[lng] as GIS gives them), copies in taps too.
+     * It is left unsent: if the move was uploaded meanwhile, GIS has the moved point and the next
+     * upload takes it back; if not, the pole is sent as GIS has it and nothing moves.
+     */
+    @Transaction
+    suspend fun restoreGisPosition(id: Int, lat: String, lng: String): Int {
+        val pole = getPillarById(id) ?: return 0
+        markAsInGis(id, lat, lng)
+        if (pole.lat.toDoubleOrNull()?.let { it != 0.0 } != true) return 0
+        return moveCopies(id, pole.tplnr, pole.name, pole.lat, pole.lng, lat, lng)
+    }
+
+    @Query("UPDATE line_pillar SET lat = :lat, lng = :lng, isSent = 0, fromGis = 1 WHERE id = :id")
+    suspend fun markAsInGis(id: Int, lat: String, lng: String)
+
     @Transaction
     suspend fun movePole(id: Int, lat: String, lng: String): Int {
         val pole = getPillarById(id) ?: return 0

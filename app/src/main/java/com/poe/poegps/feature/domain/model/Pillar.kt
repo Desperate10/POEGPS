@@ -14,4 +14,6 @@ data class Pillar(
     val recloser: String,
     val isSent: Boolean = false,
     val fromGis: Boolean = false,
+    /** Loaded from GIS; stays true when the pole is moved, so it can be put back as GIS has it. */
+    val gisOrigin: Boolean = false,
 )

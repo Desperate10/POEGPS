@@ -105,6 +105,9 @@ interface ObjectsRepository {
     /** New coordinates for a pole and its copies in taps; returns how many copies moved with it. */
     suspend fun movePole(id: Int, lat: String, lng: String): Int
 
+    /** A moved GIS pole back to where GIS has it, as "з ГІС" and unsent; copies in taps follow. */
+    suspend fun restoreGisPosition(id: Int, lat: String, lng: String): Int
+
     suspend fun saveRecloser(recloser: Recloser) : Long
 
     suspend fun copyPillarForOtp(pillar: Pillar)

@@ -139,6 +139,11 @@ class EditorFragment : Fragment(), PoleActions, AddActions {
 
     override fun placeManually(pole: OprDisplayable, lat: Double, lng: Double) = viewModel.placeManually(pole, lat, lng)
 
+    override fun gisPosition(pole: OprDisplayable): Pair<Double, Double>? =
+        viewModel.gisPositionOf(pole)?.let { it.lat.toDouble() to it.lng.toDouble() }
+
+    override fun restoreGisPosition(pole: OprDisplayable) = viewModel.restoreGisPosition(pole)
+
     // B8–B11
     override fun addPole(name: String, afterId: Int?) = viewModel.addPole(name, afterId)
 

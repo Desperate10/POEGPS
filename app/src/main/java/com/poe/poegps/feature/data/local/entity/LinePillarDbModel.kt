@@ -23,4 +23,6 @@ data class LinePillarDbModel(
     @ColumnInfo(defaultValue = "0") val sortOrder: Double = 0.0,
     // loaded from GIS as it is and not re-surveyed on this phone yet (v3)
     @ColumnInfo(defaultValue = "0") val fromGis: Boolean = false,
+    // loaded from GIS at all, even if moved since: such a pole can be put back as GIS has it (v4)
+    @ColumnInfo(defaultValue = "0") val gisOrigin: Boolean = false,
 )

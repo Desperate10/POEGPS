@@ -63,6 +63,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.poe.poegps.core.designsystem.BadgeTone
+import com.poe.poegps.core.location.Geo
 import com.poe.poegps.feature.presentation.capture.CapturePolicy
 import com.poe.poegps.core.designsystem.PoeActionRow
 import com.poe.poegps.core.designsystem.PoeColors
@@ -100,6 +101,12 @@ interface PoleActions {
     fun clearCoordinates(pole: OprDisplayable)
     fun delete(pole: OprDisplayable)
     fun placeManually(pole: OprDisplayable, lat: Double, lng: Double)
+
+    /** Where GIS has [pole] (lat to lng) when it came from GIS and was moved since; null otherwise. */
+    fun gisPosition(pole: OprDisplayable): Pair<Double, Double>? = null
+
+    /** Undoes moves and re-captures of a GIS pole. */
+    fun restoreGisPosition(pole: OprDisplayable) {}
 }
 
 /** B3 · Лінія: map with the line, the next pole to capture and the GPS readout. */
@@ -718,6 +725,17 @@ private fun PoleActionsSheet(
                     onClick = onAdjust,
                     iconBackground = c.surface, iconTint = c.action, iconBorder = c.action,
                 )
+                actions.gisPosition(pole)?.let { (gisLat, gisLng) ->
+                    val off = pole.lat.toDoubleOrNull()?.takeIf { it != 0.0 }?.let { lat ->
+                        pole.lng.toDoubleOrNull()?.let { Geo.distanceM(lat, it, gisLat, gisLng) }
+                    }
+                    PoeActionRow(
+                        PoeIcons.Undo, "Повернути як у ГІС",
+                        off?.takeIf { it >= 0.1 }?.let { "Скасувати зміни · зараз за ${if (it < 10) String.format(Locale.US, "%.1f", it) else it.roundToInt()} м від ГІС" }
+                            ?: "Скасувати зміни",
+                        onClick = { onDismiss(); actions.restoreGisPosition(pole) },
+                    )
+                }
                 PoeActionRow(
                     PoeIcons.Plus, "Додати опору після цієї", "Пропущена опора між цією і наступною",
                     onClick = { onDismiss(); onInsertAfter() },

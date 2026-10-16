@@ -49,6 +49,7 @@ import com.poe.poegps.feature.domain.LineOrdering
 import com.poe.poegps.feature.domain.LocalPole
 import com.poe.poegps.feature.domain.MergedPole
 import com.poe.poegps.feature.domain.mergeWithGis
+import com.poe.poegps.feature.domain.nearestNamesake
 import com.poe.poegps.feature.presentation.map.lineShapes
 import com.poe.poegps.feature.presentation.screens.main.plural
 import kotlinx.coroutines.flow.filterNotNull
@@ -169,7 +170,7 @@ class EditorViewModel @Inject constructor(
             return Pillar(
                 id = 0, tplnr = args.tplnr, name = src.name, parentName = line, category = args.category,
                 wire = src.wire, pillarType = pillarType.name, lat = src.lat, lng = src.lng,
-                isAbon = args.isAbon, recloser = "", isSent = true, fromGis = true,
+                isAbon = args.isAbon, recloser = "", isSent = true, fromGis = true, gisOrigin = true,
             )
         }
         if (local.isNotEmpty()) {
@@ -385,7 +386,7 @@ class EditorViewModel @Inject constructor(
     fun createOtp(pillarStart: OprDisplayable, pillarNext: OprDisplayable) {
         viewModelScope.launch {
             // the tap's own copy of its first pole: unsent, so the new tap uploads whole
-            repository.copyPillarForOtp(pillarStart.copy(id = 0, isSent = false, fromGis = false).toDomainModel())
+            repository.copyPillarForOtp(pillarStart.copy(id = 0, isSent = false, fromGis = false, gisOrigin = false).toDomainModel())
             repository.savePillar(pillarNext.toDomainModel())
             when(args.objectType) {
                 ObjectType.LINE04 -> repository.saveLine04(
@@ -444,6 +445,27 @@ class EditorViewModel @Inject constructor(
                     name = pillarStart.parentName
                 ).toLineDomainModel()
             )*/
+        }
+    }
+
+    /** Where GIS has [pole], when it was loaded from GIS and has been moved since; else null. */
+    fun gisPositionOf(pole: OprDisplayable): Pillar? {
+        if (!pole.gisOrigin || pole.fromGis) return null
+        val gis = gisPoles.value.filter { it.lng.toDoubleOrNull() != null }
+        val i = nearestNamesake(
+            pole.name, pole.lat.toDoubleOrNull()?.takeIf { it != 0.0 }, pole.lng.toDoubleOrNull(),
+            gis.map { GisPoint(it.name, it.lat.toDouble(), it.lng.toDouble()) },
+        ) ?: return null
+        return gis[i]
+    }
+
+    /** Undoes moves and re-captures of a GIS pole: back where GIS has it, coordinates exactly as GIS gives them. */
+    fun restoreGisPosition(pole: OprDisplayable) {
+        val gis = gisPositionOf(pole) ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.restoreGisPosition(pole.id, gis.lat, gis.lng)
+            session.forget(CaptureLog.poleKey(pole.id))
+            _notices.send("${poleTitle(pole.name)}: повернуто як у ГІС")
         }
     }
 
