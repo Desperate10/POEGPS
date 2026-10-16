@@ -346,6 +346,27 @@ interface ObjectsDao {
     @Query("UPDATE line_pillar SET lat = :lat, lng = :lng, isSent = 0, fromGis = 0 WHERE id = :id")
     suspend fun updatePillarCoords(id: Int, lat: String, lng: String)
 
+    // copies of one pole in other lines: same object, same name, and the very coordinates text it had
+    @Query(
+        "UPDATE line_pillar SET lat = :lat, lng = :lng, isSent = 0, fromGis = 0 " +
+            "WHERE tplnr = :tplnr AND name = :name AND lat = :oldLat AND lng = :oldLng AND id <> :id"
+    )
+    suspend fun moveCopies(id: Int, tplnr: String, name: String, oldLat: String, oldLng: String, lat: String, lng: String): Int
+
+    /**
+     * A pole captured or moved, with its copies: a tap starts with a copy of the pole it leaves from, and
+     * a copy left at the old place would put the pole back there in GIS when both lines are uploaded.
+     * Taps reuse pole numbers, so a copy is told by its unchanged coordinates, never by name alone;
+     * a pole that had none has no copy to tell apart.
+     */
+    @Transaction
+    suspend fun movePole(id: Int, lat: String, lng: String): Int {
+        val pole = getPillarById(id) ?: return 0
+        updatePillarCoords(id, lat, lng)
+        if (pole.lat.toDoubleOrNull()?.let { it != 0.0 } != true) return 0
+        return moveCopies(id, pole.tplnr, pole.name, pole.lat, pole.lng, lat, lng)
+    }
+
     @Delete
     suspend fun deletePillar(pillar: LinePillarDbModel)
 

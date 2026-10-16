@@ -530,7 +530,7 @@ class EditorViewModel @Inject constructor(
     }
 
     private suspend fun storePosition(opr: OprDisplayable, lat: Double, lng: Double) {
-        repository.updatePillarCoords(opr.id, Geo.coordText(lat), Geo.coordText(lng))
+        repository.movePole(opr.id, Geo.coordText(lat), Geo.coordText(lng))
     }
 
     /** Span from the previous captured pole and offset from where GIS has this pole. */

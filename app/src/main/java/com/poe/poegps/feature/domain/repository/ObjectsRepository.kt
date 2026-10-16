@@ -102,6 +102,9 @@ interface ObjectsRepository {
 
     suspend fun updatePillarCoords(id: Int, lat: String, lng: String)
 
+    /** New coordinates for a pole and its copies in taps; returns how many copies moved with it. */
+    suspend fun movePole(id: Int, lat: String, lng: String): Int
+
     suspend fun saveRecloser(recloser: Recloser) : Long
 
     suspend fun copyPillarForOtp(pillar: Pillar)
