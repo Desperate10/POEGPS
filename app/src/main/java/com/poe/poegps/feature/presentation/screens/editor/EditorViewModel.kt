@@ -47,6 +47,9 @@ import java.util.Locale
 import kotlin.math.cos
 import com.poe.poegps.feature.domain.GisPoint
 import com.poe.poegps.feature.domain.LineOrdering
+import com.poe.poegps.feature.domain.LocalPole
+import com.poe.poegps.feature.domain.MergedPole
+import com.poe.poegps.feature.domain.mergeWithGis
 import com.poe.poegps.feature.presentation.map.lineShapes
 import com.poe.poegps.feature.presentation.screens.main.plural
 import kotlinx.coroutines.flow.filterNotNull
@@ -58,6 +61,9 @@ sealed class InsertResult {
     object Duplicate : InsertResult()
     object Failure : InsertResult() // For any other unexpected error
 }
+
+/** A line surveyed before its GIS poles were loaded: [toAdd] GIS poles would join the [onPhone] there, as in [plan]. */
+data class GisMergeOffer(val onPhone: Int, val toAdd: Int, val plan: List<Pillar>)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -143,7 +149,9 @@ class EditorViewModel @Inject constructor(
             else -> return@launch
         }
         val line = args.pltxt
-        if (repository.getSavedPillars(line).first().isNotEmpty()) return@launch
+        val existing = repository.getSavedPillars(line).first()
+        val local = existing.filter { it.tplnr == args.tplnr }
+        if (existing.isNotEmpty() && local.isEmpty()) return@launch
         val gis = (if (highVoltage) repository.getPillar10List(args.tplnr) else repository.getPillar04List(args.tplnr))
             .first()
             .filter { p -> p.lat.toDoubleOrNull()?.let { it != 0.0 } == true && p.lng.toDoubleOrNull() != null }
@@ -156,19 +164,56 @@ class EditorViewModel @Inject constructor(
         // Without one the order would be a guess and an upload would add a second line to GIS.
         if (!ordered.fromShape) return@launch
         val pillarType = if (CABLE_LINE.containsMatchIn(line)) PillarType.KL else PillarType.PILLAR
-        val poles = ordered.poles.map { point ->
+        fun gisPillar(point: GisPoint): Pillar {
             // the GIS row itself: its coordinates go back to the server exactly as GIS has them
             val src = gis[points.indexOfFirst { it === point }]
-            Pillar(
+            return Pillar(
                 id = 0, tplnr = args.tplnr, name = src.name, parentName = line, category = args.category,
                 wire = src.wire, pillarType = pillarType.name, lat = src.lat, lng = src.lng,
                 isAbon = args.isAbon, recloser = "", isSent = true, fromGis = true,
             )
         }
+        if (local.isNotEmpty()) {
+            // surveyed on this phone before GIS poles were loaded: offer to complete it, never silently
+            val merged = mergeWithGis(local.map { LocalPole(it.id, it.name) }, ordered.poles) ?: return@launch
+            val byId = local.associateBy { it.id }
+            _gisMerge.value = GisMergeOffer(
+                onPhone = local.size,
+                toAdd = merged.count { it is MergedPole.Gis },
+                plan = merged.map { m ->
+                    when (m) {
+                        is MergedPole.Local -> byId.getValue(m.id)
+                        is MergedPole.Gis -> gisPillar(m.point)
+                    }
+                },
+            )
+            return@launch
+        }
+        val poles = ordered.poles.map { gisPillar(it) }
         val loaded = repository.importLine(args.tplnr, line, poles)
         if (loaded > 0) {
             _notices.send("З ГІС завантажено $loaded ${plural(loaded, "опору", "опори", "опор")}")
         }
+    }
+
+    private val _gisMerge = MutableStateFlow<GisMergeOffer?>(null)
+    /** A line with poles on the phone that GIS has more of: offered once per opening. */
+    val gisMerge: StateFlow<GisMergeOffer?> = _gisMerge
+
+    fun acceptGisMerge() {
+        val offer = _gisMerge.value ?: return
+        _gisMerge.value = null
+        viewModelScope.launch(Dispatchers.IO) {
+            val added = repository.mergeLine(args.tplnr, args.pltxt, offer.plan)
+            _notices.send(
+                if (added > 0) "З ГІС додано $added ${plural(added, "опору", "опори", "опор")}"
+                else "Лінія змінилася, опори не додано. Відкрийте її знову."
+            )
+        }
+    }
+
+    fun declineGisMerge() {
+        _gisMerge.value = null
     }
 
     fun setLineName(lineName: String) {

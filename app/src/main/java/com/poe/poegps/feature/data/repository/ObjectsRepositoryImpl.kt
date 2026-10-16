@@ -493,6 +493,10 @@ class ObjectsRepositoryImpl @Inject constructor(
         return objectsDao.importLine(tplnr, parentName, poles.map { it.toLinePillarDbModel() })
     }
 
+    override suspend fun mergeLine(tplnr: String, parentName: String, merged: List<Pillar>): Int {
+        return objectsDao.mergeLine(tplnr, parentName, merged.map { it.toLinePillarDbModel() })
+    }
+
     override suspend fun updatePillarCoords(id: Int, lat: String, lng: String) {
         objectsDao.updatePillarCoords(id, lat, lng)
     }

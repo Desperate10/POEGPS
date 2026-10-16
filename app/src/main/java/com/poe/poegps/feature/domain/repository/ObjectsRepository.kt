@@ -97,6 +97,9 @@ interface ObjectsRepository {
     /** Loads GIS poles (already ordered) into a line that has none on the phone; returns how many. */
     suspend fun importLine(tplnr: String, parentName: String, poles: List<Pillar>): Int
 
+    /** The whole line in a new order: poles on the phone by id, GIS poles to add with id 0. */
+    suspend fun mergeLine(tplnr: String, parentName: String, merged: List<Pillar>): Int
+
     suspend fun updatePillarCoords(id: Int, lat: String, lng: String)
 
     suspend fun saveRecloser(recloser: Recloser) : Long

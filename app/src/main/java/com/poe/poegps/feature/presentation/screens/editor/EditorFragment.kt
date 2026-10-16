@@ -75,6 +75,7 @@ class EditorFragment : Fragment(), PoleActions, AddActions {
         val gisPoles by viewModel.gisPoles.collectAsStateWithLifecycle()
         val trust by viewModel.trust.collectAsStateWithLifecycle()
         val captureMeta by viewModel.captureMeta.collectAsStateWithLifecycle()
+        val gisMerge by viewModel.gisMerge.collectAsStateWithLifecycle()
         val downloadedAt by filialManager.getDownloadedAt().collectAsStateWithLifecycle(null)
         // B12 on entry while GPS isn't ready, and again from the GPS chip
         var showReady by rememberSaveable { mutableStateOf(true) }
@@ -112,6 +113,12 @@ class EditorFragment : Fragment(), PoleActions, AddActions {
                     else viewModel.capture(c.pole, belowGate = c.belowGate, confirmed = true)
                 },
             )
+            // after the GPS checklist: both on entry would stack
+            if (!showReady) {
+                gisMerge?.let { offer ->
+                    GisMergeDialog(offer, onAccept = viewModel::acceptGisMerge, onDecline = viewModel::declineGisMerge)
+                }
+            }
             ReadyChecklist(
                 show = showReady,
                 gps = gps,

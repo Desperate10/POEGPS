@@ -304,6 +304,34 @@ interface ObjectsDao {
         return poles.size
     }
 
+    @Query("SELECT id FROM line_pillar WHERE tplnr = :tplnr AND parentName = :parentName")
+    suspend fun getLinePoleIds(tplnr: String, parentName: String): List<Int>
+
+    @Query("UPDATE line_pillar SET sortOrder = :order WHERE id = :id")
+    suspend fun setSortOrder(id: Int, order: Double)
+
+    /**
+     * Completes a line surveyed before its GIS poles were loaded: [merged] is the whole line in its new
+     * order, the phone's poles by their id, GIS poles to add with id 0. Nothing changes (0) when the
+     * line's poles on the phone are no longer the ones the merge was planned on.
+     */
+    @Transaction
+    suspend fun mergeLine(tplnr: String, parentName: String, merged: List<LinePillarDbModel>): Int {
+        val planned = merged.filter { it.id != 0 }.map { it.id }.toSet()
+        if (getLinePoleIds(tplnr, parentName).toSet() != planned) return 0
+        val base = nextSortOrder()
+        val added = merged.mapIndexedNotNull { i, p ->
+            if (p.id != 0) {
+                setSortOrder(p.id, base + i)
+                null
+            } else {
+                p.copy(sortOrder = base + i)
+            }
+        }
+        insertPillarsIgnoring(added)
+        return added.size
+    }
+
     // per line: a tap shares its main line's tplnr and may have a pole with the same name
     @Query("SELECT * FROM line_pillar WHERE tplnr = :tplnr AND parentName = :parentName AND name = :name LIMIT 1")
     suspend fun getSinglePillar(tplnr: String, parentName: String, name: String): LinePillarDbModel?
