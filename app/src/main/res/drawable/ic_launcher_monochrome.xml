@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 13 themed icon: the foreground in one colour, the pin's dot cut out -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M27,72 L40,63 L54,70 L68,61 L81,67" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M27,72m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0 M40,63m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0 M68,61m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0 M81,67m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0 M54,70m-5.5,0a5.5,5.5 0,1 1,11 0a5.5,5.5 0,1 1,-11 0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M54,62.5 C51,59 42.5,51.5 42.5,44 A11.5,11.5 0,1 1,65.5 44 C65.5,51.5 57,59 54,62.5 Z M54,44m-4.5,0a4.5,4.5 0,1 1,9 0a4.5,4.5 0,1 1,-9 0" />
+</vector>
