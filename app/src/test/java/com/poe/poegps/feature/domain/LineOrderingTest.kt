@@ -62,6 +62,13 @@ class LineOrderingTest {
     }
 
     @Test
+    fun `a tap GIS doesn't draw yet is not given the main line's poles`() {
+        val shapes = listOf(GisShape("", listOf(at(p1), at(p2), at(p3), at(p4))))
+        val result = LineOrdering.order("Відп. від оп. 3 до оп. 999", listOf(p1, p2, p3, p4), shapes)
+        assertFalse(result.fromShape)
+    }
+
+    @Test
     fun `two drawings through as many poles give no main line`() {
         val shapes = listOf(
             GisShape("", listOf(at(p1), at(p2))),

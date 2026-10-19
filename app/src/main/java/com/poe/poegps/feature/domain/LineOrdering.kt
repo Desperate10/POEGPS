@@ -22,7 +22,8 @@ object LineOrdering {
     fun order(lineName: String, poles: List<GisPoint>, shapes: List<GisShape>): OrderedLine {
         val main = shapes.firstOrNull { it.name == lineName }
             ?: shapes.firstOrNull { it.name.isNotBlank() && it.name.equals(lineName, ignoreCase = true) }
-            ?: mainByPoles(poles, shapes)
+            // the busiest drawing is the main line: a tap without its own drawing must not take its poles
+            ?: mainByPoles(poles, shapes).takeUnless { isTap(lineName) }
         if (main != null) {
             val ordered = walk(main.vertices, poles)
             if (ordered.size >= 2) return OrderedLine(ordered, fromShape = true)
