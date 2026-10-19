@@ -16,10 +16,17 @@ import android.os.Looper
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.shareIn
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -68,7 +75,11 @@ data class GpsFix(
     }
 }
 
-/** GPS-only location plus satellite counts, as a cold flow that stops listening when collection stops. */
+/**
+ * GPS-only location plus satellite counts. One listener for the whole app, kept on for [KEEP_WARM_MS]
+ * after the last screen stops collecting: going back to the list for the next line, or a moment with
+ * the screen off, doesn't restart the receiver and its accuracy from scratch.
+ */
 @Singleton
 class GpsTracker @Inject constructor(@ApplicationContext private val context: Context) {
 
@@ -78,13 +89,21 @@ class GpsTracker @Inject constructor(@ApplicationContext private val context: Co
         context, Manifest.permission.ACCESS_FINE_LOCATION
     ) == PackageManager.PERMISSION_GRANTED
 
-    @SuppressLint("MissingPermission")
-    fun fixes(): Flow<GpsFix> = callbackFlow {
-        if (!hasPermission()) {
-            trySend(GpsFix(permission = false))
-            awaitClose()
-            return@callbackFlow
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // a fix cached from before the receiver stopped would claim GPS is on, so nothing is replayed then
+    private val shared: Flow<GpsFix> = listen()
+        .shareIn(scope, SharingStarted.WhileSubscribed(KEEP_WARM_MS, replayExpirationMillis = 0), replay = 1)
+
+    fun fixes(): Flow<GpsFix> =
+        if (hasPermission()) shared
+        else flow {
+            emit(GpsFix(permission = false))
+            awaitCancellation()
         }
+
+    @SuppressLint("MissingPermission")
+    private fun listen(): Flow<GpsFix> = callbackFlow {
         var fix = GpsFix(permission = true, enabled = manager.isProviderEnabled(LocationManager.GPS_PROVIDER))
         trySend(fix)
 
@@ -148,5 +167,6 @@ class GpsTracker @Inject constructor(@ApplicationContext private val context: Co
 
     private companion object {
         const val UPDATE_MS = 1000L
+        const val KEEP_WARM_MS = 60_000L
     }
 }
