@@ -1,5 +1,6 @@
 package com.poe.poegps.feature.presentation.screens.editor
 
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -93,7 +94,7 @@ fun BoxScope.AdjustOverlay(
     val gpsUsable = gps.current?.takeIf { !trust.level.locksCapture }
 
     Column(
-        Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp),
+        Modifier.fillMaxWidth().statusBarsPadding().padding(start = 14.dp, end = 14.dp, top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

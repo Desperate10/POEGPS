@@ -249,8 +249,15 @@ fun LineMap(
         val points = poles.map { LatLng(it.lat, it.lng) } + gisPoles.map { LatLng(it.lat, it.lng) } +
             lineShape + listOfNotNull(gps?.let { LatLng(it.lat, it.lng) })
         when {
+            // clear of the header (and the status bar above it) and of the sheet, not only of the screen edges
             points.size >= 2 -> m.moveCamera(
-                CameraUpdateFactory.newLatLngBounds(LatLngBounds.Builder().includes(points).build(), (48 * density.density).toInt())
+                CameraUpdateFactory.newLatLngBounds(
+                    LatLngBounds.Builder().includes(points).build(),
+                    (48 * density.density).toInt(),
+                    (padding[1] + 24 * density.density).toInt(),
+                    (48 * density.density).toInt(),
+                    (padding[3] + 24 * density.density).toInt(),
+                )
             )
             points.size == 1 -> m.moveCamera(CameraUpdateFactory.newLatLngZoom(points[0], 16.5))
             else -> {

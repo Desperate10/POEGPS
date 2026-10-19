@@ -1,5 +1,12 @@
 package com.poe.poegps.feature.presentation.screens.main
 
+import androidx.compose.foundation.layout.statusBarsPadding
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -85,6 +92,7 @@ fun LoginScreen(
     }
     val submit = { if (missing == null && !state.busy) onSubmit(filial!!.code, login.trim(), password) }
 
+    LightStatusBarIcons()
     // no way around the login: back leaves the app, as the old dialog did
     BackHandler(onBack = onExit)
     Column(
@@ -95,7 +103,7 @@ fun LoginScreen(
             .imePadding(),
     ) {
         Column(
-            Modifier.weight(1f).fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp),
+            Modifier.weight(1f).fillMaxWidth().statusBarsPadding().padding(horizontal = 24.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
@@ -266,4 +274,24 @@ private fun LoginInput(
             ) { inner() }
         },
     )
+}
+
+/** White status-bar icons while this is shown (the login is orange under them); the previous look comes back after. */
+@Composable
+private fun LightStatusBarIcons() {
+    val view = LocalView.current
+    DisposableEffect(view) {
+        val window = view.context.findActivity()?.window ?: return@DisposableEffect onDispose { }
+        val controller = WindowCompat.getInsetsController(window, view)
+        val before = controller.isAppearanceLightStatusBars
+        controller.isAppearanceLightStatusBars = false
+        onDispose { controller.isAppearanceLightStatusBars = before }
+    }
+}
+
+// Hilt wraps a fragment's context, so the activity is found by unwrapping
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

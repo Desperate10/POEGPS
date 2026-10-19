@@ -78,8 +78,7 @@ class ThemeGalleryActivity : ComponentActivity() {
                 when {
                     screen == "sync" -> SyncScreen(SAMPLE_SYNC, onDone = ::finish, onRetry = {})
                     screen?.startsWith("gps-") == true -> EditorScenario(screen, onExit = ::finish)
-                    // the app pads below the status bar (MainActivity); do the same here
-                    screen?.startsWith("login") == true -> Box(Modifier.statusBarsPadding()) { LoginScreen(
+                    screen?.startsWith("login") == true -> Box { LoginScreen(
                         state = when (screen) {
                             "login-busy" -> LoginState(busy = true)
                             "login-error" -> LoginState(error = "Невірний логін або пароль")

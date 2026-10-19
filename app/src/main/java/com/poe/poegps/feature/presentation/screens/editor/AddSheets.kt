@@ -1,5 +1,6 @@
 package com.poe.poegps.feature.presentation.screens.editor
 
+import androidx.compose.foundation.layout.statusBarsPadding
 import android.location.Location
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -254,7 +255,7 @@ internal fun ExistingPicker(
     // swallows touches so the map underneath doesn't pan
     Column(Modifier.fillMaxSize().background(c.ground).pointerInput(Unit) { detectTapGestures { } }) {
         Column(
-            Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+            Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

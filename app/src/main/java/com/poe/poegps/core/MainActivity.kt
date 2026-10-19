@@ -40,13 +40,15 @@ class MainActivity : AppCompatActivity() {
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
             )
             binding.toolbar.updatePadding(left = bars.left, top = bars.top, right = bars.right)
+            // redesigned screens draw under the status and navigation bars (maps, the login's orange)
+            // and keep their content clear of them themselves, so they get the insets passed on
             binding.flFragment.updatePadding(
                 left = bars.left,
-                top = if (redesigned) bars.top else 0,
+                top = 0,
                 right = bars.right,
-                bottom = bars.bottom,
+                bottom = if (redesigned) 0 else bars.bottom,
             )
-            WindowInsetsCompat.CONSUMED
+            if (redesigned) insets else WindowInsetsCompat.CONSUMED
         }
 
         val navHost = supportFragmentManager.findFragmentById(R.id.usersNavHostFragment) as NavHostFragment

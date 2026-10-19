@@ -1,5 +1,6 @@
 package com.poe.poegps.feature.presentation.capture
 
+import androidx.compose.foundation.layout.systemBarsPadding
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -86,7 +87,7 @@ fun ReadyChecklist(
             // the map underneath must not pan
             .pointerInput(Unit) { detectTapGestures { } }
             .verticalScroll(rememberScrollState())
-            .navigationBarsPadding()
+            .systemBarsPadding()
             .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {

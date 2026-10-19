@@ -1,5 +1,6 @@
 package com.poe.poegps.feature.presentation.screens.main
 
+import androidx.compose.foundation.layout.navigationBarsPadding
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -97,7 +98,7 @@ class MainFragment : Fragment() {
             )
             SnackbarHost(
                 snackbar,
-                Modifier.align(Alignment.BottomCenter).padding(start = 16.dp, end = 16.dp, bottom = 96.dp),
+                Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 96.dp),
             ) { data ->
                 Snackbar(
                     data,

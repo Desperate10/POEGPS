@@ -1,5 +1,9 @@
 package com.poe.poegps.feature.presentation.screens.editor
 
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.asPaddingValues
 import android.location.Location
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -131,6 +135,7 @@ fun EditorScreen(
 ) {
     val c = PoeTheme.colors
     val density = LocalDensity.current
+    val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     var sheetHeight by remember { mutableIntStateOf(0) }
     var recenter by remember { mutableIntStateOf(0) }
     var actionsFor by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -189,7 +194,7 @@ fun EditorScreen(
             },
             gps = here?.let { MapGps(it.latitude, it.longitude, it.takeIf { l -> l.hasAccuracy() }?.accuracy) },
             recenter = recenter,
-            topInset = 120.dp,
+            topInset = 120.dp + statusTop,
             bottomInset = (with(density) { sheetHeight.toDp() } - 24.dp).coerceAtLeast(0.dp),
             onPoleClick = { if (adjusting == null) actionsFor = it },
             modifier = Modifier.fillMaxSize(),
@@ -208,7 +213,7 @@ fun EditorScreen(
                 trust = trust,
                 previous = previousOf(adjusting),
                 step = ADJUST_STEPS[stepIndex],
-                topInset = 120.dp,
+                topInset = 120.dp + statusTop,
                 bottomInset = (with(density) { sheetHeight.toDp() } - 24.dp).coerceAtLeast(0.dp),
                 onSheetHeight = { sheetHeight = it },
                 onStep = { stepIndex = (stepIndex + 1) % ADJUST_STEPS.size },
@@ -225,7 +230,7 @@ fun EditorScreen(
 
         // header over the map
         Row(
-            Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp),
+            Modifier.fillMaxWidth().statusBarsPadding().padding(start = 14.dp, end = 14.dp, top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -238,7 +243,7 @@ fun EditorScreen(
             )
             PoeOverlayIconButton(PoeIcons.Plus, "Додати опору", { addAfter = null; showAdd = true }, filled = true)
         }
-        GpsStatus(gps, trust, onGpsProblem, Modifier.align(Alignment.TopEnd).padding(top = 68.dp, end = 14.dp))
+        GpsStatus(gps, trust, onGpsProblem, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 68.dp, end = 14.dp))
 
         // above the sheet: attribution and "back to me"
         Row(

@@ -65,8 +65,7 @@ fun EditorScenario(name: String, onExit: () -> Unit) {
         "gps-jamming" -> TrustState(TrustLevel.JAMMING, listOf("Супутники видно, але сигнал заглушено"))
         else -> TrustState()
     }
-    // the real screen sits below the status bar (MainActivity pads it); do the same here
-    Box(Modifier.fillMaxSize().statusBarsPadding()) {
+    Box(Modifier.fillMaxSize()) {
         EditorScreen(
             tplnr = "02-PS15-L12",
             lineName = "ПЛ-0,4 кВ Л-12 · Кохнівка",

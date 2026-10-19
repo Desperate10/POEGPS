@@ -1,5 +1,10 @@
 package com.poe.poegps.feature.presentation.screens.main
 
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -104,11 +109,12 @@ fun ObjectsScreen(
     var query by rememberSaveable { mutableStateOf(state.query) }
     val filial = filials.firstOrNull { it.code == state.filial }
     val listState = rememberLazyListState()
+    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     Box(Modifier.fillMaxSize().background(c.ground)) {
         Column(Modifier.fillMaxSize()) {
             Column(
-                Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 4.dp),
+                Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 Row(
@@ -161,7 +167,7 @@ fun ObjectsScreen(
                 else -> LazyColumn(
                     state = listState,
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 120.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 120.dp + navBottom),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     items(state.items, key = { "${it.obj.tplnr}|${it.obj.name}|${it.obj.id}" }) { item ->
@@ -184,7 +190,7 @@ fun ObjectsScreen(
                 uploading = uploading,
                 onDownload = onDownload,
                 onUpload = onUploadAll,
-                modifier = Modifier.align(Alignment.BottomCenter).padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
             )
         }
     }
@@ -470,7 +476,7 @@ private fun EmptyBranch(
 ) {
     val c = PoeTheme.colors
     Column(
-        modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp),
+        modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
     ) {
         Text("Даних ще немає", style = PoeTheme.type.sheetTitle, color = c.ink)

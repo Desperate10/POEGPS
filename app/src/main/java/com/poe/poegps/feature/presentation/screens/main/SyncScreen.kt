@@ -1,5 +1,6 @@
 package com.poe.poegps.feature.presentation.screens.main
 
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -71,7 +72,7 @@ private fun SyncDone(state: SyncUiState.Done, onDone: () -> Unit) {
     val c = PoeTheme.colors
     val allAccepted = state.accepted == state.total
     Column(
-        Modifier.fillMaxSize().padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 16.dp),
+        Modifier.fillMaxSize().systemBarsPadding().padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -159,7 +160,7 @@ private fun SyncRowCard(row: SyncRow, rejectReason: String) {
 private fun SyncFailed(state: SyncUiState.Failed, onClose: () -> Unit, onRetry: () -> Unit) {
     val c = PoeTheme.colors
     Column(
-        Modifier.fillMaxSize().padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 16.dp),
+        Modifier.fillMaxSize().systemBarsPadding().padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Box(

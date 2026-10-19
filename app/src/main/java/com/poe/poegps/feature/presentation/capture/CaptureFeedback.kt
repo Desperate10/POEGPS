@@ -1,5 +1,6 @@
 package com.poe.poegps.feature.presentation.capture
 
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
@@ -85,7 +86,7 @@ fun BoxScope.CaptureFeedback(
     }
     SnackbarHost(
         snackbar,
-        Modifier.align(Alignment.TopCenter).padding(top = 112.dp, start = 16.dp, end = 16.dp),
+        Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 112.dp, start = 16.dp, end = 16.dp),
     ) { data ->
         Snackbar(data, containerColor = c.inverse, contentColor = c.onInverse)
     }

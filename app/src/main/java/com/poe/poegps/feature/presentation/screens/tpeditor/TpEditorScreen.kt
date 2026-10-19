@@ -1,5 +1,9 @@
 package com.poe.poegps.feature.presentation.screens.tpeditor
 
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -84,6 +88,7 @@ fun TpEditorScreen(
 ) {
     val c = PoeTheme.colors
     val density = LocalDensity.current
+    val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     var sheetHeight by remember { mutableIntStateOf(0) }
     var recenter by remember { mutableIntStateOf(0) }
     var adjusting by rememberSaveable { mutableStateOf(false) }
@@ -117,7 +122,7 @@ fun TpEditorScreen(
             }),
             gps = here?.let { MapGps(it.latitude, it.longitude, it.takeIf { l -> l.hasAccuracy() }?.accuracy) },
             recenter = recenter,
-            topInset = 120.dp,
+            topInset = 120.dp + statusTop,
             bottomInset = (with(density) { sheetHeight.toDp() } - 24.dp).coerceAtLeast(0.dp),
             onPoleClick = {},
             modifier = Modifier.fillMaxSize(),
@@ -134,7 +139,7 @@ fun TpEditorScreen(
                 trust = trust,
                 previous = null,
                 step = ADJUST_STEPS[stepIndex],
-                topInset = 120.dp,
+                topInset = 120.dp + statusTop,
                 bottomInset = (with(density) { sheetHeight.toDp() } - 24.dp).coerceAtLeast(0.dp),
                 onSheetHeight = { sheetHeight = it },
                 onStep = { stepIndex = (stepIndex + 1) % ADJUST_STEPS.size },
@@ -150,14 +155,14 @@ fun TpEditorScreen(
         }
 
         Row(
-            Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp),
+            Modifier.fillMaxWidth().statusBarsPadding().padding(start = 14.dp, end = 14.dp, top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             PoeOverlayIconButton(PoeIcons.Back, "Назад до об'єктів", onBack)
             PoeOverlayTitle(title, "ТП/РП · $tplnr", Modifier.weight(1f))
         }
-        GpsStatus(gps, trust, onGpsProblem, Modifier.align(Alignment.TopEnd).padding(top = 68.dp, end = 14.dp))
+        GpsStatus(gps, trust, onGpsProblem, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 68.dp, end = 14.dp))
 
         Row(
             Modifier
