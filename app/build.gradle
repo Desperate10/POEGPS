@@ -70,7 +70,7 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.6.1'
     debugImplementation 'androidx.compose.ui:ui-tooling'
     //map
-    implementation 'org.maplibre.gl:android-sdk:11.5.2'
+    implementation 'org.maplibre.gl:android-sdk:11.13.5'
     implementation 'androidx.activity:activity-ktx:1.9.3'
     implementation 'androidx.activity:activity-compose:1.9.3'
     implementation 'com.google.android.material:material:1.8.0'
