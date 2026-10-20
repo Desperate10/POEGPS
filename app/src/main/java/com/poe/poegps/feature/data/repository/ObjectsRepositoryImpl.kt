@@ -13,6 +13,7 @@ import com.poe.poegps.feature.data.remote.model.upload.SaveRequestDTO
 import com.poe.poegps.feature.data.remote.model.upload.UploadState
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.data.remote.utils.apiRequestFlow
+import com.poe.poegps.feature.domain.isTapName
 import com.poe.poegps.feature.domain.model.*
 import com.poe.poegps.feature.domain.repository.ObjectsRepository
 import kotlinx.coroutines.flow.Flow
@@ -526,6 +527,13 @@ class ObjectsRepositoryImpl @Inject constructor(
         objectsDao.deletePillar(pillar.toLinePillarDbModel())
         objectsDao.deleteRecloser(pillar.tplnr, pillar.name)
     }
+
+    override suspend fun clearLine(tplnr: String, name: String): List<Int> =
+        if (isTapName(name)) objectsDao.clearLine(tplnr, name) else objectsDao.clearLineWithTaps(tplnr, name)
+
+    override suspend fun clearLineSummary(tplnr: String, name: String): LineClearSummary =
+        if (isTapName(name)) LineClearSummary(taps = 0, unsent = objectsDao.countUnsentOfLine(tplnr, name))
+        else LineClearSummary(taps = objectsDao.countTaps(tplnr, name), unsent = objectsDao.countUnsentOfObject(tplnr))
 
     override suspend fun getParentName(tplnr: String): String {
         return objectsDao.getParentName(tplnr)

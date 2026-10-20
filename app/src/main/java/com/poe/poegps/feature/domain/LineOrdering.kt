@@ -2,6 +2,9 @@ package com.poe.poegps.feature.domain
 
 import com.poe.poegps.core.location.Geo
 
+/** A tap (відпайка) by its name: GIS draws them as "Відп. від оп. …", and the phone names new ones the same way. */
+fun isTapName(name: String) = name.startsWith("Відп.", ignoreCase = true)
+
 /** A GIS pole of the object (pillars04/pillars10). */
 data class GisPoint(val name: String, val lat: Double, val lng: Double)
 
@@ -64,7 +67,7 @@ object LineOrdering {
         }
     }
 
-    private fun isTap(name: String) = name.startsWith("Відп.", ignoreCase = true)
+    private fun isTap(name: String) = isTapName(name)
 
     /** "2", "13а", "13/1", "16": by the leading number, then the rest; names without one go last. */
     val BY_NUMBER: Comparator<GisPoint> = compareBy(

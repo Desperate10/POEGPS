@@ -59,6 +59,8 @@ class CaptureLog @Inject constructor(@ApplicationContext context: Context) {
 
     suspend fun forget(key: String) = update { it - key }
 
+    suspend fun forgetAll(keys: Collection<String>) = update { it - keys.toSet() }
+
     private suspend fun update(change: (Map<String, CaptureMeta>) -> Map<String, CaptureMeta>) = mutex.withLock {
         ensureLoaded()
         val next = change(_entries.value)

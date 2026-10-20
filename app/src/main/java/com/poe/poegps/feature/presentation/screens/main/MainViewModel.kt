@@ -1,6 +1,9 @@
 package com.poe.poegps.feature.presentation.screens.main
 
 import android.util.Log
+import com.poe.poegps.feature.data.local.CaptureLog
+import kotlinx.coroutines.withContext
+import com.poe.poegps.feature.domain.model.LineClearSummary
 import androidx.lifecycle.viewModelScope
 import com.poe.poegps.feature.data.remote.model.LoginResponse
 import com.poe.poegps.feature.data.remote.model.TokenCheckResponse
@@ -91,6 +94,7 @@ class MainViewModel @Inject constructor(
     private val tokenManager: TokenManager,
     private val filialManager: FilialManager,
     private val geoRepository: GeoRepository,
+    private val captureLog: CaptureLog,
 ) : BaseViewModel() {
 
     private val token = MutableStateFlow<String?>("")
@@ -336,6 +340,18 @@ class MainViewModel @Inject constructor(
                 ObjectType.KLKVABON04 -> {}
                 ObjectType.KLKVABON10 -> {}
             }
+        }
+    }
+
+    suspend fun clearLineSummary(line: ObjectDisplayable): LineClearSummary =
+        withContext(Dispatchers.IO) { repository.clearLineSummary(line.tplnr, line.name) }
+
+    /** Takes all of [line]'s poles off the phone (a main line with its taps), so it starts over as GIS has it. */
+    fun clearLine(line: ObjectDisplayable) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val ids = repository.clearLine(line.tplnr, line.name)
+            captureLog.forgetAll(ids.map(CaptureLog::poleKey))
+            _message.emit("Лінію очищено: ${line.name}")
         }
     }
 

@@ -114,6 +114,15 @@ interface ObjectsRepository {
 
     suspend fun deletePillar(pillar: Pillar)
 
+    /**
+     * One line's poles off the phone (GIS unchanged): a main line takes its taps with it, a tap only
+     * itself. Returns the removed poles' ids.
+     */
+    suspend fun clearLine(tplnr: String, name: String): List<Int>
+
+    /** What [clearLine] would remove, for its confirmation. */
+    suspend fun clearLineSummary(tplnr: String, name: String): LineClearSummary
+
     suspend fun getParentName(tplnr: String): String
 
     suspend fun saveLine04(line: Line)

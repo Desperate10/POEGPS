@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -76,6 +77,7 @@ import com.poe.poegps.core.designsystem.PoeSheet
 import com.poe.poegps.core.designsystem.PoeStatusBadge
 import com.poe.poegps.core.designsystem.PoeTheme
 import com.poe.poegps.feature.data.remote.model.upload.UploadState
+import com.poe.poegps.feature.domain.model.LineClearSummary
 import com.poe.poegps.feature.domain.model.LineProgress
 import com.poe.poegps.feature.presentation.capture.downloadedLabel
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
@@ -103,6 +105,8 @@ fun ObjectsScreen(
     onOpen: (ObjectDisplayable) -> Unit,
     onUploadOne: (ObjectDisplayable) -> Unit,
     onDeleteTap: (ObjectDisplayable) -> Unit,
+    onClearLine: (ObjectDisplayable) -> Unit,
+    clearSummary: suspend (ObjectDisplayable) -> LineClearSummary,
     onDownload: () -> Unit,
     onUploadAll: () -> Unit,
     onFilialSelected: (String) -> Unit,
@@ -187,6 +191,8 @@ fun ObjectsScreen(
                             onOpen = { onOpen(item.obj) },
                             onUpload = { onUploadOne(item.obj) },
                             onDeleteTap = { onDeleteTap(item.obj) },
+                            onClearLine = { onClearLine(item.obj) },
+                            clearSummary = { clearSummary(item.obj) },
                         )
                     }
                 }
@@ -268,6 +274,8 @@ private fun ObjectCard(
     onOpen: () -> Unit,
     onUpload: () -> Unit,
     onDeleteTap: () -> Unit,
+    onClearLine: () -> Unit,
+    clearSummary: suspend () -> LineClearSummary,
 ) {
     val c = PoeTheme.colors
     val obj = item.obj
@@ -275,6 +283,7 @@ private fun ObjectCard(
     val gis = item.gisPoles
     var menu by remember { mutableStateOf(false) }
     var confirmUpload by remember { mutableStateOf(false) }
+    var confirmClear by remember { mutableStateOf(false) }
 
     Box {
         PoeCard(onClick = onOpen, onLongClick = { menu = true }) {
@@ -330,6 +339,14 @@ private fun ObjectCard(
                 leadingIcon = { Icon(PoeIcons.Upload, null, Modifier.size(20.dp)) },
                 onClick = { menu = false; confirmUpload = true },
             )
+            // a line with poles on the phone can be started over; a TP has only its one point
+            if (!isTp && p != null) {
+                DropdownMenuItem(
+                    text = { Text("Очистити лінію на телефоні", style = PoeTheme.type.labelRegular, color = c.danger) },
+                    leadingIcon = { Icon(PoeIcons.Trash, null, Modifier.size(20.dp), tint = c.danger) },
+                    onClick = { menu = false; confirmClear = true },
+                )
+            }
             // trunk lines come from GIS and can't be removed; only taps created on the phone can
             if (!isTp && !obj.name.contains("ПЛ")) {
                 DropdownMenuItem(
@@ -339,6 +356,42 @@ private fun ObjectCard(
                 )
             }
         }
+    }
+    if (confirmClear && p != null) {
+        val summary by produceState<LineClearSummary?>(null) { value = clearSummary() }
+        AlertDialog(
+            onDismissRequest = { confirmClear = false },
+            containerColor = c.surface,
+            title = { Text("Очистити лінію?", style = PoeTheme.type.sheetTitle, color = c.ink) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(obj.name, style = PoeTheme.type.rowTitle, color = c.ink)
+                    val s = summary
+                    Text(
+                        when {
+                            s == null -> "…"
+                            s.taps > 0 -> "З телефона буде видалено всі опори цієї лінії та її " +
+                                "${s.taps} ${plural(s.taps, "відпайки", "відпайок", "відпайок")} разом із самими відпайками"
+                            else -> "З телефона буде видалено всі опори цієї лінії"
+                        } + (s?.unsent?.takeIf { it > 0 }
+                            ?.let { ", серед них $it ${plural(it, "не надіслана", "не надіслані", "не надісланих")} — їх не можна буде відновити" }
+                            ?: "") +
+                            ". У ГІС нічого не зміниться. Коли відкриєте лінію знову, опори з ГІС завантажаться заново.",
+                        style = PoeTheme.type.body, color = c.muted,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { confirmClear = false; onClearLine() }, enabled = summary != null) {
+                    Text("Очистити", style = PoeTheme.type.button, color = c.danger)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmClear = false }) {
+                    Text("Скасувати", style = PoeTheme.type.button, color = c.ink)
+                }
+            },
+        )
     }
     if (confirmUpload) {
         AlertDialog(

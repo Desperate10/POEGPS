@@ -392,6 +392,77 @@ interface ObjectsDao {
     @Query("DELETE FROM recloser WHERE tplnr = :tplnr AND name = :name")
     suspend fun deleteRecloser(tplnr: String, name: String)
 
+    @Query("SELECT * FROM line_pillar WHERE tplnr = :tplnr AND parentName = :parentName")
+    suspend fun getLinePoles(tplnr: String, parentName: String): List<LinePillarDbModel>
+
+    @Query("DELETE FROM line_pillar WHERE tplnr = :tplnr AND parentName = :parentName")
+    suspend fun deleteLinePoles(tplnr: String, parentName: String)
+
+    @Query("DELETE FROM recloser WHERE tplnr = :tplnr AND name IN (:names) AND isSent = 0")
+    suspend fun deleteUnsentReclosers(tplnr: String, names: List<String>)
+
+    /**
+     * Every pole of one line off the phone, with the unsent reclosers set on them; GIS is not touched.
+     * Opening the line again loads its GIS poles afresh. Returns the removed poles' ids.
+     */
+    @Transaction
+    suspend fun clearLine(tplnr: String, parentName: String): List<Int> {
+        val poles = getLinePoles(tplnr, parentName)
+        val reclosers = poles.mapNotNull { it.recloser?.takeIf(String::isNotBlank) }.distinct()
+        if (reclosers.isNotEmpty()) deleteUnsentReclosers(tplnr, reclosers)
+        deleteLinePoles(tplnr, parentName)
+        return poles.map { it.id }
+    }
+
+    @Query("SELECT id FROM line_pillar WHERE tplnr = :tplnr")
+    suspend fun getObjectPoleIds(tplnr: String): List<Int>
+
+    @Query("DELETE FROM line_pillar WHERE tplnr = :tplnr")
+    suspend fun deleteObjectPoles(tplnr: String)
+
+    @Query("DELETE FROM recloser WHERE tplnr = :tplnr AND isSent = 0")
+    suspend fun deleteUnsentObjectReclosers(tplnr: String)
+
+    // GIS lists one row per object (its main line); any other row of the object is a tap made on the phone
+    @Query("DELETE FROM line04 WHERE tplnr = :tplnr AND name <> :mainName")
+    suspend fun deleteTaps04(tplnr: String, mainName: String)
+
+    @Query("DELETE FROM line10 WHERE tplnr = :tplnr AND name <> :mainName")
+    suspend fun deleteTaps10(tplnr: String, mainName: String)
+
+    @Query("DELETE FROM abon_line04 WHERE tplnr = :tplnr AND name <> :mainName")
+    suspend fun deleteAbonTaps04(tplnr: String, mainName: String)
+
+    @Query("DELETE FROM abon_line10 WHERE tplnr = :tplnr AND name <> :mainName")
+    suspend fun deleteAbonTaps10(tplnr: String, mainName: String)
+
+    @Query(
+        "SELECT (SELECT COUNT(*) FROM line04 WHERE tplnr = :tplnr AND name <> :mainName) + " +
+            "(SELECT COUNT(*) FROM line10 WHERE tplnr = :tplnr AND name <> :mainName) + " +
+            "(SELECT COUNT(*) FROM abon_line04 WHERE tplnr = :tplnr AND name <> :mainName) + " +
+            "(SELECT COUNT(*) FROM abon_line10 WHERE tplnr = :tplnr AND name <> :mainName)"
+    )
+    suspend fun countTaps(tplnr: String, mainName: String): Int
+
+    @Query("SELECT COUNT(*) FROM line_pillar WHERE tplnr = :tplnr AND lat <> '0.0' AND isSent = 0")
+    suspend fun countUnsentOfObject(tplnr: String): Int
+
+    @Query("SELECT COUNT(*) FROM line_pillar WHERE tplnr = :tplnr AND parentName = :parentName AND lat <> '0.0' AND isSent = 0")
+    suspend fun countUnsentOfLine(tplnr: String, parentName: String): Int
+
+    /** A main line with all its taps (they share its tplnr): their poles, unsent reclosers and the taps' cards. */
+    @Transaction
+    suspend fun clearLineWithTaps(tplnr: String, mainName: String): List<Int> {
+        val ids = getObjectPoleIds(tplnr)
+        deleteUnsentObjectReclosers(tplnr)
+        deleteObjectPoles(tplnr)
+        deleteTaps04(tplnr, mainName)
+        deleteTaps10(tplnr, mainName)
+        deleteAbonTaps04(tplnr, mainName)
+        deleteAbonTaps10(tplnr, mainName)
+        return ids
+    }
+
     // the server rebuilds each line from the poles it receives, so a line with any unsent pole
     // is sent whole (sent poles included), in editor order
     @Query(

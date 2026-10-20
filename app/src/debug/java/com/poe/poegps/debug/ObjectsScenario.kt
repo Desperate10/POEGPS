@@ -3,6 +3,7 @@ package com.poe.poegps.debug
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringArrayResource
 import com.poe.poegps.R
+import com.poe.poegps.feature.domain.model.LineClearSummary
 import com.poe.poegps.feature.domain.model.LineProgress
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.screens.main.Filial
@@ -36,6 +37,8 @@ fun ObjectsScenario() {
         onOpen = {},
         onUploadOne = {},
         onDeleteTap = {},
+        onClearLine = {},
+        clearSummary = { LineClearSummary(taps = 2, unsent = 3) },
         onDownload = {},
         onUploadAll = {},
         onFilialSelected = {},

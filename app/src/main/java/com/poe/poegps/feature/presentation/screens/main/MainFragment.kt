@@ -97,6 +97,8 @@ class MainFragment : Fragment() {
                 onOpen = ::navigateToEditObjectFragment,
                 onUploadOne = { viewModel.upload(it.tplnr) },
                 onDeleteTap = { viewModel.deleteObject(it.name) },
+                onClearLine = viewModel::clearLine,
+                clearSummary = viewModel::clearLineSummary,
                 onDownload = viewModel::loadObjectsToDb,
                 onUploadAll = { viewModel.upload() },
                 onFilialSelected = viewModel::selectedFilial,
