@@ -217,11 +217,13 @@ class MainViewModel @Inject constructor(
             delay(500)
             // never signed in on this phone: ask right away, the server can't say anything else
             // read the store itself: the token StateFlow may not have been filled yet
-            if (tokenManager.getToken().first().isNullOrBlank()) {
+            val stored = tokenManager.getToken().first()
+            if (stored.isNullOrBlank()) {
                 requireLogin()
                 return@launch
             }
-            tokenCheck(object : CoroutinesErrorHandler {
+            // the stored token, not the StateFlow: on a slow cold start (first run after an update) it's still ""
+            tokenCheck(stored, object : CoroutinesErrorHandler {
                 override fun onError(message: String) {
                     viewModelScope.launch(Dispatchers.Main) {
                         _message.emit("Не вдалося перевірити токен! Перевірте підключення до інтернету та спробуйте ще раз.")
@@ -307,11 +309,12 @@ class MainViewModel @Inject constructor(
     }
 
     private fun tokenCheck(
+        token: String,
         coroutineErrorHandler: CoroutinesErrorHandler
     ) = baseRequest(
         _tokenValidity, coroutineErrorHandler
     ) {
-        repository.tokenCheck(token.value ?: "")
+        repository.tokenCheck(token)
     }
 
     fun saveToken(token: String) {

@@ -16,6 +16,9 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
 import com.poe.poegps.R
 import com.poe.poegps.core.designsystem.PoeTheme
+import com.poe.poegps.core.update.AppUpdater
 import com.poe.poegps.feature.data.remote.model.upload.UploadState
 import com.poe.poegps.feature.data.remote.utils.FilialManager
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
@@ -47,6 +51,9 @@ class MainFragment : Fragment() {
     @Inject
     lateinit var filialManager: FilialManager
 
+    @Inject
+    lateinit var updater: AppUpdater
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -60,6 +67,12 @@ class MainFragment : Fragment() {
         collectLogin()
     }
 
+    override fun onResume() {
+        super.onResume()
+        // also catches a Play download that finished while the app was in the background
+        updater.check()
+    }
+
     @Composable
     private fun MainRoute() {
         val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -69,6 +82,8 @@ class MainFragment : Fragment() {
         val login by viewModel.login.collectAsStateWithLifecycle()
         val downloadedAt by filialManager.getDownloadedAt().collectAsStateWithLifecycle(null)
         val snackbar = remember { SnackbarHostState() }
+        val update by updater.state.collectAsStateWithLifecycle()
+        var updateOpen by rememberSaveable { mutableStateOf(false) }
 
         LaunchedEffect(Unit) {
             viewModel.message.collect { snackbar.showSnackbar(it) }
@@ -85,6 +100,11 @@ class MainFragment : Fragment() {
                 }
                 else -> {}
             }
+        }
+
+        LaunchedEffect(sync) {
+            // the server may have refused the upload as coming from an outdated version
+            if (sync is SyncUiState.Failed) updater.check(force = true)
         }
 
         Box(Modifier.fillMaxSize()) {
@@ -104,6 +124,11 @@ class MainFragment : Fragment() {
                 onFilialSelected = viewModel::selectedFilial,
                 downloadedAt = downloadedAt,
                 askFilial = login == null,
+                banner = {
+                    update?.takeIf { !it.required }?.let { u ->
+                        UpdateBanner(u, onOpen = { updateOpen = true }, onDismiss = updater::dismiss)
+                    }
+                },
             )
             SnackbarHost(
                 snackbar,
@@ -130,6 +155,13 @@ class MainFragment : Fragment() {
                     onSubmit = viewModel::login,
                     onExit = { requireActivity().finish() },
                 )
+            }
+            update?.let { u ->
+                if (u.required) {
+                    RequiredUpdateScreen(u, state.unsent, onProceed = { updater.proceed(requireActivity()) })
+                } else if (updateOpen) {
+                    UpdateSheet(u, state.unsent, onProceed = { updater.proceed(requireActivity()) }, onClose = { updateOpen = false })
+                }
             }
         }
     }

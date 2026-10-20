@@ -1,6 +1,7 @@
 package com.poe.poegps.core.network
 
 import com.poe.poegps.BuildConfig
+import com.poe.poegps.core.update.AppReleaseApi
 import com.poe.poegps.feature.data.remote.utils.AuthInterceptor
 import com.poe.poegps.feature.data.remote.utils.TokenManager
 import dagger.Module
@@ -23,6 +24,12 @@ object NetworkModule {
         val builder = OkHttpClient().newBuilder()
             .retryOnConnectionFailure(true)
             // .addInterceptor(authInterceptor)
+            // the server refuses uploads from versions it no longer supports
+            .addInterceptor { chain ->
+                chain.proceed(
+                    chain.request().newBuilder().header("X-App-Version", BuildConfig.VERSION_CODE.toString()).build()
+                )
+            }
         // Bodies and headers carry the password, the JWT and the Authorization token, so release
         // builds log nothing and debug builds only the request line and status.
         if (BuildConfig.DEBUG) {
@@ -49,4 +56,8 @@ object NetworkModule {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
+
+    @Provides
+    @Singleton
+    fun provideAppReleaseApi(retrofit: Retrofit): AppReleaseApi = retrofit.create(AppReleaseApi::class.java)
 }

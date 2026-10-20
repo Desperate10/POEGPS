@@ -22,8 +22,8 @@ android {
         applicationId "com.poe.poegps"
         minSdk 24
         targetSdk 36
-        versionCode 14
-        versionName "2.1.0"
+        versionCode 15
+        versionName "2.2.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -42,6 +42,17 @@ android {
                     outputFileName = new File("POEGPS2-${variant.versionName}.apk")
                 }
             }}
+    }
+    // play: Google Play installs and updates it (Play In-App Updates);
+    // direct: the sideloaded APK for phones without Google services, updates itself from the GIS server
+    flavorDimensions = ['distribution']
+    productFlavors {
+        play {
+            dimension 'distribution'
+        }
+        direct {
+            dimension 'distribution'
+        }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -119,6 +130,8 @@ dependencies {
     implementation "androidx.room:room-ktx:2.6.1"
     // debugImplementation because LeakCanary should only run in debug builds.
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.10'
+    // Play In-App Updates: only in the Play build, the direct one updates from the GIS server
+    playImplementation 'com.google.android.play:app-update-ktx:2.1.0'
     //handle permission requests
     implementation 'com.guolindev.permissionx:permissionx:1.7.1'
 

@@ -114,6 +114,8 @@ fun ObjectsScreen(
     downloadedAt: Long? = null,
     // false while B1 is up: the login form asks for the branch itself
     askFilial: Boolean = true,
+    /** Under the search field: the app update offer. */
+    banner: @Composable () -> Unit = {},
 ) {
     val c = PoeTheme.colors
     val type = state.objectType
@@ -163,6 +165,7 @@ fun ObjectsScreen(
                     onValueChange = { query = it; onQueryChange(it) },
                     trailing = if (state.query.isNotBlank() && state.total > 0) "${state.items.size} з ${state.total}" else null,
                 )
+                banner()
             }
 
             when {
