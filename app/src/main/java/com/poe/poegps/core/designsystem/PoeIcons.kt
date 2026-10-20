@@ -25,6 +25,7 @@ object PoeIcons {
     val ChevronDown = icon("chevron_down", 2.6f, "M8 10l4 4 4-4")
     val Person = icon("person", 2.2f, circle(12f, 8f, 4f) + "M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6")
     val Capture = icon("capture", 2.4f, circle(12f, 10f, 3f) + "M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z")
+    val Layers = icon("layers", 2.2f, "M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 17.5l9 5 9-5")
     val Crosshair = icon("crosshair", 2.4f, "M12 2v4M12 18v4M2 12h4M18 12h4" + circle(12f, 12f, 5f))
     val Tap = icon("tap", 2.2f, "M6 3v8a5 5 0 0 0 5 5h8M15 12l4 4-4 4")
     val Recloser = icon("recloser", 2.2f, "M3 12h5M16 12h5M8 12l7-5")

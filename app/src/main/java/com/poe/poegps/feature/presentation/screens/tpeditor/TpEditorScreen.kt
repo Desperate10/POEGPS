@@ -8,6 +8,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -51,6 +53,7 @@ import com.poe.poegps.feature.domain.model.LineProgress
 import com.poe.poegps.feature.presentation.capture.CapturePolicy
 import com.poe.poegps.feature.presentation.map.LineMap
 import com.poe.poegps.feature.presentation.map.MapConfig
+import com.poe.poegps.feature.presentation.map.rememberSatellite
 import com.poe.poegps.feature.presentation.map.MapFocus
 import com.poe.poegps.feature.presentation.map.MapGps
 import com.poe.poegps.feature.presentation.map.MapPole
@@ -91,6 +94,7 @@ fun TpEditorScreen(
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     var sheetHeight by remember { mutableIntStateOf(0) }
     var recenter by remember { mutableIntStateOf(0) }
+    var satellite by rememberSatellite()
     var adjusting by rememberSaveable { mutableStateOf(false) }
     var center by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var focus by remember { mutableStateOf<MapFocus?>(null) }
@@ -128,6 +132,7 @@ fun TpEditorScreen(
             modifier = Modifier.fillMaxSize(),
             focus = focus,
             onCenterChange = { lat, lng -> center = lat to lng },
+            satellite = satellite,
         )
 
         if (adjusting && tp != null) {
@@ -172,12 +177,22 @@ fun TpEditorScreen(
             verticalAlignment = Alignment.Bottom,
         ) {
             Text(
-                MapConfig.ATTRIBUTION, style = PoeTheme.type.small, color = c.muted,
+                MapConfig.attribution(satellite), style = PoeTheme.type.small, color = c.muted,
                 modifier = Modifier.weight(1f).clip(PoeShapes.pill).background(c.overlay.copy(alpha = 0.8f))
                     .padding(horizontal = 8.dp, vertical = 2.dp),
                 maxLines = 1,
             )
-            if (here != null) PoeOverlayIconButton(PoeIcons.Crosshair, "Показати мою позицію", { recenter++ })
+            Spacer(Modifier.width(8.dp))
+            PoeOverlayIconButton(
+                PoeIcons.Layers,
+                if (satellite) "Показати карту" else "Показати супутник",
+                { satellite = !satellite },
+                filled = satellite,
+            )
+            if (here != null) {
+                Spacer(Modifier.width(8.dp))
+                PoeOverlayIconButton(PoeIcons.Crosshair, "Показати мою позицію", { recenter++ })
+            }
         }
 
         PoeSheet(Modifier.align(Alignment.BottomCenter).onSizeChanged { sheetHeight = it.height }) {

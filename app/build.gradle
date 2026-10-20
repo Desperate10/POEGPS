@@ -14,11 +14,16 @@ android {
     compileSdk 36
 
     defaultConfig {
+        // satellite imagery: an ArcGIS Location Platform key in local.properties (esri.apiKey=…), never in git
+        def localProps = new Properties()
+        def localFile = rootProject.file('local.properties')
+        if (localFile.exists()) localFile.withInputStream { localProps.load(it) }
+        buildConfigField "String", "ESRI_API_KEY", "\"${localProps.getProperty('esri.apiKey', '')}\""
         applicationId "com.poe.poegps"
         minSdk 24
         targetSdk 36
-        versionCode 13
-        versionName "2.0.1"
+        versionCode 14
+        versionName "2.1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }

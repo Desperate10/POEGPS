@@ -38,6 +38,7 @@ import org.maplibre.android.style.expressions.Expression.switchCase
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.FillLayer
 import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.RasterLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory.circleColor
 import org.maplibre.android.style.layers.PropertyFactory.circleRadius
@@ -59,8 +60,11 @@ import org.maplibre.android.style.layers.PropertyFactory.textHaloColor
 import org.maplibre.android.style.layers.PropertyFactory.textHaloWidth
 import org.maplibre.android.style.layers.PropertyFactory.textOffset
 import org.maplibre.android.style.layers.PropertyFactory.textSize
+import org.maplibre.android.style.layers.PropertyFactory.visibility
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.android.style.sources.RasterSource
+import org.maplibre.android.style.sources.TileSet
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
@@ -113,6 +117,8 @@ fun LineMap(
     onCenterChange: ((Double, Double) -> Unit)? = null,
     /** Where the dashed span to the GPS dot starts (lat, lng); null draws none. */
     gpsLinkFrom: Pair<Double, Double>? = poles.lastOrNull()?.let { it.lat to it.lng },
+    /** Esri imagery under the lines instead of the street map. */
+    satellite: Boolean = false,
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -185,6 +191,12 @@ fun LineMap(
     val padding = with(density) { doubleArrayOf(0.0, topInset.toPx().toDouble(), 0.0, bottomInset.toPx().toDouble()) }
     LaunchedEffect(map, padding[1], padding[3]) {
         map?.moveCamera(CameraUpdateFactory.paddingTo(padding))
+    }
+
+    LaunchedEffect(style, satellite) {
+        val s = style ?: return@LaunchedEffect
+        s.getLayer(LAYER_SATELLITE)?.setProperties(visibility(if (satellite) Property.VISIBLE else Property.NONE))
+        restyle(s, tplnr, colors, satellite)
     }
 
     LaunchedEffect(style, gisLines) {
@@ -312,6 +324,12 @@ private fun addLayers(style: Style, tplnr: String, c: PoeColors) {
     listOf(SRC_GIS_LINES, SRC_GIS_POLES, SRC_ROUTE, SRC_POLES, SRC_GPS, SRC_GPS_ACCURACY, SRC_GPS_LINK)
         .forEach { style.addSource(GeoJsonSource(it)) }
 
+    // hidden until chosen; tiles are only requested while it is visible
+    style.addSource(
+        RasterSource(SRC_SATELLITE, TileSet("2.2.0", MapConfig.SATELLITE.tiles).apply { maxZoom = MapConfig.SATELLITE.maxZoom }, 256)
+    )
+    style.addLayer(RasterLayer(LAYER_SATELLITE, SRC_SATELLITE).withProperties(visibility(Property.NONE)))
+
     style.addLayer(
         LineLayer("gis-lines-other", SRC_GIS_LINES)
             .withProperties(lineColor(c.muted.toArgb()), lineWidth(1.5f), lineOpacity(0.55f))
@@ -394,6 +412,44 @@ private fun addLayers(style: Style, tplnr: String, c: PoeColors) {
     )
 }
 
+/**
+ * The line colours for the ground under them: on the street map as [addLayers] set them, on imagery
+ * white, which stays readable over fields, roofs and trees alike.
+ */
+private fun restyle(style: Style, tplnr: String, c: PoeColors, satellite: Boolean) {
+    val surface = c.surface.toArgb()
+    val action = c.action.toArgb()
+    val route = when {
+        satellite -> android.graphics.Color.WHITE
+        c.isDark -> action
+        else -> c.ink.toArgb()
+    }
+    val other = if (satellite) android.graphics.Color.WHITE else c.muted.toArgb()
+    style.getLayer("gis-lines-other")?.setProperties(lineColor(other), lineOpacity(if (satellite) 0.5f else 0.55f))
+    style.getLayer("gis-line-current")?.setProperties(lineColor(route), lineOpacity(if (satellite) 0.5f else 0.35f))
+    style.getLayer("route")?.setProperties(lineColor(route))
+    // on imagery a solid pole is white with a dark edge, a ring is dark with a white edge
+    val solid = route
+    val ring = if (satellite) c.ink.toArgb() else surface
+    val edge = if (satellite) c.ink.toArgb() else surface
+    style.getLayer(LAYER_POLES)?.setProperties(
+        circleColor(
+            switchCase(
+                eq(get("selected"), literal(true)), literal(action.hex()),
+                eq(get("gis"), literal(true)), literal(ring.hex()),
+                literal(solid.hex()),
+            )
+        ),
+        circleStrokeColor(
+            switchCase(
+                eq(get("selected"), literal(true)), literal(surface.hex()),
+                eq(get("gis"), literal(true)), literal(route.hex()),
+                literal(edge.hex()),
+            )
+        ),
+    )
+}
+
 private fun features(feature: Feature?): FeatureCollection = FeatureCollection.fromFeatures(listOfNotNull(feature))
 
 private fun Int.hex() = String.format("#%06X", this and 0xFFFFFF)
@@ -418,3 +474,5 @@ private const val SRC_GPS = "gps"
 private const val SRC_GPS_ACCURACY = "gps-accuracy"
 private const val SRC_GPS_LINK = "gps-link"
 private const val LAYER_POLES = "poles"
+private const val SRC_SATELLITE = "satellite"
+private const val LAYER_SATELLITE = "satellite"

@@ -88,6 +88,7 @@ import com.poe.poegps.core.location.TrustState
 import com.poe.poegps.feature.data.local.CaptureMeta
 import com.poe.poegps.feature.presentation.map.LineMap
 import com.poe.poegps.feature.presentation.map.MapConfig
+import com.poe.poegps.feature.presentation.map.rememberSatellite
 import com.poe.poegps.feature.presentation.map.MapFocus
 import com.poe.poegps.feature.presentation.map.MapGps
 import com.poe.poegps.feature.presentation.map.MapGisPole
@@ -138,6 +139,7 @@ fun EditorScreen(
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     var sheetHeight by remember { mutableIntStateOf(0) }
     var recenter by remember { mutableIntStateOf(0) }
+    var satellite by rememberSatellite()
     var actionsFor by rememberSaveable { mutableStateOf<Int?>(null) }
     var showAdd by rememberSaveable { mutableStateOf(false) }
     // B8/B9 opened from a pole's actions: the new pole goes right after this one (else at the end)
@@ -200,6 +202,7 @@ fun EditorScreen(
             modifier = Modifier.fillMaxSize(),
             focus = focus,
             onCenterChange = { lat, lng -> center = lat to lng },
+            satellite = satellite,
             // the span being measured: from the pole before the one to capture; none when nothing is next
             gpsLinkFrom = if (target != null) previous?.let { it.lat.toDouble() to it.lng.toDouble() } else null,
         )
@@ -254,11 +257,21 @@ fun EditorScreen(
             verticalAlignment = Alignment.Bottom,
         ) {
             Text(
-                MapConfig.ATTRIBUTION, style = PoeTheme.type.small, color = c.muted,
+                MapConfig.attribution(satellite), style = PoeTheme.type.small, color = c.muted,
                 modifier = Modifier.weight(1f).clip(PoeShapes.pill).background(c.overlay.copy(alpha = 0.8f)).padding(horizontal = 8.dp, vertical = 2.dp),
                 maxLines = 1,
             )
-            if (here != null) PoeOverlayIconButton(PoeIcons.Crosshair, "Показати мою позицію", { recenter++ })
+            Spacer(Modifier.width(8.dp))
+            PoeOverlayIconButton(
+                PoeIcons.Layers,
+                if (satellite) "Показати карту" else "Показати супутник",
+                { satellite = !satellite },
+                filled = satellite,
+            )
+            if (here != null) {
+                Spacer(Modifier.width(8.dp))
+                PoeOverlayIconButton(PoeIcons.Crosshair, "Показати мою позицію", { recenter++ })
+            }
         }
 
         PoeSheet(
