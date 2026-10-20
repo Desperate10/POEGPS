@@ -70,6 +70,7 @@ class ThemeGalleryActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         // --es screen sync: the upload result screen with sample data (the emulator can't reach the GIS server)
+        // --es screen objects: B2 with sample lines, the sync button and its sheet
         // --es screen login | login-busy | login-error: B1 (the emulator can't reach the auth server)
         // --es screen gps-…: the line editor in GPS states, see EditorScenarios.kt
         val screen = intent.getStringExtra("screen")
@@ -77,6 +78,7 @@ class ThemeGalleryActivity : ComponentActivity() {
             PoeTheme {
                 when {
                     screen == "sync" -> SyncScreen(SAMPLE_SYNC, onDone = ::finish, onRetry = {})
+                    screen == "objects" -> ObjectsScenario()
                     screen?.startsWith("gps-") == true -> EditorScenario(screen, onExit = ::finish)
                     screen?.startsWith("login") == true -> Box { LoginScreen(
                         state = when (screen) {

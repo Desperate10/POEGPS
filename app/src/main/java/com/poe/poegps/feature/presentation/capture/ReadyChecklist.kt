@@ -221,7 +221,7 @@ private fun Context.locationState(): LocationState {
 }
 
 /** "сьогодні о 08:42", "вчора о 17:10", "12.10 о 08:42". */
-private fun downloadedLabel(timeMs: Long): String {
+internal fun downloadedLabel(timeMs: Long): String {
     val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timeMs))
     val day = when {
         DateUtils.isToday(timeMs) -> "сьогодні"

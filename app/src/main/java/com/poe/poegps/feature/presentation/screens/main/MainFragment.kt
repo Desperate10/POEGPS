@@ -30,17 +30,22 @@ import androidx.navigation.fragment.findNavController
 import com.poe.poegps.R
 import com.poe.poegps.core.designsystem.PoeTheme
 import com.poe.poegps.feature.data.remote.model.upload.UploadState
+import com.poe.poegps.feature.data.remote.utils.FilialManager
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.presentation.CoroutinesErrorHandler
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.ObjectType
 import dagger.hilt.android.AndroidEntryPoint
 import gromov.ramdomusertestcase.core.extension.collectLifecycleFlow
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainFragment : Fragment() {
 
     private val viewModel by viewModels<MainViewModel>()
+
+    @Inject
+    lateinit var filialManager: FilialManager
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -62,6 +67,7 @@ class MainFragment : Fragment() {
         val newLines by viewModel.newLines.collectAsStateWithLifecycle()
         val filials = stringArrayResource(R.array.filials).map(Filial::parse)
         val login by viewModel.login.collectAsStateWithLifecycle()
+        val downloadedAt by filialManager.getDownloadedAt().collectAsStateWithLifecycle(null)
         val snackbar = remember { SnackbarHostState() }
 
         LaunchedEffect(Unit) {
@@ -94,6 +100,7 @@ class MainFragment : Fragment() {
                 onDownload = viewModel::loadObjectsToDb,
                 onUploadAll = { viewModel.upload() },
                 onFilialSelected = viewModel::selectedFilial,
+                downloadedAt = downloadedAt,
                 askFilial = login == null,
             )
             SnackbarHost(

@@ -1,5 +1,7 @@
 package com.poe.poegps.feature.presentation.screens.main
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.WindowInsets
@@ -37,6 +39,7 @@ import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,16 +67,20 @@ import com.poe.poegps.core.designsystem.BadgeTone
 import com.poe.poegps.core.designsystem.PoeCard
 import com.poe.poegps.core.designsystem.PoeChip
 import com.poe.poegps.core.designsystem.PoeIcons
+import com.poe.poegps.core.designsystem.PoeOutlinedButton
 import com.poe.poegps.core.designsystem.PoePrimaryButton
 import com.poe.poegps.core.designsystem.PoeSearchField
 import com.poe.poegps.core.designsystem.PoeSegmentedTabs
 import com.poe.poegps.core.designsystem.PoeShapes
+import com.poe.poegps.core.designsystem.PoeSheet
 import com.poe.poegps.core.designsystem.PoeStatusBadge
 import com.poe.poegps.core.designsystem.PoeTheme
 import com.poe.poegps.feature.data.remote.model.upload.UploadState
 import com.poe.poegps.feature.domain.model.LineProgress
+import com.poe.poegps.feature.presentation.capture.downloadedLabel
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
 import com.poe.poegps.feature.presentation.model.ObjectType
+import kotlinx.coroutines.delay
 
 /** A branch from the filials string array: "2300  Полтавська філія МЕМ". */
 data class Filial(val code: String, val name: String) {
@@ -85,7 +92,7 @@ data class Filial(val code: String, val name: String) {
     }
 }
 
-/** B2 · Об'єкти: object type tabs, voltage and abonent filters, live search, line cards and the sync dock. */
+/** B2 · Об'єкти: object type tabs, voltage and abonent filters, live search, line cards and the sync button. */
 @Composable
 fun ObjectsScreen(
     state: MainUiState,
@@ -99,12 +106,15 @@ fun ObjectsScreen(
     onDownload: () -> Unit,
     onUploadAll: () -> Unit,
     onFilialSelected: (String) -> Unit,
+    /** When the branch data was last downloaded completely; null = never. */
+    downloadedAt: Long? = null,
     // false while B1 is up: the login form asks for the branch itself
     askFilial: Boolean = true,
 ) {
     val c = PoeTheme.colors
     val type = state.objectType
     var pickFilial by rememberSaveable { mutableStateOf(false) }
+    var syncOpen by rememberSaveable { mutableStateOf(false) }
     // the field owns its text: round-tripping it through the async ui state would reset the cursor
     var query by rememberSaveable { mutableStateOf(state.query) }
     val filial = filials.firstOrNull { it.code == state.filial }
@@ -167,7 +177,7 @@ fun ObjectsScreen(
                 else -> LazyColumn(
                     state = listState,
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 120.dp + navBottom),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 96.dp + navBottom),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     items(state.items, key = { "${it.obj.tplnr}|${it.obj.name}|${it.obj.id}" }) { item ->
@@ -183,14 +193,24 @@ fun ObjectsScreen(
             }
         }
 
+        // the actions themselves are one tap further, in the sheet: a thumb scrolling the list kept hitting them
         if (state.total > 0 || state.unsent > 0) {
-            SyncDock(
+            SyncButton(
+                busy = state.download.isRunning || uploading,
+                unsent = state.unsent,
+                onClick = { syncOpen = true },
+                modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 16.dp, bottom = 16.dp),
+            )
+        }
+        if (syncOpen) {
+            SyncSheet(
                 download = state.download,
+                downloadedAt = downloadedAt,
                 unsent = state.unsent,
                 uploading = uploading,
-                onDownload = onDownload,
-                onUpload = onUploadAll,
-                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                onDownload = { syncOpen = false; onDownload() },
+                onUpload = { syncOpen = false; onUploadAll() },
+                onClose = { syncOpen = false },
             )
         }
     }
@@ -254,6 +274,7 @@ private fun ObjectCard(
     val p = item.progress?.takeIf { it.total > 0 }
     val gis = item.gisPoles
     var menu by remember { mutableStateOf(false) }
+    var confirmUpload by remember { mutableStateOf(false) }
 
     Box {
         PoeCard(onClick = onOpen, onLongClick = { menu = true }) {
@@ -307,7 +328,7 @@ private fun ObjectCard(
             DropdownMenuItem(
                 text = { Text("Вивантажити цей об'єкт", style = PoeTheme.type.labelRegular) },
                 leadingIcon = { Icon(PoeIcons.Upload, null, Modifier.size(20.dp)) },
-                onClick = { menu = false; onUpload() },
+                onClick = { menu = false; confirmUpload = true },
             )
             // trunk lines come from GIS and can't be removed; only taps created on the phone can
             if (!isTp && !obj.name.contains("ПЛ")) {
@@ -318,6 +339,34 @@ private fun ObjectCard(
                 )
             }
         }
+    }
+    if (confirmUpload) {
+        AlertDialog(
+            onDismissRequest = { confirmUpload = false },
+            containerColor = c.surface,
+            title = { Text("Вивантажити об'єкт?", style = PoeTheme.type.sheetTitle, color = c.ink) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(obj.name, style = PoeTheme.type.rowTitle, color = c.ink)
+                    Text(
+                        p?.unsent?.takeIf { it > 0 }
+                            ?.let { "Буде надіслано в ГІС: $it ${plural(it, "зміна", "зміни", "змін")}." }
+                            ?: "На телефоні немає нових змін цього об'єкта.",
+                        style = PoeTheme.type.body, color = c.muted,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { confirmUpload = false; onUpload() }) {
+                    Text("Вивантажити", style = PoeTheme.type.button, color = c.actionText)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmUpload = false }) {
+                    Text("Скасувати", style = PoeTheme.type.button, color = c.ink)
+                }
+            },
+        )
     }
 }
 
@@ -389,79 +438,114 @@ private fun GisLineGraphic(p: LineProgress?, gisPoles: Int) {
 }
 
 private const val MAX_DOTS = 30
+private const val ARM_DELAY_MS = 600L
 private val ZIGZAG = listOf(22, 14, 18, 10, 16, 12, 20, 14, 18, 24, 20, 26, 22)
 
+/** The way into upload and download: one round button with the count of unsent changes. */
 @Composable
-private fun SyncDock(
+private fun SyncButton(busy: Boolean, unsent: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val c = PoeTheme.colors
+    val label = if (unsent > 0) "Синхронізація, не надіслано $unsent" else "Синхронізація"
+    Box(modifier) {
+        Box(
+            Modifier
+                .size(60.dp)
+                .shadow(16.dp, CircleShape, spotColor = c.ink)
+                .clip(CircleShape)
+                .background(c.dock)
+                .border(1.dp, c.dockBorder, CircleShape)
+                .clickable(role = Role.Button, onClickLabel = "Відкрити синхронізацію", onClick = onClick)
+                .semantics { contentDescription = label },
+            contentAlignment = Alignment.Center,
+        ) {
+            if (busy) {
+                CircularProgressIndicator(Modifier.size(22.dp), color = c.onDock, strokeWidth = 2.5.dp)
+            } else {
+                Icon(PoeIcons.Sync, null, tint = c.onDock, modifier = Modifier.size(26.dp))
+            }
+        }
+        if (unsent > 0) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .heightIn(min = 24.dp)
+                    .widthIn(min = 24.dp)
+                    .clip(PoeShapes.pill)
+                    .background(c.action)
+                    .border(2.dp, c.ground, PoeShapes.pill)
+                    .padding(horizontal = 6.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("$unsent", style = PoeTheme.type.captionStrong, color = c.onAction)
+            }
+        }
+    }
+}
+
+/** Download and upload, each with what it will do, behind the sync button. */
+@Composable
+private fun SyncSheet(
     download: UploadState,
+    downloadedAt: Long?,
     unsent: Int,
     uploading: Boolean,
     onDownload: () -> Unit,
     onUpload: () -> Unit,
-    modifier: Modifier = Modifier,
+    onClose: () -> Unit,
 ) {
     val c = PoeTheme.colors
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(68.dp)
-            .shadow(20.dp, PoeShapes.card, spotColor = c.ink)
-            .clip(PoeShapes.card)
-            .background(c.dock)
-            .border(1.dp, c.dockBorder, PoeShapes.card)
-            .padding(6.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    BackHandler(onBack = onClose)
+    // the upload button opens right under the sync button: a double tap there must not upload
+    var armed by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(ARM_DELAY_MS)
+        armed = true
+    }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(c.ink.copy(alpha = 0.4f))
+            .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onClose),
     ) {
-        Row(
-            Modifier
-                .weight(1f)
-                .height(56.dp)
-                .clip(PoeShapes.field)
-                .clickable(enabled = !download.isRunning, role = Role.Button, onClick = onDownload),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        // taps on the sheet itself must not reach the scrim
+        PoeSheet(Modifier.align(Alignment.BottomCenter).clickable(remember { MutableInteractionSource() }, indication = null) {}) {
+            Text("Синхронізація", style = PoeTheme.type.sheetTitle, color = c.ink)
+
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Дані філії", style = PoeTheme.type.rowTitle, color = c.ink)
+                Text(
+                    downloadedAt?.let { "Оновлено ${downloadedLabel(it)}" } ?: "Ще не завантажено",
+                    style = PoeTheme.type.captionRegular, color = c.muted,
+                )
+            }
             if (download.isRunning) {
-                CircularProgressIndicator(Modifier.size(18.dp), color = c.onDock, strokeWidth = 2.dp)
                 val pct = (download as? UploadState.Progress)?.percentage
-                Text(if (pct != null) "$pct%" else "Завантаження", style = PoeTheme.type.tab, color = c.onDock)
-            } else {
-                Icon(PoeIcons.Download, null, tint = c.onDock, modifier = Modifier.size(20.dp))
-                Text("Завантажити", style = PoeTheme.type.tab, color = c.onDock)
-            }
-        }
-        Row(
-            Modifier
-                .weight(1.25f)
-                .height(56.dp)
-                .clip(PoeShapes.field)
-                .background(if (unsent > 0) c.action else c.onDock.copy(alpha = 0.12f))
-                .clickable(enabled = !uploading, role = Role.Button, onClick = onUpload),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val fg = if (unsent > 0) c.onAction else c.onDock
-            if (uploading) {
-                CircularProgressIndicator(Modifier.size(18.dp), color = fg, strokeWidth = 2.dp)
-                Text("Вивантаження", style = PoeTheme.type.titleSmall, color = fg)
-            } else {
-                if (!c.isDark) Icon(PoeIcons.Upload, null, tint = fg, modifier = Modifier.size(20.dp))
-                Text("Вивантажити", style = PoeTheme.type.titleSmall, color = fg)
-                if (unsent > 0) {
-                    Box(
-                        Modifier
-                            .heightIn(min = 24.dp)
-                            .widthIn(min = 24.dp)
-                            .clip(PoeShapes.pill)
-                            .background(if (c.isDark) c.onAction else c.surface)
-                            .padding(horizontal = 6.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text("$unsent", style = PoeTheme.type.captionStrong, color = if (c.isDark) c.action else c.actionText)
-                    }
+                Row(
+                    Modifier.fillMaxWidth().height(52.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(Modifier.size(18.dp), color = c.ink, strokeWidth = 2.dp)
+                    Text(if (pct != null) "Завантаження $pct%" else "Завантаження…", style = PoeTheme.type.button, color = c.ink)
                 }
+            } else {
+                PoeOutlinedButton("Завантажити дані філії", { if (armed) onDownload() }, Modifier.fillMaxWidth(), icon = PoeIcons.Download)
             }
+
+            Spacer(Modifier.height(4.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Зміни на телефоні", style = PoeTheme.type.rowTitle, color = c.ink)
+                Text(
+                    if (unsent > 0) "Не надіслано: $unsent" else "Усе надіслано",
+                    style = PoeTheme.type.captionRegular, color = if (unsent > 0) c.actionText else c.muted,
+                )
+            }
+            PoePrimaryButton(
+                text = if (uploading) "Вивантаження…" else "Вивантажити в ГІС",
+                onClick = { if (armed) onUpload() },
+                icon = PoeIcons.Upload,
+                enabled = unsent > 0 && !uploading,
+            )
         }
     }
 }

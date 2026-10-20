@@ -19,6 +19,7 @@ object PoeIcons {
     val Search = icon("search", 2.2f, circle(11f, 11f, 7f) + "M20 20l-4-4")
     val Download = icon("download", 2.2f, "M12 4v11M7 10l5 5 5-5M5 20h14")
     val Upload = icon("upload", 2.4f, "M12 20V9M7 14l5-5 5 5M5 4h14")
+    val Sync = icon("sync", 2.4f, "M8 4v15M4 15l4 4 4-4M16 20V5M12 9l4-4 4 4")
     val Check = icon("check", 2.8f, "M5 12l5 5 9-10")
     val ChevronRight = icon("chevron_right", 2.4f, "M9 6l6 6-6 6")
     val ChevronDown = icon("chevron_down", 2.6f, "M8 10l4 4 4-4")
