@@ -23,8 +23,12 @@ object LineOrdering {
     const val MATCH_M = 3.0
 
     fun order(lineName: String, poles: List<GisPoint>, shapes: List<GisShape>): OrderedLine {
-        val main = shapes.firstOrNull { it.name == lineName }
-            ?: shapes.firstOrNull { it.name.isNotBlank() && it.name.equals(lineName, ignoreCase = true) }
+        // GIS can hold several drawings under the line's name, e.g. a 2-point stub left beside the real
+        // one (PO-F-23-L1740), and sends them in no fixed order: the one through the most poles wins
+        val named = shapes.filter { it.name == lineName }
+            .ifEmpty { shapes.filter { it.name.isNotBlank() && it.name.equals(lineName, ignoreCase = true) } }
+        val main = named.map { it to walk(it.vertices, poles).size }.maxByOrNull { it.second }
+            ?.takeIf { it.second >= 2 }?.first
             // the busiest drawing is the main line: a tap without its own drawing must not take its poles
             ?: mainByPoles(poles, shapes).takeUnless { isTap(lineName) }
         if (main != null) {

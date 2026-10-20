@@ -27,6 +27,16 @@ class LineOrderingTest {
     }
 
     @Test
+    fun `a stub drawing under the same name doesn't hide the real one`() {
+        // PO-F-23-L1740: a 2-point stub, both points the same, sent before the 145-vertex line
+        val stub = GisShape("Л-1", listOf(50.1 to 34.1, 50.1 to 34.1))
+        val real = GisShape("Л-1", listOf(at(p1), at(p2), at(p3), at(p4)))
+        val result = LineOrdering.order("Л-1", listOf(p3, p1, p4, p2), listOf(stub, real))
+        assertTrue(result.fromShape)
+        assertEquals(listOf("1", "2", "3", "4"), result.poles.map { it.name })
+    }
+
+    @Test
     fun `vertices drawn a little off the poles still match`() {
         val shapes = listOf(GisShape("Л-1", listOf(at(p1, 1.5), at(p2, -2.0), at(p3, 2.5))))
         assertEquals(listOf("1", "2", "3"), LineOrdering.order("Л-1", listOf(p1, p2, p3), shapes).poles.map { it.name })

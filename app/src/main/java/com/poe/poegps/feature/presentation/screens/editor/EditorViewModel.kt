@@ -53,7 +53,6 @@ import com.poe.poegps.feature.domain.nearestNamesake
 import com.poe.poegps.feature.presentation.map.lineShapes
 import com.poe.poegps.feature.presentation.screens.main.plural
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 sealed class InsertResult {
@@ -141,28 +140,34 @@ class EditorViewModel @Inject constructor(
      * An existing line opened with nothing on this phone: load its GIS poles in line order (from its
      * GIS geometry, else by pole number) as "as in GIS" and already sent. Any later change sends the
      * whole line, so the server rebuilds its geometry complete.
+     *
+     * Tried on the phone's cached drawings and again on the server's when they differ, so a drawing
+     * fixed in GIS since the last visit loads on this opening, not the next.
      */
     private fun importFromGis() = viewModelScope.launch(Dispatchers.IO) {
+        _gisLines.filterNotNull().first { json -> tryImportFromGis(json) }
+    }
+
+    /** One try of [importFromGis] on the branch drawings [json]; false = no usable drawing, wait for newer ones. */
+    private suspend fun tryImportFromGis(json: String): Boolean {
         val highVoltage = when (args.objectType) {
             ObjectType.LINE04, ObjectType.LINEABON04 -> false
             ObjectType.LINE10, ObjectType.LINEABON10 -> true
-            else -> return@launch
+            else -> return true
         }
         val line = args.pltxt
         val existing = repository.getSavedPillars(line).first()
         val local = existing.filter { it.tplnr == args.tplnr }
-        if (existing.isNotEmpty() && local.isEmpty()) return@launch
+        if (existing.isNotEmpty() && local.isEmpty()) return true
         val gis = (if (highVoltage) repository.getPillar10List(args.tplnr) else repository.getPillar04List(args.tplnr))
             .first()
             .filter { p -> p.lat.toDoubleOrNull()?.let { it != 0.0 } == true && p.lng.toDoubleOrNull() != null }
-        if (gis.isEmpty()) return@launch
-        // the cached branch lines arrive within moments; without them the order falls back to pole numbers
-        val json = withTimeoutOrNull(GEOMETRY_WAIT_MS) { _gisLines.filterNotNull().first() }
+        if (gis.isEmpty()) return true
         val points = gis.map { GisPoint(it.name, it.lat.toDouble(), it.lng.toDouble()) }
-        val ordered = LineOrdering.order(line, points, json?.let { lineShapes(it, args.tplnr) }.orEmpty())
+        val ordered = LineOrdering.order(line, points, lineShapes(json, args.tplnr))
         // only a line GIS draws under this name: its order is known and the server edits that drawing.
         // Without one the order would be a guess and an upload would add a second line to GIS.
-        if (!ordered.fromShape) return@launch
+        if (!ordered.fromShape) return false
         val pillarType = if (CABLE_LINE.containsMatchIn(line)) PillarType.KL else PillarType.PILLAR
         fun gisPillar(point: GisPoint): Pillar {
             // the GIS row itself: its coordinates go back to the server exactly as GIS has them
@@ -175,7 +180,7 @@ class EditorViewModel @Inject constructor(
         }
         if (local.isNotEmpty()) {
             // surveyed on this phone before GIS poles were loaded: offer to complete it, never silently
-            val merged = mergeWithGis(local.map { LocalPole(it.id, it.name) }, ordered.poles) ?: return@launch
+            val merged = mergeWithGis(local.map { LocalPole(it.id, it.name) }, ordered.poles) ?: return true
             val byId = local.associateBy { it.id }
             _gisMerge.value = GisMergeOffer(
                 onPhone = local.size,
@@ -187,13 +192,14 @@ class EditorViewModel @Inject constructor(
                     }
                 },
             )
-            return@launch
+            return true
         }
         val poles = ordered.poles.map { gisPillar(it) }
         val loaded = repository.importLine(args.tplnr, line, poles)
         if (loaded > 0) {
             _notices.send("З ГІС завантажено $loaded ${plural(loaded, "опору", "опори", "опор")}")
         }
+        return true
     }
 
     private val _gisMerge = MutableStateFlow<GisMergeOffer?>(null)
@@ -506,7 +512,6 @@ class EditorViewModel @Inject constructor(
         /** КЛ/КВ lines get cable "poles" (PillarType.KL), as the old add dialog decided. */
         private val CABLE_LINE = Regex("К[ВЛ]-(0|6|10)", RegexOption.IGNORE_CASE)
         const val NEARBY_RADIUS_M = 1_000.0
-        private const val GEOMETRY_WAIT_MS = 5_000L
         private const val NEARBY_LIMIT = 30
 
         fun tapName(fromPole: String, firstPole: String) = "Відп. від оп. $fromPole до оп. $firstPole"
