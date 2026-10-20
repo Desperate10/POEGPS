@@ -1,6 +1,7 @@
 package com.poe.poegps.feature.data.repository
 
 import android.util.Log
+import com.poe.poegps.feature.data.local.BranchPruner
 import com.poe.poegps.feature.data.local.dao.ObjectsDao
 import com.poe.poegps.feature.data.local.entity.RecloserDbModel
 import com.poe.poegps.feature.data.mapper.*
@@ -26,7 +27,8 @@ private const val STATUS_UPDATE_CHUNK = 500
 
 class ObjectsRepositoryImpl @Inject constructor(
     private val objectsDao: ObjectsDao,
-    private val objectsApi: ObjectsApi
+    private val objectsApi: ObjectsApi,
+    private val branchPruner: BranchPruner,
 ) : ObjectsRepository {
 
     override fun auth(login: String, password: String) = apiRequestFlow {
@@ -138,6 +140,13 @@ class ObjectsRepositoryImpl @Inject constructor(
                 line?.let { objectsDao.insertAbonLine10IfNotExist(it.toAbonLine10DbModel()) }
                 // objectsDao.insertAbonLine10IfNotExist(line.toAbonLine10DbModel())
             }
+            // lines no longer in this branch (another branch chosen, or moved by SAP plant) go
+            branchPruner.prune(mapOf(
+                "line04" to line04Objects.mapNotNull { it?.tplnr },
+                "line10" to line10Objects.mapNotNull { it?.tplnr },
+                "abon_line04" to line04AbonObjects.mapNotNull { it?.tplnr },
+                "abon_line10" to line10AbonObjects.mapNotNull { it?.tplnr },
+            ))
 
             emit(UploadState.Complete)
         } catch (e: Exception) {
@@ -146,72 +155,31 @@ class ObjectsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun downloadKls(filial: String, token: String) {
-        objectsApi.getKl04Objects(filial, "Bearer $token")
-            .map { kl ->
-                kl?.toDomainModel()
-            }
-            .also { kls ->
-                kls.map {kl->
-                    kl?.let { objectsDao.insertKl04IfNotExist(it.toKl04DbModel()) }
-                }
-            }
-
-        objectsApi.getKl10Objects(filial, "Bearer $token")
-            .map { kl ->
-                kl?.toDomainModel()
-            }
-            .also { kls ->
-                kls.map { kl ->
-                    kl?.let { objectsDao.insertKl10IfNotExist(it.toKl10DbModel()) }
-                }
-            }
-
-        objectsApi.getKl04AbonObjects(filial, "Bearer $token")
-            .map { kl ->
-                kl?.toDomainModel()
-            }
-            .also { kls ->
-                kls.map { kl ->
-                    kl?.let { objectsDao.insertAbonKl04IfNotExist(it.toAbonKl04DbModel()) }
-                }
-            }
-
-        objectsApi.getKl10OAbonObjects(filial, "Bearer $token")
-            .map { kl ->
-                kl?.toDomainModel()
-            }
-            .also { kls ->
-                kls.map { kl ->
-                    kl?.let { objectsDao.insertAbonKl10IfNotExist(it.toAbonKl10DbModel()) }
-                }
-            }
+        val kl04 = objectsApi.getKl04Objects(filial, "Bearer $token").mapNotNull { it?.toDomainModel() }
+        kl04.forEach { objectsDao.insertKl04IfNotExist(it.toKl04DbModel()) }
+        val kl10 = objectsApi.getKl10Objects(filial, "Bearer $token").mapNotNull { it?.toDomainModel() }
+        kl10.forEach { objectsDao.insertKl10IfNotExist(it.toKl10DbModel()) }
+        val abonKl04 = objectsApi.getKl04AbonObjects(filial, "Bearer $token").mapNotNull { it?.toDomainModel() }
+        abonKl04.forEach { objectsDao.insertAbonKl04IfNotExist(it.toAbonKl04DbModel()) }
+        val abonKl10 = objectsApi.getKl10OAbonObjects(filial, "Bearer $token").mapNotNull { it?.toDomainModel() }
+        abonKl10.forEach { objectsDao.insertAbonKl10IfNotExist(it.toAbonKl10DbModel()) }
+        branchPruner.prune(mapOf(
+            "kl04" to kl04.map { it.tplnr },
+            "kl10" to kl10.map { it.tplnr },
+            "abon_kl04" to abonKl04.map { it.tplnr },
+            "abon_kl10" to abonKl10.map { it.tplnr },
+        ))
     }
 
     override suspend fun downloadTPs(filial: String, token: String) {
-        objectsApi.getTpObjects(filial, "Bearer $token")
-            .map { tp ->
-                tp.toDomainModel()
-            }
-            .also { tps ->
-                tps.map {
-                    objectsDao.insertTpIfNotExist(it.toDbModel())
-                    //objectsDao.insertTp(it.toDbModel())
-                }
-            }
-        //abon
-        objectsApi.getAbonTpObjects(filial, "Bearer $token")
-            .map { tp ->
-                val domain = tp.toDomainModel()
-                val tps = domain.toAbonDbModel()
-                //Log.d("testim", tps.toString())
-                objectsDao.insertAbonTpIfNotExist(tps)
-                //objectsDao.insertAbonTp(tps)
-            }
-        /*.also { tps ->
-            tps.map {
-                objectsDao.insertAbonTp(it.toAbonDbModel())
-            }
-        }*/
+        val tps = objectsApi.getTpObjects(filial, "Bearer $token").map { it.toDomainModel() }
+        tps.forEach { objectsDao.insertTpIfNotExist(it.toDbModel()) }
+        val abonTps = objectsApi.getAbonTpObjects(filial, "Bearer $token").map { it.toDomainModel() }
+        abonTps.forEach { objectsDao.insertAbonTpIfNotExist(it.toAbonDbModel()) }
+        branchPruner.prune(mapOf(
+            "tp" to tps.map { it.tplnr },
+            "abon_tp" to abonTps.map { it.tplnr },
+        ))
     }
 
     override suspend fun downloadPss(token: String) {
@@ -232,12 +200,14 @@ class ObjectsRepositoryImpl @Inject constructor(
         val pillars = objectsApi.getPillarObjects04(filial, "Bearer $token")
             .map { it.toDomainModel().to04DbModel() }
         objectsDao.insertPillars04IfNotExist(pillars)
+        branchPruner.prune(mapOf("pillars04" to pillars.map { it.tplnr }))
     }
 
     override suspend fun downloadPillars10(filial: String, token: String) {
         val pillars = objectsApi.getPillarObjects10(filial, "Bearer $token")
             .map { it.toDomainModel().to10DbModel() }
         objectsDao.insertPillars10IfNotExist(pillars)
+        branchPruner.prune(mapOf("pillars10" to pillars.map { it.tplnr }))
     }
 
     override suspend fun downloadWires(token: String) {

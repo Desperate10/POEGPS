@@ -30,6 +30,8 @@ class FilialManager(private val context: Context) {
 
     suspend fun saveFilial(filial: String) {
         context.dataStore.edit { preferences ->
+            // the download time belongs to the previous branch's data
+            if (preferences[FILIAL_KEY] != filial) preferences.remove(DOWNLOADED_AT_KEY)
             preferences[FILIAL_KEY] = filial
         }
     }
