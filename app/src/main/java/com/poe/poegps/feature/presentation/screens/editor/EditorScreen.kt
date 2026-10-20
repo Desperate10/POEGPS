@@ -376,6 +376,8 @@ internal fun GpsStatus(gps: GpsFix, trust: TrustState, onProblem: () -> Unit, mo
         !gps.permission -> "Немає дозволу на GPS"
         !gps.enabled -> "GPS вимкнено"
         trust.level.locksCapture -> "${trust.level.label} GPS"
+        // used/heard tells "no sky here" (0 heard) from "hears them but can't fix" in a crew's screenshot
+        gps.current == null && gps.satellitesVisible > 0 -> "Пошук супутників · ${gps.satellitesUsed}/${gps.satellitesVisible}"
         gps.current == null -> "Пошук супутників…"
         alarm -> "${trust.level.label} · ±${accuracy?.format1() ?: "?"} м"
         accuracy == null || accuracy > CapturePolicy.ACCURACY_GATE_M -> "±${accuracy?.roundToInt() ?: "?"} м · шукаємо точніше"

@@ -41,12 +41,15 @@ data class GpsFix(
     val cn0: List<Float> = emptyList(),
     /** Receiver gain, dB, where the chip reports it. */
     val agcDb: Double? = null,
+    /**
+     * [SystemClock.elapsedRealtime] when [location] arrived. The fix's own elapsedRealtimeNanos isn't
+     * used: some chips leave it at 0 or on another clock, and every fix then looked stale.
+     */
+    val receivedAtMs: Long = 0L,
 ) {
-    /** A fix younger than [MAX_FIX_AGE_MS]; older ones mean the receiver lost the sky. */
+    /** A fix received within [MAX_FIX_AGE_MS]; older ones mean the receiver lost the sky. */
     val current: Location?
-        get() = location?.takeIf {
-            SystemClock.elapsedRealtime() - it.elapsedRealtimeNanos / 1_000_000 < MAX_FIX_AGE_MS
-        }
+        get() = location?.takeIf { SystemClock.elapsedRealtime() - receivedAtMs < MAX_FIX_AGE_MS }
 
     val accuracy: Float? get() = current?.takeIf { it.hasAccuracy() }?.accuracy
 
@@ -109,7 +112,7 @@ class GpsTracker @Inject constructor(@ApplicationContext private val context: Co
 
         val listener = object : LocationListener {
             override fun onLocationChanged(location: Location) {
-                fix = fix.copy(enabled = true, location = location)
+                fix = fix.copy(enabled = true, location = location, receivedAtMs = SystemClock.elapsedRealtime())
                 trySend(fix)
             }
 
