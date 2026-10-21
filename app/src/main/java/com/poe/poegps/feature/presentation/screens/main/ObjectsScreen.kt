@@ -457,12 +457,16 @@ private fun ObjectCard(
             },
             confirmButton = {
                 if (choose) {
-                    Row {
+                    // three buttons don't fit one row on a narrow phone: stacked, the cancel one last
+                    Column(horizontalAlignment = Alignment.End) {
+                        TextButton(onClick = { confirmUpload = false; onUpload(whole) }) {
+                            Text("З відпайками", style = PoeTheme.type.button, color = c.actionText)
+                        }
                         TextButton(onClick = { confirmUpload = false; onUpload(onlyThis) }, enabled = s!!.line > 0) {
                             Text("Лише лінію", style = PoeTheme.type.button, color = if (s.line > 0) c.actionText else c.muted)
                         }
-                        TextButton(onClick = { confirmUpload = false; onUpload(whole) }) {
-                            Text("З відпайками", style = PoeTheme.type.button, color = c.actionText)
+                        TextButton(onClick = { confirmUpload = false }) {
+                            Text("Скасувати", style = PoeTheme.type.button, color = c.ink)
                         }
                     }
                 } else {
@@ -474,9 +478,11 @@ private fun ObjectCard(
                     }
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { confirmUpload = false }) {
-                    Text("Скасувати", style = PoeTheme.type.button, color = c.ink)
+            dismissButton = if (choose) null else {
+                {
+                    TextButton(onClick = { confirmUpload = false }) {
+                        Text("Скасувати", style = PoeTheme.type.button, color = c.ink)
+                    }
                 }
             },
         )
