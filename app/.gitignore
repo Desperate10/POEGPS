@@ -1,1 +1,5 @@
 /build
+# signed builds from Generate Signed Bundle/APK (per flavor since play/direct)
+/release
+/play/release
+/direct/release
