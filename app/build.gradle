@@ -72,6 +72,29 @@ kotlin {
     jvmToolchain(17)
 }
 
+// The sideloaded build updates itself from the GIS server (DEPLOY.md in POEGPS_api): its release.properties is
+// written next to the APK, wherever the signing wizard puts it, from the version above and
+// src/direct/release-notes.txt (one item per line). A release = the APK, then this file, into the server's update/.
+android.applicationVariants.all { variant ->
+    if (variant.name != 'directRelease') return
+    def notesFile = file('src/direct/release-notes.txt')
+    variant.packageApplicationProvider.configure { task ->
+        task.inputs.file(notesFile)
+        task.doLast {
+            def notes = notesFile.readLines('UTF-8').collect { it.trim() }.findAll { it }
+                .collect { '• ' + it.replace('\\', '\\\\') }.join('\\n')
+            def text = """versionCode=${variant.versionCode}
+versionName=${variant.versionName}
+# raise only when old versions must not upload: /save refuses every phone below it
+minVersionCode=0
+apk=POEGPS2-${variant.versionName}.apk
+notes=${notes}
+"""
+            new File(task.outputDirectory.get().asFile, 'release.properties').write(text, 'UTF-8')
+        }
+    }
+}
+
 dependencies {
 
     implementation 'androidx.core:core-ktx:1.10.0'
