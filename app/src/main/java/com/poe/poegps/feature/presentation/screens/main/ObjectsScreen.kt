@@ -78,6 +78,9 @@ import com.poe.poegps.core.designsystem.PoeStatusBadge
 import com.poe.poegps.core.designsystem.PoeTheme
 import com.poe.poegps.feature.data.remote.model.upload.UploadState
 import com.poe.poegps.feature.domain.model.LineClearSummary
+import com.poe.poegps.feature.domain.UploadScope
+import com.poe.poegps.feature.domain.UploadSummary
+import com.poe.poegps.feature.domain.isTapName
 import com.poe.poegps.feature.domain.model.LineProgress
 import com.poe.poegps.feature.presentation.capture.downloadedLabel
 import com.poe.poegps.feature.presentation.model.ObjectDisplayable
@@ -103,7 +106,8 @@ fun ObjectsScreen(
     onTypeChange: (ObjectType) -> Unit,
     onQueryChange: (String) -> Unit,
     onOpen: (ObjectDisplayable) -> Unit,
-    onUploadOne: (ObjectDisplayable) -> Unit,
+    onUpload: (UploadScope) -> Unit,
+    uploadSummary: suspend (ObjectDisplayable) -> UploadSummary,
     onDeleteTap: (ObjectDisplayable) -> Unit,
     onClearLine: (ObjectDisplayable) -> Unit,
     clearSummary: suspend (ObjectDisplayable) -> LineClearSummary,
@@ -192,7 +196,8 @@ fun ObjectsScreen(
                             item = item,
                             isTp = type.tab == TAB_TP,
                             onOpen = { onOpen(item.obj) },
-                            onUpload = { onUploadOne(item.obj) },
+                            onUpload = onUpload,
+                            uploadSummary = { uploadSummary(item.obj) },
                             onDeleteTap = { onDeleteTap(item.obj) },
                             onClearLine = { onClearLine(item.obj) },
                             clearSummary = { clearSummary(item.obj) },
@@ -275,7 +280,8 @@ private fun ObjectCard(
     item: ObjectItem,
     isTp: Boolean,
     onOpen: () -> Unit,
-    onUpload: () -> Unit,
+    onUpload: (UploadScope) -> Unit,
+    uploadSummary: suspend () -> UploadSummary,
     onDeleteTap: () -> Unit,
     onClearLine: () -> Unit,
     clearSummary: suspend () -> LineClearSummary,
@@ -338,7 +344,16 @@ private fun ObjectCard(
         }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
             DropdownMenuItem(
-                text = { Text("Вивантажити цей об'єкт", style = PoeTheme.type.labelRegular) },
+                text = {
+                    Text(
+                        when {
+                            isTp -> "Вивантажити цей об'єкт"
+                            isTapName(obj.name) -> "Вивантажити відпайку"
+                            else -> "Вивантажити лінію"
+                        },
+                        style = PoeTheme.type.labelRegular,
+                    )
+                },
                 leadingIcon = { Icon(PoeIcons.Upload, null, Modifier.size(20.dp)) },
                 onClick = { menu = false; confirmUpload = true },
             )
@@ -397,24 +412,66 @@ private fun ObjectCard(
         )
     }
     if (confirmUpload) {
+        // a tap goes up alone; a main line asks whether its taps go too; a TP or cable object goes whole
+        val tap = !isTp && isTapName(obj.name)
+        val summary by produceState<UploadSummary?>(null) { if (!isTp) value = uploadSummary() }
+        val s = summary
+        val choose = !isTp && !tap && s != null && s.others > 0
+        val onlyThis = UploadScope(obj.tplnr, obj.name)
+        val whole = UploadScope(obj.tplnr)
+        fun changes(n: Int) = "$n ${plural(n, "зміна", "зміни", "змін")}"
         AlertDialog(
             onDismissRequest = { confirmUpload = false },
             containerColor = c.surface,
-            title = { Text("Вивантажити об'єкт?", style = PoeTheme.type.sheetTitle, color = c.ink) },
+            title = {
+                Text(
+                    when {
+                        tap -> "Вивантажити відпайку?"
+                        isTp -> "Вивантажити об'єкт?"
+                        else -> "Вивантажити лінію?"
+                    },
+                    style = PoeTheme.type.sheetTitle, color = c.ink,
+                )
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(obj.name, style = PoeTheme.type.rowTitle, color = c.ink)
                     Text(
-                        p?.unsent?.takeIf { it > 0 }
-                            ?.let { "Буде надіслано в ГІС: $it ${plural(it, "зміна", "зміни", "змін")}." }
-                            ?: "На телефоні немає нових змін цього об'єкта.",
+                        when {
+                            isTp -> p?.unsent?.takeIf { it > 0 }?.let { "Буде надіслано в ГІС: ${changes(it)}." }
+                                ?: "На телефоні немає нових змін цього об'єкта."
+                            s == null -> "…"
+                            tap && s.line > 0 -> "Буде надіслано в ГІС лише цю відпайку: ${changes(s.line)}. " +
+                                "Основна лінія та інші відпайки не надсилаються."
+                            tap -> "На телефоні немає нових змін цієї відпайки."
+                            choose -> "Ця лінія: ${changes(s.line)}.\n" +
+                                "Відпайки: ${changes(s.others)} у ${s.otherLines} " +
+                                "${plural(s.otherLines, "відпайці", "відпайках", "відпайках")}.\n" +
+                                "Надіслати лише лінію чи разом з відпайками?"
+                            s.line > 0 -> "Буде надіслано в ГІС: ${changes(s.line)}."
+                            else -> "На телефоні немає нових змін цієї лінії."
+                        },
                         style = PoeTheme.type.body, color = c.muted,
                     )
                 }
             },
             confirmButton = {
-                TextButton(onClick = { confirmUpload = false; onUpload() }) {
-                    Text("Вивантажити", style = PoeTheme.type.button, color = c.actionText)
+                if (choose) {
+                    Row {
+                        TextButton(onClick = { confirmUpload = false; onUpload(onlyThis) }, enabled = s!!.line > 0) {
+                            Text("Лише лінію", style = PoeTheme.type.button, color = if (s.line > 0) c.actionText else c.muted)
+                        }
+                        TextButton(onClick = { confirmUpload = false; onUpload(whole) }) {
+                            Text("З відпайками", style = PoeTheme.type.button, color = c.actionText)
+                        }
+                    }
+                } else {
+                    TextButton(
+                        onClick = { confirmUpload = false; onUpload(if (tap) onlyThis else whole) },
+                        enabled = isTp || s != null,
+                    ) {
+                        Text("Вивантажити", style = PoeTheme.type.button, color = c.actionText)
+                    }
                 }
             },
             dismissButton = {

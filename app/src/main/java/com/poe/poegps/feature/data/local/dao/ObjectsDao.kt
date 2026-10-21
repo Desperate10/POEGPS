@@ -11,8 +11,8 @@ import com.poe.poegps.feature.data.local.entity.*
 import com.poe.poegps.feature.domain.model.GisPoleCount
 import com.poe.poegps.feature.domain.model.LineProgress
 import com.poe.poegps.feature.domain.model.UploadLine
-import com.poe.poegps.feature.domain.model.RecloserCount
 import com.poe.poegps.feature.domain.model.UploadGroup
+import com.poe.poegps.feature.domain.LinePoleName
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -474,15 +474,16 @@ interface ObjectsDao {
     )
     suspend fun getSavedPillars(): List<LinePillarDbModel>
 
-    // one object: like getSavedPillars, only its lines with an unsent pole (a tap's change doesn't resend the main line)
+    // one object, or one [line] of it: like getSavedPillars, only its lines with an unsent pole
     @Query(
-        "SELECT * FROM line_pillar p WHERE p.lat <> '0.0' AND p.tplnr LIKE :tplnr AND EXISTS (" +
+        "SELECT * FROM line_pillar p WHERE p.lat <> '0.0' AND p.tplnr LIKE :tplnr " +
+            "AND (:line IS NULL OR p.parentName = :line) AND EXISTS (" +
             "SELECT 1 FROM line_pillar u WHERE u.lat <> '0.0' AND u.isSent = 0 " +
             "AND u.tplnr = p.tplnr AND u.parentName = p.parentName " +
             "AND u.category = p.category AND u.isAbon = p.isAbon) " +
             "ORDER BY p.sortOrder, p.id"
     )
-    suspend fun getSavedPillarsByTplnr(tplnr: String): List<LinePillarDbModel>
+    suspend fun getSavedPillarsByTplnr(tplnr: String, line: String?): List<LinePillarDbModel>
 
     @Query(
         "SELECT tplnr, parentName, isAbon, COUNT(*) AS total, " +
@@ -508,30 +509,38 @@ interface ObjectsDao {
 
     @Query(
         "SELECT tplnr, COALESCE(NULLIF(parentName, ''), MIN(name)) AS name, COUNT(*) AS poles FROM line_pillar " +
-            "WHERE lat <> '0.0' AND isSent = 0 AND tplnr LIKE :tplnr GROUP BY tplnr, parentName ORDER BY MIN(id)"
+            "WHERE lat <> '0.0' AND isSent = 0 AND tplnr LIKE :tplnr AND (:line IS NULL OR parentName = :line) " +
+            "GROUP BY tplnr, parentName ORDER BY MIN(id)"
     )
-    suspend fun getGroupsByTplnr(tplnr: String): List<UploadGroup>
+    suspend fun getGroupsByTplnr(tplnr: String, line: String?): List<UploadGroup>
 
     // the lines an upload sends, picked like getSavedPillars (all) and getSavedPillarsByTplnr (one object)
     @Query(
         "SELECT tplnr, parentName AS name, MIN(pillarType) AS pillarType, category, isAbon, COUNT(*) AS poles " +
             "FROM line_pillar p WHERE lat <> '0.0' AND parentName <> '' " +
-            "AND (:tplnr = '' OR tplnr LIKE :tplnr) AND EXISTS (" +
+            "AND (:tplnr = '' OR tplnr LIKE :tplnr) AND (:line IS NULL OR parentName = :line) AND EXISTS (" +
             "SELECT 1 FROM line_pillar u WHERE u.lat <> '0.0' AND u.isSent = 0 " +
             "AND u.tplnr = p.tplnr AND u.parentName = p.parentName " +
             "AND u.category = p.category AND u.isAbon = p.isAbon) " +
             "GROUP BY tplnr, parentName, category, isAbon"
     )
-    suspend fun getLinesToUpload(tplnr: String): List<UploadLine>
-
-    @Query("SELECT tplnr, COUNT(*) AS count FROM recloser WHERE lat <> '0.0' AND isSent = 0 GROUP BY tplnr")
-    suspend fun getUnsentRecloserCounts(): List<RecloserCount>
+    suspend fun getLinesToUpload(tplnr: String, line: String?): List<UploadLine>
 
     @Query("SELECT * FROM recloser WHERE lat <> '0.0' AND isSent = 0")
     suspend fun getSavedReclosers(): List<RecloserDbModel>
 
-    @Query("SELECT * FROM recloser WHERE lat <> '0.0' AND isSent = 0 AND tplnr LIKE '%' || :tplnr || '%'")
+    // exact: a substring match took PO-F-23-L1740's reclosers along with PO-F-23-L174
+    @Query("SELECT * FROM recloser WHERE lat <> '0.0' AND isSent = 0 AND tplnr = :tplnr")
     suspend fun getSavedReclosersByTplnr(tplnr: String): List<RecloserDbModel>
+
+    @Query("SELECT DISTINCT parentName, name FROM line_pillar WHERE tplnr = :tplnr")
+    suspend fun getPoleNamesOfObject(tplnr: String): List<LinePoleName>
+
+    @Query(
+        "SELECT COUNT(DISTINCT parentName) FROM line_pillar " +
+            "WHERE tplnr = :tplnr AND parentName <> :parentName AND lat <> '0.0' AND isSent = 0"
+    )
+    suspend fun countOtherLinesWithUnsent(tplnr: String, parentName: String): Int
 
     @Query("SELECT * FROM tp WHERE lat <> '0.0' ORDER BY pltxt ASC")
     fun getTps(): Flow<List<TpDbModel>>

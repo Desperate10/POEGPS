@@ -1,5 +1,6 @@
 package com.poe.poegps.debug
 
+import com.poe.poegps.feature.domain.UploadSummary
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringArrayResource
 import com.poe.poegps.R
@@ -35,7 +36,8 @@ fun ObjectsScenario() {
         onTypeChange = {},
         onQueryChange = {},
         onOpen = {},
-        onUploadOne = {},
+        onUpload = {},
+        uploadSummary = { UploadSummary(line = 3, others = 5, otherLines = 2) },
         onDeleteTap = {},
         onClearLine = {},
         clearSummary = { LineClearSummary(taps = 2, unsent = 3) },

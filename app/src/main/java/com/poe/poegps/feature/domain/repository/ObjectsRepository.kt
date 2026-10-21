@@ -1,5 +1,8 @@
 package com.poe.poegps.feature.domain.repository
 
+import com.poe.poegps.feature.domain.UploadScope
+import com.poe.poegps.feature.domain.UploadSummary
+
 import com.poe.poegps.feature.data.remote.model.LoginResponse
 import com.poe.poegps.feature.data.remote.model.SavePillarsResponse
 import com.poe.poegps.feature.data.remote.model.TokenCheckResponse
@@ -17,7 +20,7 @@ interface ObjectsRepository {
     fun tokenCheck(token: String): Flow<ApiResponse<TokenCheckResponse>>
 
     //Выгрузка опор из БД
-    fun uploadSavedPillars(token: String, tplnr: String = ""): Flow<SavePillarsResponse>
+    fun uploadSavedPillars(token: String, scope: UploadScope = UploadScope()): Flow<SavePillarsResponse>
 
     //загрузка линий из апи
     fun downloadLines(filial: String, token: String): Flow<UploadState>
@@ -152,11 +155,14 @@ interface ObjectsRepository {
 
     fun countUnsent(): Flow<Int>
 
-    /** Lines (and their recloser counts) an upload will report; empty tplnr = everything unsent. */
-    suspend fun getUploadGroups(tplnr: String = ""): Pair<List<UploadGroup>, Map<String, Int>>
+    /** Lines an upload of [scope] will report, and its unsent reclosers counted by tplnr. */
+    suspend fun getUploadGroups(scope: UploadScope = UploadScope()): Pair<List<UploadGroup>, Map<String, Int>>
 
-    /** The lines an upload of everything ("") or of one object sends. */
-    suspend fun getLinesToUpload(tplnr: String = ""): List<UploadLine>
+    /** The lines an upload of [scope] sends. */
+    suspend fun getLinesToUpload(scope: UploadScope = UploadScope()): List<UploadLine>
+
+    /** Unsent poles on line [name] of object [tplnr], and on the object's other lines (its taps, or its main line). */
+    suspend fun uploadSummary(tplnr: String, name: String): UploadSummary
 
     /** The line's poles that have coordinates, as lat to lng. */
     suspend fun getLinePolePositions(tplnr: String, lineName: String): List<Pair<Double, Double>>

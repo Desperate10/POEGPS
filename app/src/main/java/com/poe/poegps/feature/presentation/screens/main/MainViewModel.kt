@@ -1,5 +1,7 @@
 package com.poe.poegps.feature.presentation.screens.main
 
+import com.poe.poegps.feature.domain.UploadScope
+import com.poe.poegps.feature.domain.UploadSummary
 import android.util.Log
 import com.poe.poegps.feature.data.local.CaptureLog
 import kotlinx.coroutines.withContext
@@ -42,9 +44,9 @@ data class ObjectItem(
     val gisPoles: Int = 0,
 )
 
-/** Before an upload of [tplnr] ("" = everything): the lines GIS will get as new drawings. */
+/** Before an upload of [scope]: the lines GIS will get as new drawings. */
 data class NewLinesPrompt(
-    val tplnr: String,
+    val scope: UploadScope,
     val lines: List<NewLine>,
 )
 
@@ -115,7 +117,7 @@ class MainViewModel @Inject constructor(
         MutableStateFlow<ApiResponse<TokenCheckResponse>>(ApiResponse.Loading)
     val tokenValidity: StateFlow<ApiResponse<TokenCheckResponse>> = _tokenValidity
 
-    private var lastUploadTplnr = ""
+    private var lastUpload = UploadScope()
     private val _sync = MutableStateFlow<SyncUiState?>(null)
     val sync: StateFlow<SyncUiState?> = _sync
 
@@ -346,6 +348,9 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    suspend fun uploadSummary(line: ObjectDisplayable): UploadSummary =
+        withContext(Dispatchers.IO) { repository.uploadSummary(line.tplnr, line.name) }
+
     suspend fun clearLineSummary(line: ObjectDisplayable): LineClearSummary =
         withContext(Dispatchers.IO) { repository.clearLineSummary(line.tplnr, line.name) }
 
@@ -369,14 +374,14 @@ class MainViewModel @Inject constructor(
     val newLines: StateFlow<NewLinesPrompt?> = _newLines
 
     /**
-     * Uploads everything unsent, or one object when [tplnr] is given. Lines GIS doesn't have under
-     * the same name would be added as new ones, so those are shown for confirmation first.
+     * Uploads everything unsent, one object, or one line of it ([UploadScope]). Lines GIS doesn't have
+     * under the same name would be added as new ones, so those are shown for confirmation first.
      */
-    fun upload(tplnr: String = "") {
+    fun upload(scope: UploadScope = UploadScope()) {
         if (_sync.value == SyncUiState.Uploading || _newLines.value != null) return
         viewModelScope.launch(Dispatchers.IO) {
             val fresh = try {
-                findNewLines(tplnr)
+                findNewLines(scope)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -384,8 +389,8 @@ class MainViewModel @Inject constructor(
                 Log.w("MainViewModel", "new-line check skipped", e)
                 emptyList()
             }
-            if (fresh.isEmpty()) send(tplnr)
-            else _newLines.value = NewLinesPrompt(tplnr, fresh)
+            if (fresh.isEmpty()) send(scope)
+            else _newLines.value = NewLinesPrompt(scope, fresh)
         }
     }
 
@@ -395,15 +400,15 @@ class MainViewModel @Inject constructor(
     fun confirmNewLines() {
         val prompt = _newLines.value ?: return
         _newLines.value = null
-        send(prompt.tplnr)
+        send(prompt.scope)
     }
 
     fun cancelNewLines() {
         _newLines.value = null
     }
 
-    private suspend fun findNewLines(tplnr: String): List<NewLine> {
-        val lines = repository.getLinesToUpload(tplnr)
+    private suspend fun findNewLines(scope: UploadScope): List<NewLine> {
+        val lines = repository.getLinesToUpload(scope)
         if (lines.isEmpty()) return emptyList()
         // the fresh branch GeoJSON, so a line this phone already added to GIS isn't reported again;
         // the cached one when the server doesn't answer in time
@@ -421,20 +426,19 @@ class MainViewModel @Inject constructor(
         }.map { NewLine(it.tplnr, it.name) }
     }
 
-    private fun send(tplnr: String) {
+    private fun send(scope: UploadScope) {
         if (_sync.value == SyncUiState.Uploading) return
-        lastUploadTplnr = tplnr
+        lastUpload = scope
         _sync.value = SyncUiState.Uploading
         viewModelScope.launch(Dispatchers.IO) {
             _sync.value = try {
-                val (groups, recloserCounts) = repository.getUploadGroups(tplnr)
-                val reclosers = if (tplnr.isEmpty()) recloserCounts else recloserCounts.filterKeys { it.contains(tplnr) }
+                val (groups, reclosers) = repository.getUploadGroups(scope)
                 if (groups.isEmpty() && reclosers.isEmpty()) {
                     _message.emit("Немає даних для вивантаження")
                     null
                 } else {
                     // the flow emits nothing when the server answers without a body (HTTP error)
-                    val response = repository.uploadSavedPillars(token.value ?: "", tplnr).firstOrNull()
+                    val response = repository.uploadSavedPillars(token.value ?: "", scope).firstOrNull()
                     when {
                         response == null -> SyncUiState.Failed("Сервер не прийняв запит. Можливо, потрібно увійти знову.")
                         response.error -> SyncUiState.Failed(response.message.ifEmpty { "Сервер повернув помилку" })
@@ -474,7 +478,7 @@ class MainViewModel @Inject constructor(
     fun retryUpload() {
         _sync.value = null
         // already confirmed the first time
-        send(lastUploadTplnr)
+        send(lastUpload)
     }
 
     fun closeSync() {

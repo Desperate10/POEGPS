@@ -33,8 +33,3 @@ data class UploadGroup(
     val name: String,
     val poles: Int,
 )
-
-data class RecloserCount(
-    val tplnr: String,
-    val count: Int,
-)

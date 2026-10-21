@@ -15,6 +15,9 @@ import com.poe.poegps.feature.data.remote.model.upload.UploadState
 import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.data.remote.utils.apiRequestFlow
 import com.poe.poegps.feature.domain.isTapName
+import com.poe.poegps.feature.domain.recloserLine
+import com.poe.poegps.feature.domain.UploadScope
+import com.poe.poegps.feature.domain.UploadSummary
 import com.poe.poegps.feature.domain.model.*
 import com.poe.poegps.feature.domain.repository.ObjectsRepository
 import kotlinx.coroutines.flow.Flow
@@ -43,21 +46,17 @@ class ObjectsRepositoryImpl @Inject constructor(
 
     override fun uploadSavedPillars(
         token: String,
-        tplnr: String
+        scope: UploadScope
     ): Flow<SavePillarsResponse> = flow {
 
         // return apiRequestFlow {
-        val pillars = if (tplnr.isEmpty()) {
+        val pillars = if (scope.tplnr.isEmpty()) {
             objectsDao.getSavedPillars()
         } else {
-            objectsDao.getSavedPillarsByTplnr(tplnr)
+            objectsDao.getSavedPillarsByTplnr(scope.tplnr, scope.line)
         }
 
-        val reclosers : List<RecloserDbModel> = if (tplnr.isEmpty()) {
-            objectsDao.getSavedReclosers()
-        } else {
-            objectsDao.getSavedReclosersByTplnr(tplnr)
-        }
+        val reclosers = reclosersOf(scope)
 
         val request = SaveRequestDTO(
             pillarList = pillars.map { it.toDTObject() },
@@ -448,7 +447,8 @@ class ObjectsRepositoryImpl @Inject constructor(
 
     override fun countUnsent(): Flow<Int> = objectsDao.countUnsent()
 
-    override suspend fun getLinesToUpload(tplnr: String): List<UploadLine> = objectsDao.getLinesToUpload(tplnr)
+    override suspend fun getLinesToUpload(scope: UploadScope): List<UploadLine> =
+        objectsDao.getLinesToUpload(scope.tplnr, scope.line)
 
     override suspend fun getLinePolePositions(tplnr: String, lineName: String): List<Pair<Double, Double>> =
         objectsDao.getCapturedLinePoles(tplnr, lineName).mapNotNull { p ->
@@ -458,11 +458,27 @@ class ObjectsRepositoryImpl @Inject constructor(
         }
 
 
-    override suspend fun getUploadGroups(tplnr: String): Pair<List<UploadGroup>, Map<String, Int>> {
-        val groups = if (tplnr.isEmpty()) objectsDao.getUnsentGroups() else objectsDao.getGroupsByTplnr(tplnr)
-        val reclosers = objectsDao.getUnsentRecloserCounts().associate { it.tplnr to it.count }
+    override suspend fun getUploadGroups(scope: UploadScope): Pair<List<UploadGroup>, Map<String, Int>> {
+        val groups = if (scope.tplnr.isEmpty()) objectsDao.getUnsentGroups() else objectsDao.getGroupsByTplnr(scope.tplnr, scope.line)
+        val reclosers = reclosersOf(scope).groupingBy { it.tplnr }.eachCount()
         return groups to reclosers
     }
+
+    /** The unsent reclosers an upload of [scope] sends; one line takes those [recloserLine] gives it. */
+    private suspend fun reclosersOf(scope: UploadScope): List<RecloserDbModel> = when {
+        scope.tplnr.isEmpty() -> objectsDao.getSavedReclosers()
+        scope.line == null -> objectsDao.getSavedReclosersByTplnr(scope.tplnr)
+        else -> {
+            val poles = objectsDao.getPoleNamesOfObject(scope.tplnr)
+            objectsDao.getSavedReclosersByTplnr(scope.tplnr).filter { recloserLine(it.opr, poles) == scope.line }
+        }
+    }
+
+    override suspend fun uploadSummary(tplnr: String, name: String): UploadSummary = UploadSummary(
+        line = objectsDao.countUnsentOfLine(tplnr, name),
+        others = objectsDao.countUnsentOfObject(tplnr) - objectsDao.countUnsentOfLine(tplnr, name),
+        otherLines = objectsDao.countOtherLinesWithUnsent(tplnr, name),
+    )
 
     override suspend fun savePillar(pillar: Pillar, afterId: Int?): Long {
         return objectsDao.insertSavedPillarIfNotExist(pillar.toLinePillarDbModel(), afterId)
