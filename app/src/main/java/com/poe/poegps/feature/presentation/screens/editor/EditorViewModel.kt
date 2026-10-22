@@ -223,27 +223,33 @@ class EditorViewModel @Inject constructor(
             .filter { name -> onPhone.none { it.parentName == name } }
             .toMutableList()
         var loaded = 0
-        do {
-            var progress = false
-            val phone = onPhone.map { PhonePole(it.parentName, it.name, it.lat.toDoubleOrNull()?.takeIf { v -> v != 0.0 }, it.lng.toDoubleOrNull()) }
-            for (name in pending.toList()) {
-                val (junction, tap) = tapJunction(name, args.pltxt, phone, points, shapes) ?: continue
-                val start = onPhone.first { it.parentName == junction.line && it.name == junction.name }.copy(id = 0, parentName = name)
-                val poles = listOf(start) + tap.map { p -> loadedFromGis(gis[points.indexOfFirst { it === p }], name) }
-                pending -= name
-                if (repository.importLine(args.tplnr, name, poles) == 0) continue
-                saveLineRecord(start.toOprDisplayable())
-                onPhone += poles
-                loaded++
-                progress = true
+        while (pending.isNotEmpty()) {
+            // every tap that hangs on a pole already here, until none does
+            var progress = true
+            while (progress) {
+                progress = false
+                val phone = onPhone.map { PhonePole(it.parentName, it.name, it.lat.toDoubleOrNull()?.takeIf { v -> v != 0.0 }, it.lng.toDoubleOrNull()) }
+                for (name in pending.toList()) {
+                    val (junction, tap) = tapJunction(name, args.pltxt, phone, points, shapes) ?: continue
+                    val start = onPhone.first { it.parentName == junction.line && it.name == junction.name }.copy(id = 0, parentName = name)
+                    val poles = listOf(start) + tap.map { p -> loadedFromGis(gis[points.indexOfFirst { it === p }], name) }
+                    pending -= name
+                    if (repository.importLine(args.tplnr, name, poles) == 0) continue
+                    saveLineRecord(start.toOprDisplayable())
+                    onPhone += poles
+                    loaded++
+                    progress = true
+                }
             }
-        } while (progress && pending.isNotEmpty())
-        // hanging on nothing here: still the object's line in GIS, so it loads whole from its drawing
-        for (name in pending) {
-            val tap = gisTapAlone(name, points, shapes) ?: continue
+            // hanging on nothing here (GIS draws the main line short, or the real trunk under a tap's
+            // name): the longest loads whole from its drawing, and the rest may hang on it
+            val (name, tap) = pending.mapNotNull { n -> gisTapAlone(n, points, shapes)?.let { n to it } }
+                .maxByOrNull { it.second.size } ?: break
+            pending -= name
             val poles = tap.map { p -> loadedFromGis(gis[points.indexOfFirst { it === p }], name) }
             if (repository.importLine(args.tplnr, name, poles) == 0) continue
             saveLineRecord(poles.first().toOprDisplayable())
+            onPhone += poles
             loaded++
         }
         return loaded
