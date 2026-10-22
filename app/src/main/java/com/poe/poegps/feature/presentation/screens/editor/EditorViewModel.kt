@@ -48,6 +48,7 @@ import com.poe.poegps.feature.domain.GisPoint
 import com.poe.poegps.feature.domain.LineOrdering
 import com.poe.poegps.feature.domain.GisShape
 import com.poe.poegps.feature.domain.PhonePole
+import com.poe.poegps.feature.domain.gisTapAlone
 import com.poe.poegps.feature.domain.gisTapPoles
 import com.poe.poegps.feature.domain.isTapName
 import com.poe.poegps.feature.domain.tapJunction
@@ -237,6 +238,14 @@ class EditorViewModel @Inject constructor(
                 progress = true
             }
         } while (progress && pending.isNotEmpty())
+        // hanging on nothing here: still the object's line in GIS, so it loads whole from its drawing
+        for (name in pending) {
+            val tap = gisTapAlone(name, points, shapes) ?: continue
+            val poles = tap.map { p -> loadedFromGis(gis[points.indexOfFirst { it === p }], name) }
+            if (repository.importLine(args.tplnr, name, poles) == 0) continue
+            saveLineRecord(poles.first().toOprDisplayable())
+            loaded++
+        }
         return loaded
     }
 
@@ -288,7 +297,7 @@ class EditorViewModel @Inject constructor(
         val target = if (isTapName(name)) name.takeIf { it in lines }
         else lines.firstOrNull { !isTapName(it) } ?: args.pltxt.takeUnless { isTapName(it) }
         when {
-            target == null -> _notices.send("Відпайки немає на телефоні: у ГІС вона не з'єднана з опорами лінії")
+            target == null -> _notices.send("На кресленні цієї відпайки в ГІС немає опор")
             target != _lineName.value -> setLineName(target)
         }
     }

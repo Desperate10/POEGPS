@@ -76,6 +76,18 @@ fun tapJunction(
         }
 }
 
+/**
+ * All the poles of the GIS tap [tapName] along its drawing, for a tap that hangs on no pole on the phone
+ * (GIS draws the main line short, or the tap's end off its junction): turned to start at its "від оп."
+ * pole when the far end is that pole. Null when the drawing passes through fewer than two GIS poles.
+ */
+fun gisTapAlone(tapName: String, poles: List<GisPoint>, shapes: List<GisShape>): List<GisPoint>? {
+    val ordered = LineOrdering.order(tapName, poles, shapes).takeIf { it.fromShape }?.poles ?: return null
+    val from = fromPole(tapName)
+    fun named(p: GisPoint) = from != null && p.name.trim().equals(from, ignoreCase = true)
+    return if (!named(ordered.first()) && named(ordered.last())) ordered.reversed() else ordered
+}
+
 /** A tap's end within this of the pole is on it: junctions are drawn on the pole, GPS adds a few metres. */
 const val TAP_END_M = 5.0
 

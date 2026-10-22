@@ -77,6 +77,12 @@ class GisTapsTest {
     }
 
     @Test
+    fun `a tap hanging on nothing loads whole, from its from pole`() {
+        assertEquals(listOf(p8, p9, p10, p11), gisTapAlone(tapName, tapPoles, listOf(tap(p11, p10, p9, p8))))
+        assertEquals(null, gisTapAlone(tapName, tapPoles, emptyList()))
+    }
+
+    @Test
     fun `a tap hangs from the main line pole on its end`() {
         val onPhone = listOf(
             PhonePole("Відп. від оп. 3 до оп. 4", "8", 50.0, 34.0),
