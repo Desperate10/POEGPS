@@ -78,6 +78,7 @@ fun EditorScenario(name: String, onExit: () -> Unit) {
             gisLines = null,
             gisPoles = emptyList(),
             onBack = onExit,
+            onOpenLine = {},
             onSelect = { selected = it },
             onGpsProblem = {},
             actions = object : PoleActions {

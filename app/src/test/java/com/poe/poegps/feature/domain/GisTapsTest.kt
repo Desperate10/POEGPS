@@ -75,4 +75,32 @@ class GisTapsTest {
         assertEquals(null, gisTapPoles(tapName, "8", 50.0, 34.0, tapPoles, emptyList()))
         assertEquals(null, gisTapPoles(tapName, "5", 49.0, 33.0, tapPoles, listOf(tap(p9, p10, p11))))
     }
+
+    @Test
+    fun `a tap hangs from the main line pole on its end`() {
+        val onPhone = listOf(
+            PhonePole("Відп. від оп. 3 до оп. 4", "8", 50.0, 34.0),
+            PhonePole("ПЛ", "8", 50.0, 34.0),
+            PhonePole("ПЛ", "7", 49.9997, 34.0),
+        )
+        assertEquals(
+            PhonePole("ПЛ", "8", 50.0, 34.0) to listOf(p9, p10, p11),
+            tapJunction(tapName, "ПЛ", onPhone, tapPoles, listOf(tap(p11, p10, p9, p8))),
+        )
+    }
+
+    @Test
+    fun `a tap off a tap hangs from that tap's pole`() {
+        val onPhone = listOf(PhonePole("ПЛ", "7", 49.9997, 34.0), PhonePole("Відп. від оп. 7 до оп. 8", "8", 50.0, 34.0))
+        assertEquals(onPhone[1], tapJunction(tapName, "ПЛ", onPhone, tapPoles, listOf(tap(p8, p9, p10, p11)))?.first)
+    }
+
+    @Test
+    fun `a junction moved off the drawing is found by the tap's from pole only`() {
+        val moved = listOf(PhonePole("ПЛ", "8", 49.99, 34.0))
+        assertEquals(listOf(p9, p10, p11), tapJunction(tapName, "ПЛ", moved, tapPoles, listOf(tap(p8, p9, p10, p11)))?.second)
+        // pole "1" is the tap's far end, but the tap doesn't hang from a pole "1"
+        val other = listOf(PhonePole("ПЛ", "1", 49.99, 34.0))
+        assertEquals(null, tapJunction(tapName, "ПЛ", other, tapPoles, listOf(tap(p8, p9, p10, p11))))
+    }
 }

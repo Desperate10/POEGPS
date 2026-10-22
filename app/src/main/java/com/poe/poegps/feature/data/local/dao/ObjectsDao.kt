@@ -594,6 +594,10 @@ interface ObjectsDao {
     @Query("SELECT * FROM line04 WHERE name LIKE 'ПЛ%'")
     fun getLineList04(): Flow<List<Line04DbModel>>
 
+    // every line of one object on the phone: the main line and its taps
+    @Query("SELECT * FROM line_pillar WHERE tplnr = :tplnr ORDER BY sortOrder, id")
+    suspend fun getObjectPillars(tplnr: String): List<LinePillarDbModel>
+
     @Query("SELECT * FROM line_pillar WHERE parentName LIKE :pltxt ORDER BY sortOrder, id")
     fun getPillarsOfLine(pltxt: String): Flow<List<LinePillarDbModel>>
 

@@ -129,6 +129,8 @@ fun EditorScreen(
     gisLines: String?,
     gisPoles: List<MapGisPole>,
     onBack: () -> Unit,
+    /** A drawing of this object tapped on the map: opens that tap, or the main line. */
+    onOpenLine: (String) -> Unit,
     onSelect: (Int?) -> Unit,
     onGpsProblem: () -> Unit,
     actions: PoleActions,
@@ -199,6 +201,7 @@ fun EditorScreen(
             topInset = 120.dp + statusTop,
             bottomInset = (with(density) { sheetHeight.toDp() } - 24.dp).coerceAtLeast(0.dp),
             onPoleClick = { if (adjusting == null) actionsFor = it },
+            onLineClick = { if (adjusting == null) onOpenLine(it) },
             modifier = Modifier.fillMaxSize(),
             focus = focus,
             onCenterChange = { lat, lng -> center = lat to lng },

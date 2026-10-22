@@ -409,6 +409,9 @@ class ObjectsRepositoryImpl @Inject constructor(
         return rows.map { it.toDomainModel(highVoltage) }
     }
 
+    override suspend fun getObjectPillars(tplnr: String): List<Pillar> =
+        objectsDao.getObjectPillars(tplnr).map { it.toDomainModel() }
+
     override fun getSavedPillars(pltxt: String): Flow<List<Pillar>> {
         return objectsDao.getPillarsOfLine(pltxt)
             .map { pillar ->

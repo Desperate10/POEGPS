@@ -19,6 +19,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.poe.poegps.core.designsystem.PoeColors
+import com.poe.poegps.feature.domain.isTapName
 import org.maplibre.android.MapLibre
 import org.maplibre.geojson.MultiLineString
 import kotlinx.coroutines.withContext
@@ -112,6 +113,8 @@ fun LineMap(
     topInset: Dp,
     onPoleClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    /** A drawing of this object tapped away from any pole, by its GIS name (a tap, or the main line). */
+    onLineClick: ((String) -> Unit)? = null,
     focus: MapFocus? = null,
     /** Reports the point under the centre of the visible area as the camera moves (B6). */
     onCenterChange: ((Double, Double) -> Unit)? = null,
@@ -131,6 +134,7 @@ fun LineMap(
     var style by remember { mutableStateOf<Style?>(null) }
     var framed by remember { mutableStateOf(false) }
     val onPoleClickState by rememberUpdatedState(onPoleClick)
+    val onLineClickState by rememberUpdatedState(onLineClick)
     val onCenterChangeState by rememberUpdatedState(onCenterChange)
 
     DisposableEffect(lifecycle) {
@@ -178,7 +182,15 @@ fun LineMap(
                     val hit = m.queryRenderedFeatures(RectF(p.x - r, p.y - r, p.x + r, p.y + r), LAYER_POLES)
                         .firstOrNull()?.getNumberProperty("id")?.toInt()
                     hit?.let(onPoleClickState)
-                    hit != null
+                    // a pole wins; else this object's drawing under the finger, the narrowest piece first
+                    val line = if (hit != null) null else onLineClickState?.let {
+                        m.queryRenderedFeatures(RectF(p.x - r, p.y - r, p.x + r, p.y + r), LAYER_GIS_LINE_CURRENT)
+                            .mapNotNull { f -> f.getStringProperty("name") }
+                            .sortedBy { !isTapName(it) }
+                            .firstOrNull()
+                    }
+                    line?.let { onLineClickState?.invoke(it) }
+                    hit != null || line != null
                 }
                 map = m
             }
@@ -337,7 +349,7 @@ private fun addLayers(style: Style, tplnr: String, c: PoeColors) {
     )
     // this line as GIS has it today: the faint track the crew is re-surveying
     style.addLayer(
-        LineLayer("gis-line-current", SRC_GIS_LINES)
+        LineLayer(LAYER_GIS_LINE_CURRENT, SRC_GIS_LINES)
             .withProperties(lineColor(route), lineWidth(5f), lineOpacity(0.35f), lineCap(Property.LINE_CAP_ROUND), lineJoin(Property.LINE_JOIN_ROUND))
             .withFilter(eq(get("tplnr"), literal(tplnr)))
     )
@@ -474,5 +486,6 @@ private const val SRC_GPS = "gps"
 private const val SRC_GPS_ACCURACY = "gps-accuracy"
 private const val SRC_GPS_LINK = "gps-link"
 private const val LAYER_POLES = "poles"
+private const val LAYER_GIS_LINE_CURRENT = "gis-line-current"
 private const val SRC_SATELLITE = "satellite"
 private const val LAYER_SATELLITE = "satellite"

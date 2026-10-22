@@ -49,6 +49,33 @@ fun gisTapPoles(tapName: String, junction: String, lat: Double?, lng: Double?, p
     return fromJunction.drop(1).ifEmpty { null }
 }
 
+/** A pole on the phone that a GIS tap may hang from: on the main line or on another tap of the object. */
+data class PhonePole(val line: String, val name: String, val lat: Double?, val lng: Double?)
+
+/**
+ * Where the GIS tap [tapName] hangs among the poles on the phone [onPhone], with its poles after that
+ * junction ([gisTapPoles]); null when none of them is its junction. A pole on an end of the tap's
+ * drawing qualifies, or one named as its "від оп." pole; those of [mainLine] are tried first, the usual
+ * place, then those of other taps (a tap off a tap).
+ */
+fun tapJunction(
+    tapName: String, mainLine: String, onPhone: List<PhonePole>, poles: List<GisPoint>, shapes: List<GisShape>,
+): Pair<PhonePole, List<GisPoint>>? {
+    val ends = shapes.filter { it.name == tapName && it.vertices.isNotEmpty() }
+        .flatMap { listOf(it.vertices.first(), it.vertices.last()) }
+    val from = fromPole(tapName)
+    fun named(p: PhonePole) = from != null && p.name.trim().equals(from, ignoreCase = true)
+    fun onEnd(p: PhonePole) = p.lat != null && p.lng != null &&
+        ends.any { (lat, lng) -> Geo.distanceM(p.lat, p.lng, lat, lng) <= TAP_END_M }
+    return onPhone.asSequence()
+        .filter { it.line != tapName && (onEnd(it) || named(it)) }
+        .sortedWith(compareBy({ it.line != mainLine }, { !named(it) }))
+        // by name only for its "від оп." pole: other poles' numbers repeat across the object's lines
+        .firstNotNullOfOrNull { p ->
+            gisTapPoles(tapName, if (named(p)) p.name else "", p.lat, p.lng, poles, shapes)?.let { p to it }
+        }
+}
+
 /** A tap's end within this of the pole is on it: junctions are drawn on the pole, GPS adds a few metres. */
 const val TAP_END_M = 5.0
 

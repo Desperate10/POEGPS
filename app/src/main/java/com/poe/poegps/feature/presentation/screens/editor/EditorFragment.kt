@@ -13,6 +13,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -80,6 +81,8 @@ class EditorFragment : Fragment(), PoleActions, AddActions {
         // B12 on entry while GPS isn't ready, and again from the GPS chip
         var showReady by rememberSaveable { mutableStateOf(true) }
 
+        // a tap opened inside the editor goes back to its line first; sheets above keep their own back
+        BackHandler(enabled = lineName != args.pltxt) { viewModel.backToOpenedLine() }
         Box(Modifier.fillMaxSize()) {
             EditorScreen(
                 tplnr = args.tplnr,
@@ -92,7 +95,8 @@ class EditorFragment : Fragment(), PoleActions, AddActions {
                 captureMeta = captureMeta,
                 gisLines = gisLines,
                 gisPoles = gisPoles.map { MapGisPole(it.name, it.lat.toDouble(), it.lng.toDouble()) },
-                onBack = { findNavController().popBackStack() },
+                onBack = { if (!viewModel.backToOpenedLine()) findNavController().popBackStack() },
+                onOpenLine = { viewModel.openLine(it) },
                 onSelect = viewModel::selectPole,
                 onGpsProblem = { showReady = true },
                 actions = this@EditorFragment,

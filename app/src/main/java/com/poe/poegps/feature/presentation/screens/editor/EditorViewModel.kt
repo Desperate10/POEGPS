@@ -46,7 +46,11 @@ import kotlinx.coroutines.withContext
 import kotlin.math.cos
 import com.poe.poegps.feature.domain.GisPoint
 import com.poe.poegps.feature.domain.LineOrdering
+import com.poe.poegps.feature.domain.GisShape
+import com.poe.poegps.feature.domain.PhonePole
 import com.poe.poegps.feature.domain.gisTapPoles
+import com.poe.poegps.feature.domain.isTapName
+import com.poe.poegps.feature.domain.tapJunction
 import com.poe.poegps.feature.domain.LocalPole
 import com.poe.poegps.feature.domain.MergedPole
 import com.poe.poegps.feature.domain.mergeWithGis
@@ -128,8 +132,9 @@ class EditorViewModel @Inject constructor(
             geoRepository.branchLines().collect { _gisLines.value = it }
         }
         viewModelScope.launch {
-            _lineName.flatMapLatest {
-                repository.getSavedPillars(it)
+            _lineName.flatMapLatest { line ->
+                // tap names repeat across objects ("Відп. від оп. 1 до оп. 2"): only this object's
+                repository.getSavedPillars(line).map { list -> if (isTapName(line)) list.filter { it.tplnr == args.tplnr } else list }
             }.collectLatest { list ->
                 _oprDisplayable.value = list.map { opr -> opr.toOprDisplayable() }
             }
@@ -140,7 +145,8 @@ class EditorViewModel @Inject constructor(
     /**
      * An existing line opened with nothing on this phone: load its GIS poles in line order (from its
      * GIS geometry, else by pole number) as "as in GIS" and already sent. Any later change sends the
-     * whole line, so the server rebuilds its geometry complete.
+     * whole line, so the server rebuilds its geometry complete. The object's GIS taps load with it
+     * ([importGisTaps]), so they are on the map and in the list without picking each one.
      *
      * Tried on the phone's cached drawings and again on the server's when they differ, so a drawing
      * fixed in GIS since the last visit loads on this opening, not the next.
@@ -163,33 +169,75 @@ class EditorViewModel @Inject constructor(
         val gis = gisRows(highVoltage)
         if (gis.isEmpty()) return true
         val points = gis.map { GisPoint(it.name, it.lat.toDouble(), it.lng.toDouble()) }
-        val ordered = LineOrdering.order(line, points, lineShapes(json, args.tplnr))
+        val shapes = lineShapes(json, args.tplnr)
+        val ordered = LineOrdering.order(line, points, shapes)
         // only a line GIS draws under this name: its order is known and the server edits that drawing.
         // Without one the order would be a guess and an upload would add a second line to GIS.
         if (!ordered.fromShape) return false
         fun gisPillar(point: GisPoint) = loadedFromGis(gis[points.indexOfFirst { it === point }], line)
+        var loaded = 0
         if (local.isNotEmpty()) {
             // surveyed on this phone before GIS poles were loaded: offer to complete it, never silently
-            val merged = mergeWithGis(local.map { LocalPole(it.id, it.name) }, ordered.poles) ?: return true
-            val byId = local.associateBy { it.id }
-            _gisMerge.value = GisMergeOffer(
-                onPhone = local.size,
-                toAdd = merged.count { it is MergedPole.Gis },
-                plan = merged.map { m ->
-                    when (m) {
-                        is MergedPole.Local -> byId.getValue(m.id)
-                        is MergedPole.Gis -> gisPillar(m.point)
-                    }
-                },
-            )
-            return true
+            mergeWithGis(local.map { LocalPole(it.id, it.name) }, ordered.poles)?.let { merged ->
+                val byId = local.associateBy { it.id }
+                _gisMerge.value = GisMergeOffer(
+                    onPhone = local.size,
+                    toAdd = merged.count { it is MergedPole.Gis },
+                    plan = merged.map { m ->
+                        when (m) {
+                            is MergedPole.Local -> byId.getValue(m.id)
+                            is MergedPole.Gis -> gisPillar(m.point)
+                        }
+                    },
+                )
+            }
+        } else {
+            loaded = repository.importLine(args.tplnr, line, ordered.poles.map { gisPillar(it) })
         }
-        val poles = ordered.poles.map { gisPillar(it) }
-        val loaded = repository.importLine(args.tplnr, line, poles)
-        if (loaded > 0) {
-            _notices.send("З ГІС завантажено $loaded ${plural(loaded, "опору", "опори", "опор")}")
-        }
+        val taps = importGisTaps(shapes, gis)
+        loadedNotice(loaded, taps)?.let { _notices.send(it) }
         return true
+    }
+
+    private fun loadedNotice(poles: Int, taps: Int): String? {
+        val p = "$poles ${plural(poles, "опору", "опори", "опор")}"
+        val t = "$taps ${plural(taps, "відпайку", "відпайки", "відпайок")}"
+        return when {
+            poles > 0 && taps > 0 -> "З ГІС завантажено $p і $t"
+            poles > 0 -> "З ГІС завантажено $p"
+            taps > 0 -> "З ГІС завантажено $t"
+            else -> null
+        }
+    }
+
+    /**
+     * The object's GIS taps not on the phone yet, each loaded "as in GIS" from its junction on a line
+     * already here ([tapJunction]): the main line's first, then taps off those, until none is left that
+     * hangs on the phone's poles. Returns how many taps were loaded.
+     */
+    private suspend fun importGisTaps(shapes: List<GisShape>, gis: List<Pillar>): Int {
+        val points = gis.map { GisPoint(it.name, it.lat.toDouble(), it.lng.toDouble()) }
+        val onPhone = repository.getObjectPillars(args.tplnr).toMutableList()
+        val pending = shapes.map { it.name }.filter { isTapName(it) }.distinct()
+            .filter { name -> onPhone.none { it.parentName == name } }
+            .toMutableList()
+        var loaded = 0
+        do {
+            var progress = false
+            val phone = onPhone.map { PhonePole(it.parentName, it.name, it.lat.toDoubleOrNull()?.takeIf { v -> v != 0.0 }, it.lng.toDoubleOrNull()) }
+            for (name in pending.toList()) {
+                val (junction, tap) = tapJunction(name, args.pltxt, phone, points, shapes) ?: continue
+                val start = onPhone.first { it.parentName == junction.line && it.name == junction.name }.copy(id = 0, parentName = name)
+                val poles = listOf(start) + tap.map { p -> loadedFromGis(gis[points.indexOfFirst { it === p }], name) }
+                pending -= name
+                if (repository.importLine(args.tplnr, name, poles) == 0) continue
+                saveLineRecord(start.toOprDisplayable())
+                onPhone += poles
+                loaded++
+                progress = true
+            }
+        } while (progress && pending.isNotEmpty())
+        return loaded
     }
 
     /** The GIS rows of this object's poles that have coordinates. */
@@ -218,11 +266,38 @@ class EditorViewModel @Inject constructor(
                 if (added > 0) "З ГІС додано $added ${plural(added, "опору", "опори", "опор")}"
                 else "Лінія змінилася, опори не додано. Відкрийте її знову."
             )
+            // taps that hang on the poles just added
+            val json = _gisLines.value
+            if (added > 0 && json != null) {
+                val highVoltage = args.objectType == ObjectType.LINE10 || args.objectType == ObjectType.LINEABON10
+                loadedNotice(0, importGisTaps(lineShapes(json, args.tplnr), gisRows(highVoltage)))?.let { _notices.send(it) }
+            }
         }
     }
 
     fun declineGisMerge() {
         _gisMerge.value = null
+    }
+
+    /**
+     * A line of this object tapped on the map, by its GIS drawing's name: a tap on the phone opens; any
+     * other drawing is the main line, whatever GIS calls it.
+     */
+    fun openLine(name: String) = viewModelScope.launch {
+        val lines = withContext(Dispatchers.IO) { repository.getObjectPillars(args.tplnr) }.map { it.parentName }.distinct()
+        val target = if (isTapName(name)) name.takeIf { it in lines }
+        else lines.firstOrNull { !isTapName(it) } ?: args.pltxt.takeUnless { isTapName(it) }
+        when {
+            target == null -> _notices.send("Відпайки немає на телефоні: у ГІС вона не з'єднана з опорами лінії")
+            target != _lineName.value -> setLineName(target)
+        }
+    }
+
+    /** Back from a tap opened inside the editor, to the line the editor was opened on; false = already there. */
+    fun backToOpenedLine(): Boolean {
+        if (_lineName.value == args.pltxt) return false
+        setLineName(args.pltxt)
+        return true
     }
 
     fun setLineName(lineName: String) {
@@ -332,6 +407,12 @@ class EditorViewModel @Inject constructor(
         val first = firstPole.trim()
         // a tap GIS already has keeps its exact name, so the upload edits it instead of adding another
         val name = gisName ?: tapName(from.name, first)
+        // already here (loaded with the line, or made before): open it, never a second copy of its poles
+        if (withContext(Dispatchers.IO) { repository.getObjectPillars(args.tplnr) }.any { it.parentName == name }) {
+            setLineName(name)
+            _notices.send("Відпайка вже є на телефоні: $name")
+            return@launch
+        }
         val loaded = gisName?.let { importTap(from, it) } ?: 0
         if (loaded > 0) {
             if (open) setLineName(name)
