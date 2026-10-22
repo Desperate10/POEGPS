@@ -46,6 +46,7 @@ import kotlinx.coroutines.withContext
 import kotlin.math.cos
 import com.poe.poegps.feature.domain.GisPoint
 import com.poe.poegps.feature.domain.LineOrdering
+import com.poe.poegps.feature.domain.gisTapPoles
 import com.poe.poegps.feature.domain.LocalPole
 import com.poe.poegps.feature.domain.MergedPole
 import com.poe.poegps.feature.domain.mergeWithGis
@@ -159,25 +160,14 @@ class EditorViewModel @Inject constructor(
         val existing = repository.getSavedPillars(line).first()
         val local = existing.filter { it.tplnr == args.tplnr }
         if (existing.isNotEmpty() && local.isEmpty()) return true
-        val gis = (if (highVoltage) repository.getPillar10List(args.tplnr) else repository.getPillar04List(args.tplnr))
-            .first()
-            .filter { p -> p.lat.toDoubleOrNull()?.let { it != 0.0 } == true && p.lng.toDoubleOrNull() != null }
+        val gis = gisRows(highVoltage)
         if (gis.isEmpty()) return true
         val points = gis.map { GisPoint(it.name, it.lat.toDouble(), it.lng.toDouble()) }
         val ordered = LineOrdering.order(line, points, lineShapes(json, args.tplnr))
         // only a line GIS draws under this name: its order is known and the server edits that drawing.
         // Without one the order would be a guess and an upload would add a second line to GIS.
         if (!ordered.fromShape) return false
-        val pillarType = if (CABLE_LINE.containsMatchIn(line)) PillarType.KL else PillarType.PILLAR
-        fun gisPillar(point: GisPoint): Pillar {
-            // the GIS row itself: its coordinates go back to the server exactly as GIS has them
-            val src = gis[points.indexOfFirst { it === point }]
-            return Pillar(
-                id = 0, tplnr = args.tplnr, name = src.name, parentName = line, category = args.category,
-                wire = src.wire, pillarType = pillarType.name, lat = src.lat, lng = src.lng,
-                isAbon = args.isAbon, recloser = "", isSent = true, fromGis = true, gisOrigin = true,
-            )
-        }
+        fun gisPillar(point: GisPoint) = loadedFromGis(gis[points.indexOfFirst { it === point }], line)
         if (local.isNotEmpty()) {
             // surveyed on this phone before GIS poles were loaded: offer to complete it, never silently
             val merged = mergeWithGis(local.map { LocalPole(it.id, it.name) }, ordered.poles) ?: return true
@@ -201,6 +191,19 @@ class EditorViewModel @Inject constructor(
         }
         return true
     }
+
+    /** The GIS rows of this object's poles that have coordinates. */
+    private suspend fun gisRows(highVoltage: Boolean): List<Pillar> =
+        (if (highVoltage) repository.getPillar10List(args.tplnr) else repository.getPillar04List(args.tplnr))
+            .first()
+            .filter { p -> p.lat.toDoubleOrNull()?.let { it != 0.0 } == true && p.lng.toDoubleOrNull() != null }
+
+    /** The GIS row [src] as a pole of [line] "as in GIS": its coordinates go back to the server exactly as GIS has them. */
+    private fun loadedFromGis(src: Pillar, line: String) = Pillar(
+        id = 0, tplnr = args.tplnr, name = src.name, parentName = line, category = args.category,
+        wire = src.wire, pillarType = (if (CABLE_LINE.containsMatchIn(line)) PillarType.KL else PillarType.PILLAR).name,
+        lat = src.lat, lng = src.lng, isAbon = args.isAbon, recloser = "", isSent = true, fromGis = true, gisOrigin = true,
+    )
 
     private val _gisMerge = MutableStateFlow<GisMergeOffer?>(null)
     /** A line with poles on the phone that GIS has more of: offered once per opening. */
@@ -325,10 +328,20 @@ class EditorViewModel @Inject constructor(
      * B11: a tap from [from] whose first pole is [firstPole]. The name keeps the generated format the
      * server receives as the line name. [open] switches the editor to the tap, as the old dialog always did.
      */
-    fun createTap(from: OprDisplayable, firstPole: String, open: Boolean, gisName: String? = null) {
+    fun createTap(from: OprDisplayable, firstPole: String, open: Boolean, gisName: String? = null) = viewModelScope.launch {
         val first = firstPole.trim()
         // a tap GIS already has keeps its exact name, so the upload edits it instead of adding another
         val name = gisName ?: tapName(from.name, first)
+        val loaded = gisName?.let { importTap(from, it) } ?: 0
+        if (loaded > 0) {
+            if (open) setLineName(name)
+            _notices.send("Відпайку з ГІС завантажено: $loaded ${plural(loaded, "опора", "опори", "опор")}")
+            return@launch
+        }
+        if (first.isEmpty()) {
+            _notices.send("У ГІС немає креслення цієї відпайки. Вкажіть її першу опору.")
+            return@launch
+        }
         createOtp(
             from.copy(parentName = name),
             OprDisplayable(
@@ -341,7 +354,33 @@ class EditorViewModel @Inject constructor(
             )
         )
         if (open) setLineName(name)
-        viewModelScope.launch { _notices.send("Відпайку створено: $name") }
+        _notices.send("Відпайку створено: $name")
+    }
+
+    /**
+     * Loads the GIS tap [name] from the junction [from] with its poles "as in GIS", in the order of its
+     * GIS drawing, the way [importFromGis] loads a line: nothing goes to the server until it changes.
+     * The junction is [from]'s own copy, so a junction already moved on the main line moves here too.
+     * Returns the tap's poles loaded, 0 when GIS has no usable drawing or the tap is already on the phone.
+     */
+    private suspend fun importTap(from: OprDisplayable, name: String): Int = withContext(Dispatchers.IO) {
+        val highVoltage = when (args.objectType) {
+            ObjectType.LINE04, ObjectType.LINEABON04 -> false
+            ObjectType.LINE10, ObjectType.LINEABON10 -> true
+            else -> return@withContext 0
+        }
+        val json = _gisLines.value ?: return@withContext 0
+        val gis = gisRows(highVoltage)
+        val points = gis.map { GisPoint(it.name, it.lat.toDouble(), it.lng.toDouble()) }
+        val tap = gisTapPoles(
+            name, from.name, from.lat.toDoubleOrNull()?.takeIf { it != 0.0 }, from.lng.toDoubleOrNull(),
+            points, lineShapes(json, args.tplnr),
+        ) ?: return@withContext 0
+        val start = from.copy(id = 0, parentName = name)
+        val poles = listOf(start.toDomainModel()) + tap.map { p -> loadedFromGis(gis[points.indexOfFirst { it === p }], name) }
+        if (repository.importLine(args.tplnr, name, poles) == 0) return@withContext 0
+        saveLineRecord(start)
+        tap.size
     }
 
     fun getPillar04List(tplnr: String) =
@@ -404,64 +443,69 @@ class EditorViewModel @Inject constructor(
             // the tap's own copy of its first pole: unsent, so the new tap uploads whole
             repository.copyPillarForOtp(pillarStart.copy(id = 0, isSent = false, fromGis = false, gisOrigin = false).toDomainModel())
             repository.savePillar(pillarNext.toDomainModel())
-            when(args.objectType) {
-                ObjectType.LINE04 -> repository.saveLine04(
-                    ObjectDisplayable(
-                        tplnr = pillarStart.tplnr,
-                        name = pillarStart.parentName,
-                        category = pillarStart.category,
-                        pillarType = pillarStart.pillarType,
-                        isAbon = pillarStart.isAbon
-                    ).toLineDomainModel()
-                )
-                ObjectType.LINE10 -> repository.saveLine10(
-                    ObjectDisplayable(
-                        tplnr = pillarStart.tplnr,
-                        name = pillarStart.parentName,
-                        category = pillarStart.category,
-                        pillarType = pillarStart.pillarType,
-                        isAbon = pillarStart.isAbon
-                    ).toLineDomainModel()
-                )
-                ObjectType.LINEABON04 -> repository.saveAbonLine04(
-                    ObjectDisplayable(
-                        tplnr = pillarStart.tplnr,
-                        name = pillarStart.parentName,
-                        category = pillarStart.category,
-                        pillarType = pillarStart.pillarType,
-                        isAbon = pillarStart.isAbon
-                    ).toLineDomainModel()
-                )
-                ObjectType.LINEABON10 -> repository.saveAbonLine10(
-                    ObjectDisplayable(
-                        tplnr = pillarStart.tplnr,
-                        name = pillarStart.parentName,
-                        category = pillarStart.category,
-                        pillarType = pillarStart.pillarType,
-                        isAbon = pillarStart.isAbon
-                    ).toLineDomainModel()
-                )
-                /* ObjectType.LINE35 -> TODO()
-                 ObjectType.LINE110 -> TODO()
-                 ObjectType.LINE154 -> TODO()
-                 ObjectType.LINEABON35 -> TODO()
-                 ObjectType.LINEABON110 -> TODO()
-                 ObjectType.LINEABON154 -> TODO()*/
-                ObjectType.TP -> {
-                }
-                ObjectType.TPABON -> {}
-                ObjectType.KLKV04 -> {}
-                ObjectType.KLKV10 -> {}
-                ObjectType.KLKVABON04 -> {}
-                ObjectType.KLKVABON10 -> {}
-            }
-            /*repository.saveLine(
+            saveLineRecord(pillarStart)
+        }
+    }
+
+    /** The line [pillarStart] belongs to (a tap), in this object type's line list. */
+    private suspend fun saveLineRecord(pillarStart: OprDisplayable) {
+        when(args.objectType) {
+            ObjectType.LINE04 -> repository.saveLine04(
                 ObjectDisplayable(
                     tplnr = pillarStart.tplnr,
-                    name = pillarStart.parentName
+                    name = pillarStart.parentName,
+                    category = pillarStart.category,
+                    pillarType = pillarStart.pillarType,
+                    isAbon = pillarStart.isAbon
                 ).toLineDomainModel()
-            )*/
+            )
+            ObjectType.LINE10 -> repository.saveLine10(
+                ObjectDisplayable(
+                    tplnr = pillarStart.tplnr,
+                    name = pillarStart.parentName,
+                    category = pillarStart.category,
+                    pillarType = pillarStart.pillarType,
+                    isAbon = pillarStart.isAbon
+                ).toLineDomainModel()
+            )
+            ObjectType.LINEABON04 -> repository.saveAbonLine04(
+                ObjectDisplayable(
+                    tplnr = pillarStart.tplnr,
+                    name = pillarStart.parentName,
+                    category = pillarStart.category,
+                    pillarType = pillarStart.pillarType,
+                    isAbon = pillarStart.isAbon
+                ).toLineDomainModel()
+            )
+            ObjectType.LINEABON10 -> repository.saveAbonLine10(
+                ObjectDisplayable(
+                    tplnr = pillarStart.tplnr,
+                    name = pillarStart.parentName,
+                    category = pillarStart.category,
+                    pillarType = pillarStart.pillarType,
+                    isAbon = pillarStart.isAbon
+                ).toLineDomainModel()
+            )
+            /* ObjectType.LINE35 -> TODO()
+             ObjectType.LINE110 -> TODO()
+             ObjectType.LINE154 -> TODO()
+             ObjectType.LINEABON35 -> TODO()
+             ObjectType.LINEABON110 -> TODO()
+             ObjectType.LINEABON154 -> TODO()*/
+            ObjectType.TP -> {
+            }
+            ObjectType.TPABON -> {}
+            ObjectType.KLKV04 -> {}
+            ObjectType.KLKV10 -> {}
+            ObjectType.KLKVABON04 -> {}
+            ObjectType.KLKVABON10 -> {}
         }
+        /*repository.saveLine(
+            ObjectDisplayable(
+                tplnr = pillarStart.tplnr,
+                name = pillarStart.parentName
+            ).toLineDomainModel()
+        )*/
     }
 
     /** Where GIS has [pole], when it was loaded from GIS and has been moved since; else null. */

@@ -491,7 +491,8 @@ internal fun RecloserSheet(
 /**
  * B11 · Нова відпайка. The name is generated: the server takes it as the tap's line name. When GIS
  * already draws taps from this pole ([gisTaps]), one can be picked to keep its exact GIS name, so the
- * upload edits that tap instead of adding a second one.
+ * upload edits that tap instead of adding a second one; its poles then load as GIS has them, and the
+ * first pole is only needed when GIS has no drawing to take them from.
  */
 @Composable
 internal fun TapSheet(
@@ -518,7 +519,7 @@ internal fun TapSheet(
             Field("Уже є в ГІС від цієї опори") {
                 Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     gisTaps.forEach { tap ->
-                        TapChoice(tap.name, "взяти назву з ГІС", selected = gisName == tap.name) {
+                        TapChoice(tap.name, "назва й опори як у ГІС", selected = gisName == tap.name) {
                             gisName = tap.name
                             other = false
                             if (first.isBlank()) first = tap.firstPole.orEmpty()
@@ -582,12 +583,13 @@ internal fun TapSheet(
         PoePrimaryButton(
             text = when {
                 mustChoose -> "Виберіть відпайку вище"
+                gisName != null -> "Завантажити відпайку"
                 first.isBlank() -> "Вкажіть першу опору"
                 else -> "Створити відпайку"
             },
             onClick = { onCreate(first, open, gisName) },
             icon = PoeIcons.Tap,
-            enabled = first.isNotBlank() && !mustChoose,
+            enabled = (first.isNotBlank() || gisName != null) && !mustChoose,
         )
     }
 }

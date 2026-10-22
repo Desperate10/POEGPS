@@ -45,4 +45,34 @@ class GisTapsTest {
         val tap = GisShape("Відп. від оп. 7 до оп. 8", listOf(49.0 to 33.0, 49.1 to 33.1))
         assertEquals(emptyList<GisTap>(), gisTapsAt("74", null, null, listOf(tap), emptySet()))
     }
+
+    // junction pole 8 at 50.0, 34.0; tap poles 9..11 northwards, drawn through them
+    private val p8 = GisPoint("8", 50.0, 34.0)
+    private val p9 = GisPoint("9", 50.0003, 34.0)
+    private val p10 = GisPoint("10", 50.0006, 34.0)
+    private val p11 = GisPoint("1", 50.0009, 34.0)
+    private val tapPoles = listOf(p8, p9, p10, p11, GisPoint("7", 49.9997, 34.0))
+    private val tapName = "Відп. від оп. 8 до оп. 11"
+    private fun tap(vararg pts: GisPoint) = GisShape(tapName, pts.map { it.lat to it.lng })
+
+    @Test
+    fun `tap poles come in order from the junction, without it`() {
+        assertEquals(listOf(p9, p10, p11), gisTapPoles(tapName, "8", 50.0, 34.0, tapPoles, listOf(tap(p8, p9, p10, p11))))
+    }
+
+    @Test
+    fun `a tap drawn towards the junction is turned round`() {
+        assertEquals(listOf(p9, p10, p11), gisTapPoles(tapName, "8", 50.0, 34.0, tapPoles, listOf(tap(p11, p10, p9, p8))))
+    }
+
+    @Test
+    fun `a junction without coordinates is found by its name`() {
+        assertEquals(listOf(p9, p10, p11), gisTapPoles(tapName, "8", null, null, tapPoles, listOf(tap(p11, p10, p9, p8))))
+    }
+
+    @Test
+    fun `no drawing, or one off the junction, loads nothing`() {
+        assertEquals(null, gisTapPoles(tapName, "8", 50.0, 34.0, tapPoles, emptyList()))
+        assertEquals(null, gisTapPoles(tapName, "5", 49.0, 33.0, tapPoles, listOf(tap(p9, p10, p11))))
+    }
 }

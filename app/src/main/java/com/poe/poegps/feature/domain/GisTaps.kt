@@ -29,6 +29,26 @@ fun gisTapsAt(poleName: String, lat: Double?, lng: Double?, shapes: List<GisShap
         .toList()
 }
 
+/**
+ * The poles of the GIS tap [tapName] after its junction pole [junction] (null coordinates: unknown), in
+ * order away from it, walked along the tap's GIS drawing. Null when GIS has no usable drawing of the tap
+ * or neither end of it is on the junction, so the tap is surveyed from scratch instead.
+ */
+fun gisTapPoles(tapName: String, junction: String, lat: Double?, lng: Double?, poles: List<GisPoint>, shapes: List<GisShape>): List<GisPoint>? {
+    val ordered = LineOrdering.order(tapName, poles, shapes).takeIf { it.fromShape }?.poles ?: return null
+    fun near(p: GisPoint) = lat != null && lng != null && Geo.distanceM(lat, lng, p.lat, p.lng) <= TAP_END_M
+    fun named(p: GisPoint) = p.name.trim().equals(junction.trim(), ignoreCase = true)
+    // drawn from either end; by position first, as tap poles often reuse the main line's numbers
+    val fromJunction = when {
+        near(ordered.first()) -> ordered
+        near(ordered.last()) -> ordered.reversed()
+        named(ordered.first()) -> ordered
+        named(ordered.last()) -> ordered.reversed()
+        else -> return null
+    }
+    return fromJunction.drop(1).ifEmpty { null }
+}
+
 /** A tap's end within this of the pole is on it: junctions are drawn on the pole, GPS adds a few metres. */
 const val TAP_END_M = 5.0
 
