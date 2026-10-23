@@ -395,6 +395,9 @@ fun PoeOverlayTitle(
     title: String,
     subtitle: String,
     modifier: Modifier = Modifier,
+    /** Makes the title a button, e.g. to pick another line of the object. */
+    onClick: (() -> Unit)? = null,
+    onClickLabel: String? = null,
 ) {
     val c = PoeTheme.colors
     Column(
@@ -403,6 +406,7 @@ fun PoeOverlayTitle(
             .shadow(if (c.isDark) 0.dp else 6.dp, PoeShapes.pill)
             .clip(PoeShapes.pill)
             .background(c.overlay)
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClickLabel = onClickLabel, onClick = onClick) else Modifier)
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.Center,
     ) {

@@ -40,6 +40,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import com.poe.poegps.feature.domain.Branch
 import com.poe.poegps.feature.domain.GisTap
 import com.poe.poegps.feature.domain.gisTapsAt
 import com.poe.poegps.feature.presentation.map.lineShapes
@@ -131,6 +132,10 @@ fun EditorScreen(
     onBack: () -> Unit,
     /** A drawing of this object tapped on the map: opens that tap, or the main line. */
     onOpenLine: (String) -> Unit,
+    /** The object's lines for the branch list; empty hides the way into it. */
+    branches: List<Branch> = emptyList(),
+    onOpenBranch: (String) -> Unit = {},
+    onClearBranch: (String) -> Unit = {},
     onSelect: (Int?) -> Unit,
     onGpsProblem: () -> Unit,
     actions: PoleActions,
@@ -151,6 +156,7 @@ fun EditorScreen(
     var recloserFor by rememberSaveable { mutableStateOf<Int?>(null) }
     var tapFor by rememberSaveable { mutableStateOf<Int?>(null) }
     var showAll by rememberSaveable { mutableStateOf(false) }
+    var showBranches by rememberSaveable { mutableStateOf(false) }
     // B6: the pole being placed by hand, the point under the pin, and camera moves for the map
     var adjustFor by rememberSaveable { mutableStateOf<Int?>(null) }
     var center by remember { mutableStateOf<Pair<Double, Double>?>(null) }
@@ -241,11 +247,16 @@ fun EditorScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             PoeOverlayIconButton(PoeIcons.Back, "Назад до об'єктів", onBack)
+            // with taps the title shows which branch is open and is the way to the others
+            val current = branches.firstOrNull { it.line == lineName }
+            val hasTaps = branches.size > 1
             PoeOverlayTitle(
-                title = lineName,
+                title = if (hasTaps && current != null && !current.isMain) "Відпайка ${current.label}" else lineName,
                 subtitle = (if (poles.any { it.fromGis }) "уточнено $surveyed з ${poles.size}" else "$surveyed з ${poles.size} опор") +
-                    if (category.isNotBlank()) " · $category" else "",
+                    (if (hasTaps) " · гілок ${branches.size} ▾" else if (category.isNotBlank()) " · $category" else ""),
                 modifier = Modifier.weight(1f),
+                onClick = if (hasTaps) ({ showBranches = true }) else null,
+                onClickLabel = "Гілки лінії",
             )
             PoeOverlayIconButton(PoeIcons.Plus, "Додати опору", { addAfter = null; showAdd = true }, filled = true)
         }
@@ -356,6 +367,15 @@ fun EditorScreen(
             pole, lineName, gisTaps,
             onCreate = { first, open, gisName -> tapFor = null; adds.createTap(pole, first, open, gisName) },
             onDismiss = { tapFor = null },
+        )
+    }
+    if (showBranches) {
+        BranchesSheet(
+            branches = branches,
+            current = lineName,
+            onOpen = { showBranches = false; onOpenBranch(it) },
+            onClear = { showBranches = false; onClearBranch(it) },
+            onDismiss = { showBranches = false },
         )
     }
     if (showAll) {

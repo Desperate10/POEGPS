@@ -97,6 +97,9 @@ interface ObjectsRepository {
     /** The poles of every line of the object [tplnr] on the phone, main line and taps, in line order. */
     suspend fun getObjectPillars(tplnr: String): List<Pillar>
 
+    /** [getObjectPillars], kept up to date. */
+    fun observeObjectPillars(tplnr: String): Flow<List<Pillar>>
+
     /** Appends [pillar] to its line, or inserts it right after the pole [afterId]. 0 = name already on the line. */
     suspend fun savePillar(pillar: Pillar, afterId: Int? = null): Long
 

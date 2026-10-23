@@ -106,9 +106,10 @@ fun ObjectsScreen(
     onTypeChange: (ObjectType) -> Unit,
     onQueryChange: (String) -> Unit,
     onOpen: (ObjectDisplayable) -> Unit,
+    /** A changed tap on a line's card: opens the line on that tap. */
+    onOpenTap: (ObjectDisplayable, String) -> Unit,
     onUpload: (UploadScope) -> Unit,
     uploadSummary: suspend (ObjectDisplayable) -> UploadSummary,
-    onDeleteTap: (ObjectDisplayable) -> Unit,
     onClearLine: (ObjectDisplayable) -> Unit,
     clearSummary: suspend (ObjectDisplayable) -> LineClearSummary,
     onDownload: () -> Unit,
@@ -196,9 +197,9 @@ fun ObjectsScreen(
                             item = item,
                             isTp = type.tab == TAB_TP,
                             onOpen = { onOpen(item.obj) },
+                            onOpenTap = { onOpenTap(item.obj, it) },
                             onUpload = onUpload,
                             uploadSummary = { uploadSummary(item.obj) },
-                            onDeleteTap = { onDeleteTap(item.obj) },
                             onClearLine = { onClearLine(item.obj) },
                             clearSummary = { clearSummary(item.obj) },
                         )
@@ -280,9 +281,9 @@ private fun ObjectCard(
     item: ObjectItem,
     isTp: Boolean,
     onOpen: () -> Unit,
+    onOpenTap: (String) -> Unit,
     onUpload: (UploadScope) -> Unit,
     uploadSummary: suspend () -> UploadSummary,
-    onDeleteTap: () -> Unit,
     onClearLine: () -> Unit,
     clearSummary: suspend () -> LineClearSummary,
 ) {
@@ -319,7 +320,9 @@ private fun ObjectCard(
                 Text(
                     buildAnnotatedString {
                         withStyle(SpanStyle(color = c.ink, fontWeight = PoeTheme.type.rowTitle.fontWeight)) { append("$gis") }
-                        append(" ${plural(gis, "опора", "опори", "опор")} в ГІС (з відпайками)")
+                        append(" ${plural(gis, "опора", "опори", "опор")} в ГІС")
+                        if (item.taps > 0) append(" · ${item.taps} ${plural(item.taps, "відпайка", "відпайки", "відпайок")}")
+                        else append(" (з відпайками)")
                         if (checked > 0) append(" · уточнено $checked")
                         if (p != null && p.captured > 0 && p.unsent == 0) append(" · усі надіслано")
                     },
@@ -341,6 +344,7 @@ private fun ObjectCard(
                     }
                 }
             }
+            ChangedTaps(item.changedTaps, onOpenTap)
         }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
             DropdownMenuItem(
@@ -363,14 +367,6 @@ private fun ObjectCard(
                     text = { Text("Очистити лінію на телефоні", style = PoeTheme.type.labelRegular, color = c.danger) },
                     leadingIcon = { Icon(PoeIcons.Trash, null, Modifier.size(20.dp), tint = c.danger) },
                     onClick = { menu = false; confirmClear = true },
-                )
-            }
-            // trunk lines come from GIS and can't be removed; only taps created on the phone can
-            if (!isTp && !obj.name.contains("ПЛ")) {
-                DropdownMenuItem(
-                    text = { Text("Видалити відпайку", style = PoeTheme.type.labelRegular, color = c.danger) },
-                    leadingIcon = { Icon(PoeIcons.Trash, null, Modifier.size(20.dp), tint = c.danger) },
-                    onClick = { menu = false; onDeleteTap() },
                 )
             }
         }
@@ -488,6 +484,40 @@ private fun ObjectCard(
         )
     }
 }
+
+/** The taps of a line with changes not sent yet: what an upload of it carries besides the line. */
+@Composable
+private fun ChangedTaps(taps: List<ChangedTap>, onOpen: (String) -> Unit) {
+    if (taps.isEmpty()) return
+    val c = PoeTheme.colors
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        taps.take(MAX_CHANGED_TAPS).forEach { t ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 40.dp)
+                    .clip(PoeShapes.pill)
+                    .background(c.surfaceMuted)
+                    .clickable(role = Role.Button, onClickLabel = "Відкрити відпайку") { onOpen(t.line) }
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(PoeIcons.Tap, null, Modifier.size(16.dp), tint = c.actionText)
+                Text("Відпайка ${t.label}", style = PoeTheme.type.labelRegular, color = c.ink, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text("${t.unsent} не надіслано", style = PoeTheme.type.caption, color = c.muted, maxLines = 1)
+            }
+        }
+        if (taps.size > MAX_CHANGED_TAPS) {
+            val more = taps.size - MAX_CHANGED_TAPS
+            Text("і ще $more ${plural(more, "змінена відпайка", "змінені відпайки", "змінених відпайок")}",
+                style = PoeTheme.type.caption, color = c.muted, modifier = Modifier.padding(start = 12.dp))
+        }
+    }
+}
+
+private const val MAX_CHANGED_TAPS = 3
 
 @Composable
 private fun com.poe.poegps.core.designsystem.PoeColors.inkSecondaryOrMuted() =

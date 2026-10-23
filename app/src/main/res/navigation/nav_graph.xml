@@ -42,6 +42,11 @@
         <argument
             android:name="pillarType"
             app:argType="string" />
+        <!-- a tap of the line to open first; back from it goes to the line -->
+        <argument
+            android:name="openLine"
+            android:defaultValue=""
+            app:argType="string" />
     </fragment>
     <fragment
         android:id="@+id/tpEditorFragment"

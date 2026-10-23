@@ -489,8 +489,12 @@ interface ObjectsDao {
         "SELECT tplnr, parentName, isAbon, COUNT(*) AS total, " +
             // poles loaded from GIS count as not surveyed yet
             "SUM(CASE WHEN lat <> '0.0' AND fromGis = 0 THEN 1 ELSE 0 END) AS captured, " +
-            "SUM(CASE WHEN lat <> '0.0' AND isSent = 0 THEN 1 ELSE 0 END) AS unsent " +
-            "FROM line_pillar GROUP BY tplnr, parentName, isAbon"
+            "SUM(CASE WHEN lat <> '0.0' AND isSent = 0 THEN 1 ELSE 0 END) AS unsent, " +
+            "(SELECT f.name FROM line_pillar f WHERE f.tplnr = a.tplnr AND f.parentName = a.parentName " +
+            "ORDER BY f.sortOrder, f.id LIMIT 1) AS firstPole, " +
+            "(SELECT l.name FROM line_pillar l WHERE l.tplnr = a.tplnr AND l.parentName = a.parentName " +
+            "ORDER BY l.sortOrder DESC, l.id DESC LIMIT 1) AS lastPole " +
+            "FROM line_pillar a GROUP BY tplnr, parentName, isAbon"
     )
     fun getLineProgress(): Flow<List<LineProgress>>
 
@@ -597,6 +601,9 @@ interface ObjectsDao {
     // every line of one object on the phone: the main line and its taps
     @Query("SELECT * FROM line_pillar WHERE tplnr = :tplnr ORDER BY sortOrder, id")
     suspend fun getObjectPillars(tplnr: String): List<LinePillarDbModel>
+
+    @Query("SELECT * FROM line_pillar WHERE tplnr = :tplnr ORDER BY sortOrder, id")
+    fun observeObjectPillars(tplnr: String): Flow<List<LinePillarDbModel>>
 
     @Query("SELECT * FROM line_pillar WHERE parentName LIKE :pltxt ORDER BY sortOrder, id")
     fun getPillarsOfLine(pltxt: String): Flow<List<LinePillarDbModel>>

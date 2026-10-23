@@ -8,6 +8,9 @@ data class LineProgress(
     val total: Int,
     val captured: Int,
     val unsent: Int,
+    /** The line's first and last poles in line order: what a tap is labelled by. */
+    val firstPole: String? = null,
+    val lastPole: String? = null,
 )
 
 /** How many poles GIS has for a line; [name] is the line's first row (taps share its tplnr). */

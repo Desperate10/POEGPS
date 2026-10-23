@@ -46,7 +46,10 @@ import kotlinx.coroutines.withContext
 import kotlin.math.cos
 import com.poe.poegps.feature.domain.GisPoint
 import com.poe.poegps.feature.domain.LineOrdering
+import com.poe.poegps.feature.domain.Branch
+import com.poe.poegps.feature.domain.BranchPole
 import com.poe.poegps.feature.domain.GisShape
+import com.poe.poegps.feature.domain.branchTree
 import com.poe.poegps.feature.domain.PhonePole
 import com.poe.poegps.feature.domain.gisTapAlone
 import com.poe.poegps.feature.domain.gisTapPoles
@@ -81,7 +84,7 @@ class EditorViewModel @Inject constructor(
 
     private val args by lazy { EditorFragmentArgs.fromSavedStateHandle(savedStateHandle) }
 
-    private val _lineName = MutableStateFlow<String>(args.pltxt)
+    private val _lineName = MutableStateFlow<String>(args.openLine.ifBlank { args.pltxt })
     val lineName = _lineName
 
     private val _oprDisplayable = MutableStateFlow<List<OprDisplayable>>(emptyList())
@@ -127,6 +130,29 @@ class EditorViewModel @Inject constructor(
     }.map { list -> list.filter { it.lat.toDoubleOrNull()?.let { lat -> lat != 0.0 } == true } }
         .flowOn(Dispatchers.IO)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** The object's lines as the branch list shows them: the main line, then its taps as a tree. */
+    val branches: StateFlow<List<Branch>> = repository.observeObjectPillars(args.tplnr)
+        .map { poles ->
+            val main = args.pltxt.takeUnless { isTapName(it) }
+                ?: poles.firstOrNull { !isTapName(it.parentName) }?.parentName ?: args.pltxt
+            branchTree(main, poles.map {
+                val captured = it.lat.toDoubleOrNull()?.let { v -> v != 0.0 } == true
+                BranchPole(it.parentName, it.name, it.lat, it.lng, checked = captured && !it.fromGis, unsent = captured && !it.isSent)
+            })
+        }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Takes the tap [name] off the phone; one from GIS loads again on the next opening. */
+    fun clearTap(name: String) {
+        if (!isTapName(name)) return
+        if (_lineName.value == name) setLineName(args.pltxt)
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.clearLine(args.tplnr, name).forEach { session.forget(CaptureLog.poleKey(it)) }
+            _notices.send("Відпайку очищено на телефоні")
+        }
+    }
 
     init {
         viewModelScope.launch {

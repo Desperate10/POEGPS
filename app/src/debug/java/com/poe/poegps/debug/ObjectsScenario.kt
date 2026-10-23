@@ -38,7 +38,7 @@ fun ObjectsScenario() {
         onOpen = {},
         onUpload = {},
         uploadSummary = { UploadSummary(line = 3, others = 5, otherLines = 2) },
-        onDeleteTap = {},
+        onOpenTap = { _, _ -> },
         onClearLine = {},
         clearSummary = { LineClearSummary(taps = 2, unsent = 3) },
         onDownload = {},

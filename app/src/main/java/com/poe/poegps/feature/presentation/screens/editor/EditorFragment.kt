@@ -77,6 +77,7 @@ class EditorFragment : Fragment(), PoleActions, AddActions {
         val trust by viewModel.trust.collectAsStateWithLifecycle()
         val captureMeta by viewModel.captureMeta.collectAsStateWithLifecycle()
         val gisMerge by viewModel.gisMerge.collectAsStateWithLifecycle()
+        val branches by viewModel.branches.collectAsStateWithLifecycle()
         val downloadedAt by filialManager.getDownloadedAt().collectAsStateWithLifecycle(null)
         // B12 on entry while GPS isn't ready, and again from the GPS chip
         var showReady by rememberSaveable { mutableStateOf(true) }
@@ -97,6 +98,9 @@ class EditorFragment : Fragment(), PoleActions, AddActions {
                 gisPoles = gisPoles.map { MapGisPole(it.name, it.lat.toDouble(), it.lng.toDouble()) },
                 onBack = { if (!viewModel.backToOpenedLine()) findNavController().popBackStack() },
                 onOpenLine = { viewModel.openLine(it) },
+                branches = branches,
+                onOpenBranch = viewModel::setLineName,
+                onClearBranch = viewModel::clearTap,
                 onSelect = viewModel::selectPole,
                 onGpsProblem = { showReady = true },
                 actions = this@EditorFragment,

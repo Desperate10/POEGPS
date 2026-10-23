@@ -1,5 +1,7 @@
 package com.poe.poegps.feature.presentation.screens.main
 
+import com.poe.poegps.feature.domain.isTapName
+import com.poe.poegps.feature.domain.tapLabel
 import com.poe.poegps.feature.domain.UploadScope
 import com.poe.poegps.feature.domain.UploadSummary
 import android.util.Log
@@ -36,13 +38,36 @@ import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 
-/** One card in the objects list: the object and its capture progress, if work on it started. */
+/**
+ * One card in the objects list: the object and its capture progress, if work on it started. A line's
+ * taps are no cards of their own: its progress covers them, and the changed ones are listed on it.
+ */
 data class ObjectItem(
     val obj: ObjectDisplayable,
     val progress: LineProgress?,
     /** Poles GIS already has for this line (0 for taps, TPs and cables). */
     val gisPoles: Int = 0,
+    /** The line's taps on the phone. */
+    val taps: Int = 0,
+    /** Taps with changes not sent yet, as the crew reads them. */
+    val changedTaps: List<ChangedTap> = emptyList(),
 )
+
+/** A tap with unsent changes, shown on its line's card: [label] by its poles, [line] its name. */
+data class ChangedTap(val line: String, val label: String, val unsent: Int)
+
+/**
+ * One card per object: its main line (a tap only when the phone has nothing else of it), kept in
+ * the order of [all]. [hits] are the rows the search matched; a matched tap brings its line.
+ */
+internal fun mainCards(all: List<ObjectDisplayable>, hits: List<ObjectDisplayable>?): List<ObjectDisplayable> {
+    val keep = hits?.map { it.tplnr }?.toSet()
+    val mains = all.filter { !isTapName(it.name) }.distinctBy { it.tplnr }
+    val withMain = mains.map { it.tplnr }.toSet()
+    val tapOnly = all.filter { it.tplnr !in withMain }.distinctBy { it.tplnr }
+    val cards = (mains + tapOnly).toSet()
+    return all.filter { it in cards && (keep == null || it.tplnr in keep) }
+}
 
 /** Before an upload of [scope]: the lines GIS will get as new drawings. */
 data class NewLinesPrompt(
@@ -156,10 +181,16 @@ class MainViewModel @Inject constructor(
 
     private val objects: Flow<List<ObjectDisplayable>> =
         combine(_spinnerObjectType, query.debounce(200)) { type, q -> type to q.trim() }
-            .flatMapLatest { (type, q) -> search(type, q) }
+            .flatMapLatest { (type, q) ->
+                if (!type.hasTaps) search(type, q)
+                else combine(search(type, ""), if (q.isEmpty()) flowOf(null) else search(type, q)) { all, hits -> mainCards(all, hits) }
+            }
 
     private val total: Flow<Int> =
-        _spinnerObjectType.flatMapLatest { search(it, "") }.map { it.size }
+        _spinnerObjectType.flatMapLatest { type -> search(type, "").map { if (type.hasTaps) mainCards(it, null).size else it.size } }
+
+    private val ObjectType.hasTaps get() = this == ObjectType.LINE04 || this == ObjectType.LINE10 ||
+        this == ObjectType.LINEABON04 || this == ObjectType.LINEABON10
 
     private val gisPoleCounts: Flow<Map<Pair<String, String?>, Int>> =
         _spinnerObjectType.flatMapLatest { type ->
@@ -177,12 +208,19 @@ class MainViewModel @Inject constructor(
             val byTplnr = progress.groupBy { it.tplnr }.mapValues { (_, rows) ->
                 rows.reduce { a, b -> a.copy(total = a.total + b.total, captured = a.captured + b.captured, unsent = a.unsent + b.unsent) }
             }
-            val isTp = _spinnerObjectType.value == ObjectType.TP || _spinnerObjectType.value == ObjectType.TPABON
+            val type = _spinnerObjectType.value
+            val isTp = type == ObjectType.TP || type == ObjectType.TPABON
+            val tapsOf = if (type.hasTaps) progress.filter { isTapName(it.parentName) }.groupBy { it.tplnr } else emptyMap()
             list.map { obj ->
+                val taps = tapsOf[obj.tplnr].orEmpty().filter { it.parentName != obj.name }
                 ObjectItem(
                     obj,
-                    if (isTp) byTplnr[obj.tplnr] else byLine[obj.tplnr to obj.name],
+                    // a line's card counts its taps too
+                    if (isTp || type.hasTaps) byTplnr[obj.tplnr] else byLine[obj.tplnr to obj.name],
                     gis[obj.tplnr to obj.name] ?: 0,
+                    taps = taps.size,
+                    changedTaps = taps.filter { it.unsent > 0 }
+                        .map { ChangedTap(it.parentName, tapLabel(it.firstPole, it.lastPole), it.unsent) },
                 )
             }
         }
@@ -328,23 +366,6 @@ class MainViewModel @Inject constructor(
     fun deleteToken() {
         viewModelScope.launch(Dispatchers.IO) {
             tokenManager.deleteToken()
-        }
-    }
-
-    fun deleteObject(name: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            when (_spinnerObjectType.value) {
-                ObjectType.LINE04 -> repository.deleteLine04(name)
-                ObjectType.LINE10 -> repository.deleteLine10(name)
-                ObjectType.LINEABON04 -> repository.deleteAbonLine04(name)
-                ObjectType.LINEABON10 -> repository.deleteAbonLine10(name)
-                ObjectType.TP -> {}
-                ObjectType.TPABON -> {}
-                ObjectType.KLKV04 -> {}
-                ObjectType.KLKV10 -> {}
-                ObjectType.KLKVABON04 -> {}
-                ObjectType.KLKVABON10 -> {}
-            }
         }
     }
 

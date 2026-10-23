@@ -114,10 +114,10 @@ class MainFragment : Fragment() {
                 uploading = sync == SyncUiState.Uploading,
                 onTypeChange = viewModel::selectedObjectType,
                 onQueryChange = viewModel::setQuery,
-                onOpen = ::navigateToEditObjectFragment,
+                onOpen = { navigateToEditObjectFragment(it) },
+                onOpenTap = { line, tap -> navigateToEditObjectFragment(line, tap) },
                 onUpload = viewModel::upload,
                 uploadSummary = viewModel::uploadSummary,
-                onDeleteTap = { viewModel.deleteObject(it.name) },
                 onClearLine = viewModel::clearLine,
                 clearSummary = viewModel::clearLineSummary,
                 onDownload = viewModel::loadObjectsToDb,
@@ -178,7 +178,7 @@ class MainFragment : Fragment() {
         }
     }
 
-    private fun navigateToEditObjectFragment(obj: ObjectDisplayable) {
+    private fun navigateToEditObjectFragment(obj: ObjectDisplayable, openLine: String = "") {
         val type = viewModel.spinnerObjectType.value
         val directions = if (type == ObjectType.TP || type == ObjectType.TPABON) {
             MainFragmentDirections.actionMainFragmentToTpEditorFragment(
@@ -187,7 +187,7 @@ class MainFragment : Fragment() {
         } else {
             MainFragmentDirections.actionMainFragmentToEditorFragment(
                 obj.tplnr, obj.name, type, obj.category, obj.isAbon, obj.pillarType
-            )
+            ).setOpenLine(openLine)
         }
         findNavController().navigate(directions)
     }
