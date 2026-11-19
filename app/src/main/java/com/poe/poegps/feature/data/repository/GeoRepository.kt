@@ -12,10 +12,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import okhttp3.ResponseBody
 import org.json.JSONArray
 import org.json.JSONObject
+import org.maplibre.geojson.FeatureCollection
 import retrofit2.Response
 import java.io.File
 import java.io.IOException
@@ -38,6 +40,32 @@ class GeoRepository @Inject constructor(
      * filled at once (and offline), then the server's answer when it differs.
      */
     fun branchLines(): Flow<String> = cachedThenFresh("lines") { filial, token -> api.getGeoLines(filial, token) }
+
+    /**
+     * [branchLines] for a map that shows object [tplnr]. An object kept from another branch (unsent work
+     * survives a branch switch) isn't in this branch's drawings: its own come from that branch's copy
+     * still on the phone, so its line is drawn and its GIS poles can be ordered along it.
+     */
+    fun branchLines(tplnr: String): Flow<String> = branchLines().map { json -> withObject(json, tplnr) }.flowOn(Dispatchers.Default)
+
+    private fun withObject(json: String, tplnr: String): String {
+        val quoted = "\"" + tplnr + "\""
+        if (json.contains(quoted)) return json
+        val own = File(context.filesDir, "geo").listFiles { f -> f.name.startsWith("lines_") }.orEmpty()
+            .sortedByDescending { it.lastModified() }
+            .firstNotNullOfOrNull { f ->
+                runCatching { f.readText() }.getOrNull()?.takeIf { it.contains(quoted) }?.let { other ->
+                    runCatching {
+                        FeatureCollection.fromJson(other).features().orEmpty()
+                            .filter { it.hasProperty("tplnr") && it.getStringProperty("tplnr") == tplnr }
+                    }.getOrNull()
+                }
+            }
+        if (own.isNullOrEmpty()) return json
+        return runCatching {
+            FeatureCollection.fromFeatures(FeatureCollection.fromJson(json).features().orEmpty() + own).toJson()
+        }.getOrDefault(json)
+    }
 
     /** The branch outline for the "outside the branch" check. */
     fun branchArea(): Flow<Area> = cachedThenFresh("branch") { filial, token -> api.getGeoBranch(filial, token) }

@@ -156,7 +156,7 @@ class EditorViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            geoRepository.branchLines().collect { _gisLines.value = it }
+            geoRepository.branchLines(args.tplnr).collect { _gisLines.value = it }
         }
         viewModelScope.launch {
             _lineName.flatMapLatest { line ->
