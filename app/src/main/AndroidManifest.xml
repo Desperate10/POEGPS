@@ -8,6 +8,11 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
+    <!-- portrait-only activity would otherwise make Play require a portrait screen (hides the app from some devices) -->
+    <uses-feature
+        android:name="android.hardware.screen.portrait"
+        android:required="false" />
+
     <application
         android:name=".app.MainApplication"
         android:allowBackup="true"
