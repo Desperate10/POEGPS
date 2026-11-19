@@ -16,6 +16,7 @@ import com.poe.poegps.feature.data.remote.utils.ApiResponse
 import com.poe.poegps.feature.data.remote.utils.FilialManager
 import com.poe.poegps.feature.data.remote.utils.TokenManager
 import com.poe.poegps.feature.data.repository.GeoRepository
+import com.poe.poegps.feature.data.repository.ObjectPlace
 import com.poe.poegps.feature.domain.UploadReport
 import com.poe.poegps.feature.domain.gisLayerOf
 import com.poe.poegps.feature.domain.drawnInGis
@@ -434,7 +435,7 @@ class MainViewModel @Inject constructor(
         // the fresh branch GeoJSON, so a line this phone already added to GIS isn't reported again;
         // the cached one when the server doesn't answer in time
         var json: String? = null
-        withTimeoutOrNull(GIS_LINES_WAIT_MS) { geoRepository.branchLines().collect { json = it } }
+        withTimeoutOrNull(GIS_LINES_WAIT_MS) { geoRepository.branchLines(ObjectPlace(lines.mapTo(HashSet()) { it.tplnr })).collect { json = it } }
         val geo = json ?: return emptyList()
         val gis = gisLineKeys(geo) ?: return emptyList()
         val fresh = linesNewToGis(lines, gis)

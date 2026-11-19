@@ -9,13 +9,16 @@ import com.poe.poegps.core.location.TrustState
 import com.poe.poegps.feature.data.local.CaptureLog
 import com.poe.poegps.feature.data.local.CaptureMeta
 import com.poe.poegps.feature.data.repository.GeoRepository
+import com.poe.poegps.feature.data.repository.ObjectPlace
 import com.poe.poegps.feature.presentation.model.OprDisplayable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -65,6 +68,7 @@ class CaptureSession(
     gpsTracker: GpsTracker,
     geoRepository: GeoRepository,
     private val captureLog: CaptureLog,
+    place: Flow<ObjectPlace>,
 ) {
     private val restart = MutableStateFlow(0)
     private val assessor = TrustAssessor()
@@ -82,7 +86,7 @@ class CaptureSession(
     val log: StateFlow<Map<String, CaptureMeta>> = captureLog.entries
 
     init {
-        scope.launch { geoRepository.branchArea().collect { assessor.setBranch(it) } }
+        scope.launch { place.flatMapLatest { geoRepository.branchArea(it) }.collect { assessor.setBranch(it) } }
         scope.launch { captureLog.load() }
     }
 
@@ -144,5 +148,7 @@ class CaptureSessionFactory @Inject constructor(
     private val geoRepository: GeoRepository,
     private val captureLog: CaptureLog,
 ) {
-    fun create(scope: CoroutineScope) = CaptureSession(scope, gpsTracker, geoRepository, captureLog)
+    /** [place]: what is being captured, so an object kept from another branch counts as inside its own. */
+    fun create(scope: CoroutineScope, place: Flow<ObjectPlace> = flowOf(ObjectPlace())) =
+        CaptureSession(scope, gpsTracker, geoRepository, captureLog, place)
 }

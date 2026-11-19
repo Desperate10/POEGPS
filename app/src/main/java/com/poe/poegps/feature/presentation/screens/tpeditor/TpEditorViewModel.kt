@@ -9,6 +9,7 @@ import com.poe.poegps.core.location.TrustState
 import com.poe.poegps.feature.data.local.CaptureLog
 import com.poe.poegps.feature.data.local.CaptureMeta
 import com.poe.poegps.feature.data.repository.GeoRepository
+import com.poe.poegps.feature.data.repository.ObjectPlace
 import com.poe.poegps.feature.domain.model.LineProgress
 import com.poe.poegps.feature.domain.repository.ObjectsRepository
 import com.poe.poegps.feature.presentation.capture.CapturePolicy
@@ -24,9 +25,12 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -40,14 +44,18 @@ class TpEditorViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val args = TpEditorFragmentArgs.fromSavedStateHandle(savedStateHandle)
-    private val session = captureSessionFactory.create(viewModelScope)
+    private val _tp = MutableStateFlow<OprDisplayable?>(null)
+    val tp: StateFlow<OprDisplayable?> = _tp
+
+    // where the TP stood when opened: finds its branch's drawings if it was kept from another branch
+    private val place = _tp.filterNotNull().take(1).map { tp ->
+        ObjectPlace(near = if (tp.hasCoordinates) tp.lat.toDouble() to tp.lng.toDouble() else null)
+    }
+    private val session = captureSessionFactory.create(viewModelScope, place)
     private val logKey = CaptureLog.tpKey(args.tplnr)
 
     val gps: StateFlow<GpsFix> = session.gps
     val trust: StateFlow<TrustState> = session.trust
-
-    private val _tp = MutableStateFlow<OprDisplayable?>(null)
-    val tp: StateFlow<OprDisplayable?> = _tp
 
     /** The TP's row in the upload table, if its point was taken on this phone. */
     val progress: StateFlow<LineProgress?> = repository.getLineProgress()
@@ -66,7 +74,7 @@ class TpEditorViewModel @Inject constructor(
 
     init {
         viewModelScope.launch { _tp.value = repository.getSingleTpObject(args.tplnr, args.isAbon).toOprDisplayable() }
-        viewModelScope.launch { geoRepository.branchLines().collect { _gisLines.value = it } }
+        viewModelScope.launch { place.flatMapLatest { geoRepository.branchLines(it) }.collect { _gisLines.value = it } }
     }
 
     fun restartGps() = session.restartGps()

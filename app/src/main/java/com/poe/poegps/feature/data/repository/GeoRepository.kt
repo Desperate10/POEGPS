@@ -2,6 +2,7 @@ package com.poe.poegps.feature.data.repository
 
 import android.content.Context
 import com.poe.poegps.core.location.Area
+import com.poe.poegps.core.location.Geo
 import com.poe.poegps.core.location.Ring
 import com.poe.poegps.feature.data.remote.api.ObjectsApi
 import com.poe.poegps.feature.data.remote.utils.FilialManager
@@ -17,7 +18,10 @@ import kotlinx.coroutines.flow.mapNotNull
 import okhttp3.ResponseBody
 import org.json.JSONArray
 import org.json.JSONObject
+import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.LineString
+import org.maplibre.geojson.MultiLineString
 import retrofit2.Response
 import java.io.File
 import java.io.IOException
@@ -42,29 +46,83 @@ class GeoRepository @Inject constructor(
     fun branchLines(): Flow<String> = cachedThenFresh("lines") { filial, token -> api.getGeoLines(filial, token) }
 
     /**
-     * [branchLines] for a map that shows object [tplnr]. An object kept from another branch (unsent work
-     * survives a branch switch) isn't in this branch's drawings: its own come from that branch's copy
-     * still on the phone, so its line is drawn and its GIS poles can be ordered along it.
+     * [branchLines] for a screen that shows [place]. An object kept from another branch (unsent work
+     * survives a branch switch) isn't in this branch's drawings: they come from that branch's copy still
+     * on the phone, so its line is drawn, its GIS poles can be ordered along it and an upload doesn't
+     * take it for a line new to GIS.
      */
-    fun branchLines(tplnr: String): Flow<String> = branchLines().map { json -> withObject(json, tplnr) }.flowOn(Dispatchers.Default)
+    fun branchLines(place: ObjectPlace): Flow<String> = branchLines()
+        .map { json -> if (place.isEmpty) json else withPlace(json, place, filialManager.getFilial().firstOrNull()) }
+        .flowOn(Dispatchers.Default)
 
-    private fun withObject(json: String, tplnr: String): String {
-        val quoted = "\"" + tplnr + "\""
-        if (json.contains(quoted)) return json
-        val own = File(context.filesDir, "geo").listFiles { f -> f.name.startsWith("lines_") }.orEmpty()
-            .sortedByDescending { it.lastModified() }
-            .firstNotNullOfOrNull { f ->
-                runCatching { f.readText() }.getOrNull()?.takeIf { it.contains(quoted) }?.let { other ->
-                    runCatching {
-                        FeatureCollection.fromJson(other).features().orEmpty()
-                            .filter { it.hasProperty("tplnr") && it.getStringProperty("tplnr") == tplnr }
-                    }.getOrNull()
-                }
+    /**
+     * [branchArea] for capturing [place]: an object kept from another branch also lets its own branch
+     * count as "inside", so its poles aren't flagged as captured outside the branch.
+     */
+    fun branchArea(place: ObjectPlace): Flow<Area> = branchArea()
+        .map { area ->
+            if (place.isEmpty) return@map area
+            val filial = filialManager.getFilial().firstOrNull() ?: return@map area
+            val current = cacheFile("lines", filial).takeIf { it.exists() }?.readText() ?: return@map area
+            area + otherBranches(current, place, filial).keys.flatMap { cachedArea(it) }
+        }
+        .flowOn(Dispatchers.Default)
+
+    private fun withPlace(json: String, place: ObjectPlace, filial: String?): String {
+        val own = otherBranches(json, place, filial).values.flatten()
+        if (own.isEmpty()) return json
+        return runCatching { FeatureCollection.fromFeatures(features(json) + own).toJson() }.getOrDefault(json)
+    }
+
+    /**
+     * The cached branches (code → the features taken from them) holding what [place] needs and [json]
+     * lacks: the drawings of its tplnrs, and the lines around its point when [json] has none there.
+     */
+    private fun otherBranches(json: String, place: ObjectPlace, filial: String?): Map<String, List<Feature>> {
+        val missing = place.tplnrs.filterNot { json.contains("\"" + it + "\"") }.toMutableSet()
+        var near = place.near?.takeIf { p -> features(json).none { it.passesWithin(p, NEAR_M) } }
+        if (missing.isEmpty() && near == null) return emptyMap()
+        val result = LinkedHashMap<String, List<Feature>>()
+        for ((other, file) in otherCaches("lines", filial)) {
+            if (missing.isEmpty() && near == null) break
+            val text = runCatching { file.readText() }.getOrNull() ?: continue
+            val found = missing.filterTo(HashSet()) { text.contains("\"" + it + "\"") }
+            if (found.isEmpty() && near == null) continue
+            val all = features(text)
+            val taken = all.filter { f ->
+                f.tplnrIn(found) || (near != null && f.passesWithin(near!!, AROUND_M))
             }
-        if (own.isNullOrEmpty()) return json
-        return runCatching {
-            FeatureCollection.fromFeatures(FeatureCollection.fromJson(json).features().orEmpty() + own).toJson()
-        }.getOrDefault(json)
+            if (near != null && all.any { it.passesWithin(near!!, NEAR_M) }) near = null
+            missing -= found
+            if (taken.isNotEmpty()) result[other] = taken
+        }
+        return result
+    }
+
+    /** Other branches' cached copies of [name] (code → file), newest first. */
+    private fun otherCaches(name: String, current: String?): List<Pair<String, File>> =
+        File(context.filesDir, "geo").listFiles { f -> f.name.startsWith(name + "_") && f.name.endsWith(".geojson") }.orEmpty()
+            .sortedByDescending { it.lastModified() }
+            .map { it.name.removePrefix(name + "_").removeSuffix(".geojson") to it }
+            .filter { it.first != current }
+
+    private fun cachedArea(filial: String): Area =
+        cacheFile("branch", filial).takeIf { it.exists() }?.let { f -> runCatching { parseArea(f.readText()) }.getOrNull() }.orEmpty()
+
+    private fun cacheFile(name: String, filial: String) = File(context.filesDir, "geo/${name}_$filial.geojson")
+
+    private fun features(json: String): List<Feature> =
+        runCatching { FeatureCollection.fromJson(json).features().orEmpty() }.getOrDefault(emptyList())
+
+    private fun Feature.tplnrIn(tplnrs: Set<String>) = hasProperty("tplnr") && getStringProperty("tplnr") in tplnrs
+
+    private fun Feature.passesWithin(p: Pair<Double, Double>, meters: Double): Boolean {
+        val points = when (val g = geometry()) {
+            is LineString -> g.coordinates()
+            is MultiLineString -> g.coordinates().flatten()
+            else -> emptyList()
+        }
+        return points.any { Geo.distanceM(p.first, p.second, it.latitude(), it.longitude()) <= meters }
     }
 
     /** The branch outline for the "outside the branch" check. */
@@ -76,7 +134,7 @@ class GeoRepository @Inject constructor(
         fetch: suspend (filial: String, bearer: String) -> Response<ResponseBody>,
     ): Flow<String> = flow {
         val filial = filialManager.getFilial().firstOrNull() ?: return@flow
-        val cache = File(context.filesDir, "geo/${name}_$filial.geojson")
+        val cache = cacheFile(name, filial)
         val cached = cache.takeIf { it.exists() }?.readText()
         if (cached != null) emit(cached)
         val fresh = try {
@@ -108,3 +166,16 @@ class GeoRepository @Inject constructor(
         }
     }
 }
+
+/**
+ * What a screen shows, to find it in another branch's cached drawings: its lines' tplnrs, and for a
+ * point object (TP) its position, as (lat, lng).
+ */
+data class ObjectPlace(val tplnrs: Set<String> = emptySet(), val near: Pair<Double, Double>? = null) {
+    val isEmpty get() = tplnrs.isEmpty() && near == null
+}
+
+// a drawing this close to a point object means the branch has its surroundings
+private const val NEAR_M = 1_000.0
+// how much of another branch is brought in around a point object
+private const val AROUND_M = 3_000.0

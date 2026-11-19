@@ -9,6 +9,7 @@ import com.poe.poegps.core.location.TrustState
 import com.poe.poegps.feature.data.local.CaptureLog
 import com.poe.poegps.feature.data.local.CaptureMeta
 import com.poe.poegps.feature.data.repository.GeoRepository
+import com.poe.poegps.feature.data.repository.ObjectPlace
 import com.poe.poegps.feature.presentation.capture.CapturePolicy
 import com.poe.poegps.feature.presentation.capture.CaptureResult
 import com.poe.poegps.feature.presentation.capture.CaptureSessionFactory
@@ -105,7 +106,7 @@ class EditorViewModel @Inject constructor(
     private val _captureResult = Channel<CaptureResult>()
     val captureResult = _captureResult.receiveAsFlow()
 
-    private val session = captureSessionFactory.create(viewModelScope)
+    private val session = captureSessionFactory.create(viewModelScope, flowOf(ObjectPlace(setOf(args.tplnr))))
     val gps: StateFlow<GpsFix> = session.gps
     val trust: StateFlow<TrustState> = session.trust
 
@@ -156,7 +157,7 @@ class EditorViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            geoRepository.branchLines(args.tplnr).collect { _gisLines.value = it }
+            geoRepository.branchLines(ObjectPlace(setOf(args.tplnr))).collect { _gisLines.value = it }
         }
         viewModelScope.launch {
             _lineName.flatMapLatest { line ->
